@@ -1,0 +1,18 @@
+[workspace]
+members = ["crates/ras-commander-rust"]
+exclude = ["vendor/hdf5-reader", "vendor/hdf5-core", "python"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT"
+repository = "https://github.com/gpt-cmdr/ras-commander-fast-hdf"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+# File-derived sizes use checked arithmetic; a missed site panics (catchable
+# at an FFI boundary) instead of wrapping into a short read or a huge allocation.
+overflow-checks = true

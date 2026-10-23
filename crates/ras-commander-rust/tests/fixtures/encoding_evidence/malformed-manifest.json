@@ -1,0 +1,162 @@
+[
+  {
+    "name": "uint64.h5",
+    "expected": "unsigned",
+    "sha256": "d84c943a9382c9ffbf6fd37689f4803200c116f65d953385c7eabbfd4b38ce68"
+  },
+  {
+    "name": "negative.h5",
+    "expected": "signed",
+    "sha256": "3f7e062719c30acfbafe13cefa94d504691e011affdf1fe113d51a469a4323e6"
+  },
+  {
+    "name": "float32.h5",
+    "expected": "float",
+    "sha256": "80423339fe10c3a6c3c19aa8a84cb7afd0993b31dd4afccc283f0155eb862742"
+  },
+  {
+    "name": "fixed.h5",
+    "expected": "text",
+    "sha256": "2e88fab391ff24ae62ea0bb4b00b2d1290afeb3be3ff1ed18931c1c4bf2abad7"
+  },
+  {
+    "name": "integer_width3.h5",
+    "expected": "unsupported",
+    "sha256": "382abcf4f6bda4ec37c0fe98bcab60ca88ba71a7f05728708d55f1fa997cb336"
+  },
+  {
+    "name": "integer_zero_width.h5",
+    "expected": "unsupported",
+    "sha256": "92965dea572e01743c5cad6a10ccfb90745a486a64364cde07f22d0a0140c0b8"
+  },
+  {
+    "name": "datatype_truncated_envelope.h5",
+    "expected": "corrupt",
+    "sha256": "1069dcec38dd8988b4836f261d7c7e194b8aa1d74a6a949c758fbb1a9640160b"
+  },
+  {
+    "name": "float64.h5",
+    "expected": "float64",
+    "sha256": "26ac645546bbe74d68a4722f292d62e6fbe90b45b13a75ed37c23d47ed74df46"
+  },
+  {
+    "name": "float_offset.h5",
+    "expected": "unsupported",
+    "sha256": "f7763f355922fd1f614ecf2c70ab700cebb13b137e1e6a8339fd43efcdbf74d8"
+  },
+  {
+    "name": "float_precision.h5",
+    "expected": "unsupported",
+    "sha256": "3b0465594ecaa8b6438ddbfd30c43fe4866624be3dcb16ed7e6125fa3ae36cf1"
+  },
+  {
+    "name": "fixed_utf8.h5",
+    "expected": "utf8",
+    "sha256": "23e1a7706f018a0895cf0d867f9b6578fb3d8498404afc51ddcaa1516bd8b06a"
+  },
+  {
+    "name": "fixed_nullpad.h5",
+    "expected": "nullpad",
+    "sha256": "e1a733275ddf8ca38ca0d0784b5d25fb8d2bd78801dd9ca591ccace3f09555e4"
+  },
+  {
+    "name": "fixed_spacepad.h5",
+    "expected": "spacepad",
+    "sha256": "949d1854fbcd848126affc538726d0cc3ed440beee7571dee665111ac3c5557f"
+  },
+  {
+    "name": "precision.h5",
+    "expected": "unsupported",
+    "sha256": "d0e60afad60a1f72c53ecaeb3c0aec0f5fab042570f87585d3da1111f1759c24"
+  },
+  {
+    "name": "offset.h5",
+    "expected": "unsupported",
+    "sha256": "361e82b58b9973939a4d9355d4cac19381f0e05928e163df07873a00ff95b703"
+  },
+  {
+    "name": "zero_precision.h5",
+    "expected": "unsupported",
+    "sha256": "919a795049da1bfb10f3d1646a4f52ac554e3802dde0c4c03a1eb21993881c7b"
+  },
+  {
+    "name": "integer_padding.h5",
+    "expected": "unsupported",
+    "sha256": "b22b31fee68e5f8bd8bf02770bf3e0ad5983e9d681532b4bd94548d380e1f93f"
+  },
+  {
+    "name": "float_layout.h5",
+    "expected": "unsupported",
+    "sha256": "09536fcb67f6f49e979c794295afec6f6b8f40e0b1e87a00900665a5c17d0aac"
+  },
+  {
+    "name": "float_reserved_high.h5",
+    "expected": "unsupported",
+    "sha256": "e00e98b0b277ed0ed964b15945db21d07a83b67d077a0b69e759772766232262"
+  },
+  {
+    "name": "float_vax.h5",
+    "expected": "unsupported",
+    "sha256": "d11f38b190619a6848d04a1af5ff4296898f285885597e8fe98768dcaf21c669"
+  },
+  {
+    "name": "reserved_padding.h5",
+    "expected": "unsupported",
+    "sha256": "f124ad8e23c7f242dca2fb8e74fa693b35c4e0090846cfff718734837bb58a1e"
+  },
+  {
+    "name": "reserved_charset.h5",
+    "expected": "unsupported",
+    "sha256": "366a55dedad00e6875bd7911d80ac06164e30c66ffb02dc657ffa0046b3c29a4"
+  },
+  {
+    "name": "vlen_valid.h5",
+    "expected": "unsupported",
+    "sha256": "358dd5343573d09566d076b30242b24493f4bfede3c27070c9b5e1ed252876d8"
+  },
+  {
+    "name": "vlen_missing_object.h5",
+    "expected": "unsupported",
+    "sha256": "a33c04fb501c2d64234f077d22382d88bb46d6c252963e84ae82d672eb97f4d7"
+  },
+  {
+    "name": "vlen_high_index.h5",
+    "expected": "unsupported",
+    "sha256": "a16e260eeeee15445c31ab8b495edc5a2cd4b14f85feed220f07dcbf31922ab8"
+  },
+  {
+    "name": "vlen_length_mismatch.h5",
+    "expected": "unsupported",
+    "sha256": "cf0dff036be784dd56e4f0d82cc68394a38ec8e93e8e878437128d8de95e1148"
+  },
+  {
+    "name": "vlen_truncated.h5",
+    "expected": "corrupt",
+    "sha256": "07fc69d33cfdf809395a4adb08fa486901ac3ff535b4bda5f5a394dd2f6d4b1a"
+  },
+  {
+    "name": "compound.h5",
+    "expected": "compound",
+    "sha256": "9f1761b146571672040ddba2fca275856972d297c81bbf5048719b012b44f183"
+  },
+  {
+    "name": "zero_record.h5",
+    "expected": "corrupt_compound",
+    "sha256": "f95734dd45c049a2c7db55ec478930de3fcd2cda823f91bb7b059ff8244177e6"
+  },
+  {
+    "name": "outside_record.h5",
+    "expected": "corrupt_compound",
+    "sha256": "1c5c26f92a3ed6c54f63da17916305fe97829ddd55d30f154011df76606f871c"
+  },
+  {
+    "name": "legacy_dims.h5",
+    "expected": "legacy",
+    "sha256": "b1e74d5e7288631bbf350993345ec7be4028f3f32cc44e3ca14bf1ca44fcb696"
+  },
+  {
+    "name": "overlap.h5",
+    "expected": "corrupt_compound",
+    "sha256": "26ec43da2f2ffb92d35b101189aacbc0f05e3778293416a67f6cab70ddd29a60"
+  }
+]

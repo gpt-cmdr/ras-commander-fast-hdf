@@ -1,0 +1,270 @@
+[
+  {
+    "name": "signed1.h5",
+    "sha256": "4ab003eb58581b1167a92da7948b70485ee90b9ffc7b0f4c69da8055ba7515cb",
+    "value": [
+      -1,
+      -128
+    ],
+    "kind": "signed"
+  },
+  {
+    "name": "unsigned1.h5",
+    "sha256": "a466732a75b029d80ef1fc6c69ec64360f4255440857de12da1a6dfbaf91f95f",
+    "value": [
+      0,
+      255
+    ],
+    "kind": "unsigned"
+  },
+  {
+    "name": "signed2.h5",
+    "sha256": "71f14d8e80a63062e20e11fed139cab4b188721fc17cf7c93bbb7253c7cf72a0",
+    "value": [
+      -1,
+      -32768
+    ],
+    "kind": "signed"
+  },
+  {
+    "name": "unsigned2.h5",
+    "sha256": "e426c9e2b5a6f3df7009627e69e1f246a9dec761da78070951b8cbe655e2c22b",
+    "value": [
+      0,
+      65535
+    ],
+    "kind": "unsigned"
+  },
+  {
+    "name": "signed4.h5",
+    "sha256": "7b70b45e5ae70d1d888441fa7aff5a8ed273b62141d3e13e3aa5052337a5a325",
+    "value": [
+      -1,
+      -2147483648
+    ],
+    "kind": "signed"
+  },
+  {
+    "name": "unsigned4.h5",
+    "sha256": "2c092ecf874aaa309140f8e68d99aeec93896ceed9f334e5fff062a661b288f3",
+    "value": [
+      0,
+      4294967295
+    ],
+    "kind": "unsigned"
+  },
+  {
+    "name": "float32le.h5",
+    "sha256": "d5325b564ed269a3df82c4ba715c1a3260382ebbe448659744c974f0729f8c7e",
+    "value": [
+      1.5,
+      -2.5
+    ],
+    "kind": "float"
+  },
+  {
+    "name": "float64be.h5",
+    "sha256": "52fc9b046208db79aca6b56725478f50b2c4ecdf5f5efef1b59f97ccb72af729",
+    "value": [
+      1.5,
+      -2.5
+    ],
+    "kind": "float"
+  },
+  {
+    "name": "float_sign.h5",
+    "sha256": "3ae76ecd8be11ea3e62f12c1def98a34ef66fd0399b4c02c84c97d60cfaeecd5",
+    "kind": "unsupported",
+    "reason": "non-IEEE"
+  },
+  {
+    "name": "float_exponent_location.h5",
+    "sha256": "b6c4fc2ac8c784c1faa0af817d37e85f2ae153ba0a99ac98a01c5c66b5f8d68a",
+    "kind": "unsupported",
+    "reason": "non-IEEE"
+  },
+  {
+    "name": "float_exponent_size.h5",
+    "sha256": "ea6255407b4d385ec4355edabd95143b1c505c9eae5a0da9ddc4843da7048b49",
+    "kind": "unsupported",
+    "reason": "non-IEEE"
+  },
+  {
+    "name": "float_mantissa_location.h5",
+    "sha256": "2faa4f2d57252760e1a62b1fd4f20998c622832c40aec6feb52d9bd674fe8b18",
+    "kind": "unsupported",
+    "reason": "non-IEEE"
+  },
+  {
+    "name": "float_mantissa_size.h5",
+    "sha256": "47a60d464b1188ecd409bccff47f69515d2b6cdf51278a06e7aaeca55db1be07",
+    "kind": "unsupported",
+    "reason": "non-IEEE"
+  },
+  {
+    "name": "float_bias.h5",
+    "sha256": "db4e67d472c8aac4de157fe00f7be34af1dfbb4a0cc89b1d84a07ec265ce405b",
+    "kind": "unsupported",
+    "reason": "non-IEEE"
+  },
+  {
+    "name": "float_normalization.h5",
+    "sha256": "7c7cc5430be50354d5ff50dc84349ea691588fc58d5ab6ddae180e1877e530c7",
+    "kind": "unsupported",
+    "reason": "non-IEEE"
+  },
+  {
+    "name": "text_base.h5",
+    "sha256": "2e88fab391ff24ae62ea0bb4b00b2d1290afeb3be3ff1ed18931c1c4bf2abad7",
+    "kind": "text",
+    "value": [
+      "hello"
+    ]
+  },
+  {
+    "name": "nullterm.h5",
+    "sha256": "6915fd749c8b07f5a4e6f1e7e10325bada13ffa655e2736d7604d6217cfa9680",
+    "kind": "text",
+    "value": [
+      "a"
+    ]
+  },
+  {
+    "name": "zero_width.h5",
+    "sha256": "3096bfdb11f2f5e2abfda09ef2ba6a2423778d26bdd9d454e0d4916319dffbeb",
+    "kind": "unsupported",
+    "reason": "zero-width"
+  },
+  {
+    "name": "utf8_invalid.h5",
+    "sha256": "86eec6f8043dc7ee5fa73ee378fc6f479904ea9b6220ca124295704a53e84433",
+    "kind": "unsupported",
+    "reason": "invalid UTF-8",
+    "raw_prefix": [
+      255
+    ]
+  },
+  {
+    "name": "ascii_invalid.h5",
+    "sha256": "6d1905ac5d630bbc9fb8ebb77c6ef285cd2731bce8a410c9bb32f360b4e115a8",
+    "kind": "unsupported",
+    "reason": "non-ASCII",
+    "raw_prefix": [
+      233
+    ]
+  },
+  {
+    "name": "crs_ascii.h5",
+    "sha256": "2b9a264d8c429505fc72c92b923b2bbc37dc83abe1f0fd56f7e888ccf61b506c",
+    "kind": "crs_ascii"
+  },
+  {
+    "name": "latest_attribute3.h5",
+    "sha256": "f0dfa43160ac99300a94c5e54f898b8e10e5bd40ebb12875c965976cd8c904e1",
+    "kind": "signed",
+    "value": [
+      -1,
+      -32768
+    ]
+  },
+  {
+    "name": "attribute2.h5",
+    "sha256": "897e094143b596fe5def006c47bf9406a1f0e83a62434824022f655c49b7af68",
+    "kind": "text",
+    "value": [
+      "hello"
+    ]
+  },
+  {
+    "name": "attribute2_shared.h5",
+    "sha256": "b5363e7a2b53c098dee1e8fae86a2a4f2e0cddd09bcfc2e9413452c1dc367f56",
+    "kind": "error",
+    "reason": "shared attribute",
+    "error": "Unsupported"
+  },
+  {
+    "name": "attribute2_reserved.h5",
+    "sha256": "d0d5e35c844c46b085b90cc94651479d0478d4272f55d52481d1f965adb25606",
+    "kind": "error",
+    "reason": "reserved attribute flags",
+    "error": "Corrupt"
+  },
+  {
+    "name": "attribute3.h5",
+    "sha256": "0b7da60428fec849dc4afd8e2a01b56cdfa531b8bce134ed01396a3f3adeee4e",
+    "kind": "text",
+    "value": [
+      "hello"
+    ]
+  },
+  {
+    "name": "attribute3_shared.h5",
+    "sha256": "e61288f70ba47358d023cb04b09250d65c41812b99729b3bef53c8958eb60dad",
+    "kind": "error",
+    "reason": "shared datatype/dataspace",
+    "error": "Unsupported"
+  },
+  {
+    "name": "attribute3_reserved.h5",
+    "sha256": "8149ae71c8784a6c369129c51a0ba6548338e1a34df38b7c68262573f36f2658",
+    "kind": "error",
+    "reason": "reserved attribute flags",
+    "error": "Corrupt"
+  },
+  {
+    "name": "vlen_valid.h5",
+    "sha256": "358dd5343573d09566d076b30242b24493f4bfede3c27070c9b5e1ed252876d8",
+    "kind": "unsupported",
+    "reason": "nested/array/vlen/reference"
+  },
+  {
+    "name": "vlen_reference_short_envelope.h5",
+    "sha256": "73accc9a0eb1f1027f72dee687ca635046b7d2d429c6a9faa7515efb35bcba5b",
+    "kind": "error",
+    "error": "Corrupt",
+    "reason": ""
+  },
+  {
+    "name": "compound1.h5",
+    "sha256": "9f1761b146571672040ddba2fca275856972d297c81bbf5048719b012b44f183",
+    "kind": "compound"
+  },
+  {
+    "name": "legacy_overlap.h5",
+    "sha256": "8b63498182b966ac847019527d65e7748c6e694b0c80ed3235f6972ff0cec484",
+    "kind": "compound_error",
+    "reason": "overlapping"
+  },
+  {
+    "name": "legacy_outside.h5",
+    "sha256": "990f9e47054c9459d88fd72540eca486e51dfbc9c1c7b5013b8f0a74c09e93fb",
+    "kind": "compound_error",
+    "reason": "outside record"
+  },
+  {
+    "name": "legacy_dimensions5.h5",
+    "sha256": "fee5542eb27347e1b1ec2e9113c82c2820e10ec799b19485c320da9734d2e48e",
+    "kind": "compound_error",
+    "reason": "dimensionality"
+  },
+  {
+    "name": "compound2.h5",
+    "sha256": "3afc8fd5df14409f9d07c7b5f085643934fbaab9464749fc1b1dc600c9b10802",
+    "kind": "compound"
+  },
+  {
+    "name": "compound3.h5",
+    "sha256": "be8fb0a2835d462c1d2a8eea2af48fa894c4782e4ac33be281538671594b5e02",
+    "kind": "compound"
+  },
+  {
+    "name": "nested.h5",
+    "sha256": "487461223680a201c55d86eded94e452c2c49a1067dd462191f064ea16ea5385",
+    "kind": "compound_unsupported"
+  },
+  {
+    "name": "array_member.h5",
+    "sha256": "39d64670daafa8419c7e2857c066149b865736b641be0e0fc5082fa876fc7592",
+    "kind": "compound_unsupported"
+  }
+]

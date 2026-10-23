@@ -1,0 +1,746 @@
+[
+ {
+  "name": "valid.h5",
+  "sha256": "3444c2401ebf32c6a72bd67707a887def9bfcc472a7df6afd8f032257b73d391",
+  "tables": [
+   {
+    "path": "Modifications/Synthetic Channel/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polyline_modification_attributes",
+    "identity_table": "Modifications/Synthetic Channel/Polyline Info",
+    "rows": 2,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Type",
+      16
+     ],
+     [
+      "Top Elevation",
+      27
+     ],
+     [
+      "Top Width",
+      31
+     ],
+     [
+      "Left Slope",
+      35
+     ],
+     [
+      "Right Slope",
+      39
+     ],
+     [
+      "Max Reach",
+      43
+     ],
+     [
+      "Elev Pt Tolerance",
+      47
+     ]
+    ],
+    "stored_hex": "43757420410000000000000000000000496e746572706f6c617465000048410000f0410000404000004040000048420000803e437574005a00000000000000000000005365742056616c756500710000c0bf000000000000004000008040000000000000003f",
+    "h5py_hex": "43757420410000000000000000000000496e746572706f6c617465000048410000f0410000404000004040000048420000803e437574000000000000000000000000005365742056616c756500000000c0bf000000000000004000008040000000000000003f",
+    "h5py_dtype": "[('Name', ('|S16', {'h5py_encoding': 'ascii'})), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Top Elevation', '<f4'), ('Top Width', '<f4'), ('Left Slope', '<f4'), ('Right Slope', '<f4'), ('Max Reach', '<f4'), ('Elev Pt Tolerance', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Circle/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "circle_modification_attributes",
+    "identity_table": "Modifications/Synthetic Circle/Circles",
+    "rows": 2,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Value",
+      6
+     ],
+     [
+      "Elevation Type",
+      10
+     ]
+    ],
+    "stored_hex": "52696e672041000040415365742056616c7565000052696e67204200005041456c65766174696f6e0000",
+    "h5py_hex": "52696e672041000040415365742056616c7565000052696e67204200005041456c65766174696f6e0000",
+    "h5py_dtype": "[('Name', ('|S6', {'h5py_encoding': 'ascii'})), ('Elevation Value', '<f4'), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'}))]"
+   },
+   {
+    "path": "Modifications/Synthetic Levee/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polyline_modification_attributes",
+    "identity_table": "Modifications/Synthetic Levee/Polyline Info",
+    "rows": 1,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Type",
+      9
+     ],
+     [
+      "Top Elevation",
+      20
+     ],
+     [
+      "Top Width",
+      24
+     ],
+     [
+      "Left Slope",
+      28
+     ],
+     [
+      "Right Slope",
+      32
+     ],
+     [
+      "Max Reach",
+      36
+     ],
+     [
+      "Elev Pt Tolerance",
+      40
+     ]
+    ],
+    "stored_hex": "4c65766565204f6e65496e746572706f6c6174650080ca420000004100004040000040400000c84100000000",
+    "h5py_hex": "4c65766565204f6e65496e746572706f6c6174650080ca420000004100004040000040400000c84100000000",
+    "h5py_dtype": "[('Name', ('|S9', {'h5py_encoding': 'ascii'})), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Top Elevation', '<f4'), ('Top Width', '<f4'), ('Left Slope', '<f4'), ('Right Slope', '<f4'), ('Max Reach', '<f4'), ('Elev Pt Tolerance', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Levee/Control Points/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "control_point_attributes",
+    "identity_table": "Modifications/Synthetic Levee/Control Points/Points",
+    "rows": 3,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation",
+      1
+     ]
+    ],
+    "stored_hex": "000000c642610000c542000000c07f",
+    "h5py_hex": "000000c642610000c542000000c07f",
+    "h5py_dtype": "[('Name', ('|S1', {'h5py_encoding': 'ascii'})), ('Elevation', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Nullpad/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polygon_modification_attributes",
+    "identity_table": "Modifications/Synthetic Nullpad/Polygon Info",
+    "rows": 1,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Value",
+      8
+     ],
+     [
+      "Elevation Type",
+      12
+     ],
+     [
+      "Elev Pt Tolerance",
+      23
+     ],
+     [
+      "Generate Boundary Elevations",
+      27
+     ],
+     [
+      "Use ShapeFile Z Elevations",
+      28
+     ]
+    ],
+    "stored_hex": "4564676500780000000000405365742056616c75650000000000000101",
+    "h5py_hex": "4564676500780000000000405365742056616c75650000000000000101",
+    "h5py_dtype": "[('Name', ('|S8', {'h5py_encoding': 'ascii'})), ('Elevation Value', '<f4'), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Elev Pt Tolerance', '<f4'), ('Generate Boundary Elevations', '|u1'), ('Use ShapeFile Z Elevations', '|u1')]"
+   },
+   {
+    "path": "Modifications/Synthetic Pier/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "pier_modification_attributes",
+    "identity_table": "Modifications/Synthetic Pier/Piers",
+    "rows": 2,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Value",
+      1
+     ],
+     [
+      "Elevation Type",
+      5
+     ]
+    ],
+    "stored_hex": "00000060405365742056616c75650000000000804054616b6548696768657200",
+    "h5py_hex": "00000060405365742056616c75650000000000804054616b6548696768657200",
+    "h5py_dtype": "[('Name', ('|S1', {'h5py_encoding': 'ascii'})), ('Elevation Value', '<f4'), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'}))]"
+   },
+   {
+    "path": "Modifications/Synthetic Polygon/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polygon_modification_attributes",
+    "identity_table": "Modifications/Synthetic Polygon/Polygon Info",
+    "rows": 2,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Value",
+      10
+     ],
+     [
+      "Elevation Type",
+      14
+     ],
+     [
+      "Elev Pt Tolerance",
+      25
+     ],
+     [
+      "Generate Boundary Elevations",
+      29
+     ],
+     [
+      "Use ShapeFile Z Elevations",
+      30
+     ]
+    ],
+    "stored_hex": "506164204f6e6500000000005c425365742056616c75650000cdcccc3d01005061642054776f000000000050c0496e746572706f6c617465000000000001",
+    "h5py_hex": "506164204f6e6500000000005c425365742056616c75650000cdcccc3d01005061642054776f000000000050c0496e746572706f6c617465000000000001",
+    "h5py_dtype": "[('Name', ('|S10', {'h5py_encoding': 'ascii'})), ('Elevation Value', '<f4'), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Elev Pt Tolerance', '<f4'), ('Generate Boundary Elevations', '|u1'), ('Use ShapeFile Z Elevations', '|u1')]"
+   },
+   {
+    "path": "Modifications/Synthetic Polygon/Control Points/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "control_point_attributes",
+    "identity_table": "Modifications/Synthetic Polygon/Control Points/Points",
+    "rows": 1,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation",
+      1
+     ]
+    ],
+    "stored_hex": "000000e040",
+    "h5py_hex": "000000e040",
+    "h5py_dtype": "[('Name', ('|S1', {'h5py_encoding': 'ascii'})), ('Elevation', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Rectangle/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "rectangle_modification_attributes",
+    "identity_table": "Modifications/Synthetic Rectangle/Rectangles",
+    "rows": 1,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Value",
+      14
+     ],
+     [
+      "Elevation Type",
+      18
+     ]
+    ],
+    "stored_hex": "43756c7665727420426f782030310000e84054616b654c6f7765720000",
+    "h5py_hex": "43756c7665727420426f782030310000e84054616b654c6f7765720000",
+    "h5py_dtype": "[('Name', ('|S14', {'h5py_encoding': 'ascii'})), ('Elevation Value', '<f4'), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'}))]"
+   },
+   {
+    "path": "Modifications/Synthetic Spacepad/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polygon_modification_attributes",
+    "identity_table": "Modifications/Synthetic Spacepad/Polygon Info",
+    "rows": 1,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Value",
+      8
+     ],
+     [
+      "Elevation Type",
+      12
+     ],
+     [
+      "Elev Pt Tolerance",
+      23
+     ],
+     [
+      "Generate Boundary Elevations",
+      27
+     ],
+     [
+      "Use ShapeFile Z Elevations",
+      28
+     ]
+    ],
+    "stored_hex": "45646765202000000000803f5365742056616c75652020000000000000",
+    "h5py_hex": "45646765202000000000803f5365742056616c75650000000000000000",
+    "h5py_dtype": "[('Name', ('|S8', {'h5py_encoding': 'ascii'})), ('Elevation Value', '<f4'), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Elev Pt Tolerance', '<f4'), ('Generate Boundary Elevations', '|u1'), ('Use ShapeFile Z Elevations', '|u1')]"
+   },
+   {
+    "path": "Modifications/Synthetic Transition Channel/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polyline_modification_attributes",
+    "identity_table": "Modifications/Synthetic Transition Channel/Polyline Info",
+    "rows": 2,
+    "columns": [
+     [
+      "System Name",
+      0
+     ],
+     [
+      "Name",
+      1
+     ],
+     [
+      "Elevation Type",
+      13
+     ],
+     [
+      "Top Elevation",
+      24
+     ],
+     [
+      "Top Width",
+      28
+     ],
+     [
+      "Left Slope",
+      32
+     ],
+     [
+      "Right Slope",
+      36
+     ],
+     [
+      "Max Reach",
+      40
+     ],
+     [
+      "Transition Percent",
+      44
+     ],
+     [
+      "Elev Pt Tolerance",
+      48
+     ]
+    ],
+    "stored_hex": "004469746368204e6f72746800496e746572706f6c617465000000c0000070410000404000004040000020420000003f0000000000446974636800536f757468005365742056616c7565007a00009040000000000000004000002040000000000000803e0000803f",
+    "h5py_hex": "004469746368204e6f72746800496e746572706f6c617465000000c0000070410000404000004040000020420000003f00000000004469746368000000000000005365742056616c7565000000009040000000000000004000002040000000000000803e0000803f",
+    "h5py_dtype": "[('System Name', ('|S1', {'h5py_encoding': 'ascii'})), ('Name', ('|S12', {'h5py_encoding': 'ascii'})), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Top Elevation', '<f4'), ('Top Width', '<f4'), ('Left Slope', '<f4'), ('Right Slope', '<f4'), ('Max Reach', '<f4'), ('Transition Percent', '<f4'), ('Elev Pt Tolerance', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Transition Levee/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polyline_modification_attributes",
+    "identity_table": "Modifications/Synthetic Transition Levee/Polyline Info",
+    "rows": 1,
+    "columns": [
+     [
+      "System Name",
+      0
+     ],
+     [
+      "Name",
+      1
+     ],
+     [
+      "Elevation Type",
+      8
+     ],
+     [
+      "Top Elevation",
+      19
+     ],
+     [
+      "Top Width",
+      23
+     ],
+     [
+      "Left Slope",
+      27
+     ],
+     [
+      "Right Slope",
+      31
+     ],
+     [
+      "Max Reach",
+      35
+     ],
+     [
+      "Transition Percent",
+      39
+     ],
+     [
+      "Elev Pt Tolerance",
+      43
+     ]
+    ],
+    "stored_hex": "004265726d20303154616b65486967686572000000a841000040410000404000008040000070420000403f0000003f",
+    "h5py_hex": "004265726d20303154616b65486967686572000000a841000040410000404000008040000070420000403f0000003f",
+    "h5py_dtype": "[('System Name', ('|S1', {'h5py_encoding': 'ascii'})), ('Name', ('|S7', {'h5py_encoding': 'ascii'})), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Top Elevation', '<f4'), ('Top Width', '<f4'), ('Left Slope', '<f4'), ('Right Slope', '<f4'), ('Max Reach', '<f4'), ('Transition Percent', '<f4'), ('Elev Pt Tolerance', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Transition Levee/Control Points/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "control_point_attributes",
+    "identity_table": "Modifications/Synthetic Transition Levee/Control Points/Points",
+    "rows": 2,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation",
+      1
+     ]
+    ],
+    "stored_hex": "000000a041000000a441",
+    "h5py_hex": "000000a041000000a441",
+    "h5py_dtype": "[('Name', ('|S1', {'h5py_encoding': 'ascii'})), ('Elevation', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Writer Channel/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polyline_modification_attributes",
+    "identity_table": "Modifications/Synthetic Writer Channel/Polyline Info",
+    "rows": 1,
+    "columns": [
+     [
+      "System Name",
+      0
+     ],
+     [
+      "Name",
+      128
+     ],
+     [
+      "Elevation Type",
+      256
+     ],
+     [
+      "Top Elevation",
+      272
+     ],
+     [
+      "Top Width",
+      276
+     ],
+     [
+      "Left Slope",
+      280
+     ],
+     [
+      "Right Slope",
+      284
+     ],
+     [
+      "Max Reach",
+      288
+     ],
+     [
+      "Transition Percent",
+      292
+     ],
+     [
+      "Elev Pt Tolerance",
+      296
+     ]
+    ],
+    "stored_hex": "53796e74686574696320577269746572204368616e6e656c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000053796e74686574696320577269746572204368616e6e656c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000054616b654c6f776572000000000000000000f0410000a04100000040000000400000c8420000003f00004842",
+    "h5py_hex": "53796e74686574696320577269746572204368616e6e656c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000053796e74686574696320577269746572204368616e6e656c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000054616b654c6f776572000000000000000000f0410000a04100000040000000400000c8420000003f00004842",
+    "h5py_dtype": "[('System Name', ('|S128', {'h5py_encoding': 'ascii'})), ('Name', ('|S128', {'h5py_encoding': 'ascii'})), ('Elevation Type', ('|S16', {'h5py_encoding': 'ascii'})), ('Top Elevation', '<f4'), ('Top Width', '<f4'), ('Left Slope', '<f4'), ('Right Slope', '<f4'), ('Max Reach', '<f4'), ('Transition Percent', '<f4'), ('Elev Pt Tolerance', '<f4')]"
+   },
+   {
+    "path": "Modifications/Synthetic Writer Levee/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polyline_modification_attributes",
+    "identity_table": "Modifications/Synthetic Writer Levee/Polyline Info",
+    "rows": 1,
+    "columns": [
+     [
+      "System Name",
+      0
+     ],
+     [
+      "Name",
+      128
+     ],
+     [
+      "Elevation Type",
+      256
+     ],
+     [
+      "Top Elevation",
+      272
+     ],
+     [
+      "Top Width",
+      276
+     ],
+     [
+      "Left Slope",
+      280
+     ],
+     [
+      "Right Slope",
+      284
+     ],
+     [
+      "Max Reach",
+      288
+     ],
+     [
+      "Transition Percent",
+      292
+     ],
+     [
+      "Elev Pt Tolerance",
+      296
+     ]
+    ],
+    "stored_hex": "53796e74686574696320577269746572204c657665650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000053796e74686574696320577269746572204c657665650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000054616b654869676865720000000000000000f0410000a04100000040000000400000c8420000003f00004842",
+    "h5py_hex": "53796e74686574696320577269746572204c657665650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000053796e74686574696320577269746572204c657665650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000054616b654869676865720000000000000000f0410000a04100000040000000400000c8420000003f00004842",
+    "h5py_dtype": "[('System Name', ('|S128', {'h5py_encoding': 'ascii'})), ('Name', ('|S128', {'h5py_encoding': 'ascii'})), ('Elevation Type', ('|S16', {'h5py_encoding': 'ascii'})), ('Top Elevation', '<f4'), ('Top Width', '<f4'), ('Left Slope', '<f4'), ('Right Slope', '<f4'), ('Max Reach', '<f4'), ('Transition Percent', '<f4'), ('Elev Pt Tolerance', '<f4')]"
+   }
+  ]
+ },
+ {
+  "name": "refusals.h5",
+  "sha256": "4edf162ccd4d5605f97d67b5c25dcda84511f64b70a11ded7fc751ff5eb2543d",
+  "tables": [
+   {
+    "path": "Modifications/Big Endian/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Channel Type Short Layout/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Missing Feature/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Missing Member/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/No Type/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Padded/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Pier Missing Feature/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Pier Wide/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Rank Two/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Rectangle Polygon Layout/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Rectangle Row Mismatch/Attributes",
+    "status": "corrupt",
+    "code": null
+   },
+   {
+    "path": "Modifications/Reordered/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Row Mismatch/Attributes",
+    "status": "corrupt",
+    "code": null
+   },
+   {
+    "path": "Modifications/Signed Byte/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Transition Missing Percent/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Transition Padded/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Transition Renamed/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Transition Reordered/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Transition Row Mismatch/Attributes",
+    "status": "corrupt",
+    "code": null
+   },
+   {
+    "path": "Modifications/Transition Wide/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Type Mismatch/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Unknown Type/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Utf8 Name/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Modifications/Valid Channel/Attributes",
+    "status": "supported",
+    "code": null,
+    "role": "polyline_modification_attributes",
+    "identity_table": "Modifications/Valid Channel/Polyline Info",
+    "rows": 1,
+    "columns": [
+     [
+      "Name",
+      0
+     ],
+     [
+      "Elevation Type",
+      8
+     ],
+     [
+      "Top Elevation",
+      19
+     ],
+     [
+      "Top Width",
+      23
+     ],
+     [
+      "Left Slope",
+      27
+     ],
+     [
+      "Right Slope",
+      31
+     ],
+     [
+      "Max Reach",
+      35
+     ],
+     [
+      "Elev Pt Tolerance",
+      39
+     ]
+    ],
+    "stored_hex": "4f6b617900000000496e746572706f6c6174650000803f0000004000004040000080400000a0400000c040",
+    "h5py_hex": "4f6b617900000000496e746572706f6c6174650000803f0000004000004040000080400000a0400000c040",
+    "h5py_dtype": "[('Name', ('|S8', {'h5py_encoding': 'ascii'})), ('Elevation Type', ('|S11', {'h5py_encoding': 'ascii'})), ('Top Elevation', '<f4'), ('Top Width', '<f4'), ('Left Slope', '<f4'), ('Right Slope', '<f4'), ('Max Reach', '<f4'), ('Elev Pt Tolerance', '<f4')]"
+   },
+   {
+    "path": "Modifications/Vlen Name/Attributes",
+    "status": "unsupported",
+    "code": "encoding"
+   },
+   {
+    "path": "Modifications/Wide Float/Attributes",
+    "status": "unsupported",
+    "code": "schema"
+   }
+  ]
+ },
+ {
+  "name": "truncated.h5",
+  "sha256": "ac7ac361db53a9c5747e018ccc5ea270113793901be2d4742b5e2549addf8153",
+  "tables": [
+   {
+    "path": "Modifications/Cut Short/Attributes",
+    "status": "refused"
+   }
+  ],
+  "h5py": "OSError"
+ }
+]

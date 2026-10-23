@@ -1,0 +1,17 @@
+{
+  "source_name": "BaldEagleDamBrk.refpts.701.p03.hdf",
+  "source_sha256": "95ad4fccf2753676d02d77bb3a58cddd952c6bc77ecf1cf7398028ee6d92c185",
+  "mutations": "full stored Base arrays; explicit column permutation, wrong Cells/2D Areas/Units/Name, missing point row, Time mismatch, unknown Flow, duplicate geometry identity",
+  "files": {
+    "bad_areas.h5": "07cd21cf02c0403adbe6e496a67f3a1fdb2fbc78ede5da272e7ad8e1df8251ea",
+    "bad_cells.h5": "095a946255d79d450294ccf288003286e065fbb9a824917e661400dc444a796b",
+    "bad_name.h5": "61e8d59b717579ddc31ca6845751b9c449efe56ed6fd6e81b98c02d6e790b3e8",
+    "bad_points.h5": "8a9699974a456bf8d34cd35f4564e5a11144bd11ec451f2ed6347f2cb621a10b",
+    "bad_time.h5": "2cba1b9c6a585ec84f4bb577fd1ab6cb8866f144c996b923d001b42ec8908ca9",
+    "bad_units.h5": "34e80bcc35a163f0ebb0f395daf4d0af113a98ef7a4653848ab645bf6dc8df14",
+    "duplicate_geometry.h5": "31e3e66f7c2c71d6b177b3983f0d1bde1dc4b8ca35ad679ad12b2e45b05f14cd",
+    "reordered.h5": "e62e2558ed1e2f4a57215718db735ec9abd19994c9c0dec065c37dd4084ad6f8",
+    "unknown_variable.h5": "529c04ab6693f23c59a2f236ac75bb8e723f3e89595c052496f6378929e5fbca",
+    "valid.h5": "f42ff68ae78518800819758ef096e17821ee3401e061e82121126601a4f39b6f"
+  }
+}

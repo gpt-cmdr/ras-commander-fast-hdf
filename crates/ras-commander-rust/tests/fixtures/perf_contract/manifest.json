@@ -1,0 +1,10 @@
+{
+  "header_address": 800,
+  "h5py": "3.14.0",
+  "files": {
+    "dense_bad.h5": "bf8cf2fe7906a3c9ccc6db99ca1e8b2821c48c71219a7285518839bd11b005c0",
+    "header_base.h5": "54592137c6edbf4e96b511a514c9155103679dffec9a91c748855d04f7323e86",
+    "parallel.h5": "c35651d9666a746ed82cdd6388c5b0399433a792319964ee629a50913e1c251a"
+  },
+  "empty_heap_sha256": "16eaac53a6bf38d259a483dc9d6e86f97c5a337314243d89e4b724bf86cac3d3"
+}

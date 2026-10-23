@@ -1,0 +1,114 @@
+name: CI
+
+# Pushes and pull requests run on CLB's self-hosted Slurm runners (clb-ci-linux,
+# clb-ci-windows). Pull requests from forks never reach a self-hosted runner: they
+# fall back to the GitHub-hosted runner named by matrix.os. macOS is GitHub-hosted
+# and runs only on release tags or when requested with include_macos.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      include_macos:
+        description: "Also build and test the macOS wheel"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles
+
+jobs:
+  test:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.include_macos && '["ubuntu-latest", "windows-latest", "macos-14"]' || '["ubuntu-latest", "windows-latest"]') }}
+        include:
+          - os: ubuntu-latest
+            self_hosted: '["self-hosted", "Linux", "X64", "clb-ci-linux"]'
+          - os: windows-latest
+            self_hosted: '["self-hosted", "Windows", "X64", "clb-ci-windows"]'
+    # Fork pull requests -> GitHub-hosted matrix.os; otherwise the self-hosted labels.
+    runs-on: ${{ fromJSON(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('["{0}"]', matrix.os) || matrix.self_hosted || format('["{0}"]', matrix.os)) }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            python -> python/target
+            vendor/hdf5-reader -> vendor/hdf5-reader/target
+      - uses: actions/setup-python@v6
+        id: py310
+        with:
+          python-version: "3.10"
+      - uses: actions/setup-python@v6
+        id: py313
+        with:
+          python-version: "3.13"
+
+      # --- Engine -------------------------------------------------------------
+      - name: Format
+        if: runner.os == 'Linux'
+        run: cargo fmt --all -- --check
+      - name: Catalog-only dependency profile and tests (std only)
+        shell: bash
+        run: |
+          cargo tree --locked --no-default-features --features catalog --edges normal > /dev/null
+          cargo test --locked --no-default-features --features catalog
+      # Includes the malformed-input regressions and the committed encoding/revision evidence.
+      - name: Engine tests (all features)
+        run: cargo test --locked --all-features
+      - name: Clippy
+        if: runner.os == 'Linux'
+        run: |
+          cargo clippy --locked --all-features --all-targets --no-deps -- -D warnings
+          cargo clippy --locked --no-default-features --all-targets --no-deps -- -D warnings
+          cargo clippy --locked --no-default-features --features hdf --all-targets --no-deps -- -D warnings
+      - name: Vendored hdf5-reader tests
+        run: cargo test --locked --all-features --manifest-path vendor/hdf5-reader/Cargo.toml
+
+      # --- Extension ----------------------------------------------------------
+      - name: Extension tests (Rust side)
+        run: cargo test --locked --manifest-path python/Cargo.toml
+      - name: Licence notices are current
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          "${{ steps.py313.outputs.python-path }}" scripts/generate_third_party_notices.py --title "ras-commander-rust (all features)" --check
+          cd python && "${{ steps.py313.outputs.python-path }}" scripts/generate_third_party_notices.py --features extension-module --own-licence ../LICENSE --title "ras-commander-fast-hdf wheel (default features)" --check
+      - name: Build wheel
+        shell: bash
+        run: |
+          py="${{ steps.py313.outputs.python-path }}"
+          "$py" -m pip install --upgrade pip "maturin>=1.9,<2"
+          args=(--release --locked --manifest-path python/Cargo.toml --features "$WHEEL_FEATURES" --out dist)
+          if [ "$RUNNER_OS" = Linux ]; then
+            # manylinux_2_28 without Docker: zig links against the older glibc.
+            "$py" -m pip install ziglang
+            args+=(--zig --compatibility manylinux_2_28)
+          fi
+          "$py" -m maturin build "${args[@]}"
+      - name: Smoke test the wheel (Python 3.10 and 3.13)
+        shell: bash
+        run: |
+          for py in "${{ steps.py310.outputs.python-path }}" "${{ steps.py313.outputs.python-path }}"; do
+            "$py" -m pip install --force-reinstall dist/*.whl
+            # -I keeps the checkout off sys.path so the installed wheel is imported.
+            "$py" -I .github/scripts/smoke_wheel.py dist "$(git rev-parse HEAD)"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-${{ runner.os }}
+          path: dist/*.whl
+          if-no-files-found: error

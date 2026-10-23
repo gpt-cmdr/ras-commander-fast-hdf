@@ -1,0 +1,43 @@
+[build-system]
+requires = ["maturin>=1.9,<2"]
+build-backend = "maturin"
+
+[project]
+name = "ras-commander-fast-hdf"
+version = "0.1.0"
+description = "Native (Rust) HEC-RAS HDF engine for ras-commander"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+license = "MIT"
+authors = [{ name = "CLB Engineering Corporation" }]
+keywords = ["HEC-RAS", "HDF5", "hydraulics", "ras-commander", "rust"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Hydrology",
+]
+# licenses/: this repository's LICENSE (ras-commander-rust-LICENSE.txt, a copy of ../LICENSE),
+# the ras-commander code the bridge was extracted from, plus earlier per-crate notices;
+# THIRD-PARTY-NOTICES.md: every crate linked into the wheel with full licence texts.
+# Regenerate with scripts/generate_third_party_notices.py (see docs/reference/extension-contract.md, "Licences").
+license-files = ["licenses/*", "THIRD-PARTY-NOTICES.md"]
+
+[project.urls]
+Homepage = "https://github.com/gpt-cmdr/ras-commander-fast-hdf"
+Documentation = "https://rascommander.info/ras/native-engine/"
+Source = "https://github.com/gpt-cmdr/ras-commander-fast-hdf"
+Issues = "https://github.com/gpt-cmdr/ras-commander-fast-hdf/issues"
+Changelog = "https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+exports = ["pyarrow>=14", "pyproj>=3.6", "shapely>=2.1"]
+
+[tool.maturin]
+module-name = "ras_commander_fast_hdf"
+features = ["extension-module"]

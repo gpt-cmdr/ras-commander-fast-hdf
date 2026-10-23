@@ -1,0 +1,13 @@
+{
+ "generator": "make_fixtures.py",
+ "h5py": "3.16.0",
+ "numpy": "2.5.4",
+ "fixtures": {
+  "lines.h5": "f3b9a69fefd79a4139dd6049bd1b645b70948ae097a330aa03a23acc7e5981c2",
+  "bad_connection.h5": "dffb7162e91c537ca9c6a1143f89d5f7e9b4ed2352f4bff393d426c914a5e680",
+  "xs_fields.h5": "b5d2152740646857572e36b8e484be6f6aa3f602b3611c8f6d95463ea1a7c5e2",
+  "xs_legacy.h5": "e1b4a324af754410ea35bdf67acbf947193faa112dc185ef528060ebe474a147",
+  "results.h5": "1edf82a557c5f462fc5b403e28774500549e9ca7f7490509d6e208b4930988c5",
+  "structures.h5": "49b4c9beaaca1cb8f3317ad82db3a498e7f1285d014577455ae0a098ca628c50"
+ }
+}

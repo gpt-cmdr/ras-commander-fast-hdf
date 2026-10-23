@@ -1,0 +1,6 @@
+# Preserve the independently recorded extraction/upstream/fixture byte hashes
+# across platforms. CRLF is permitted; Rust formatting is checked separately.
+* -text whitespace=cr-at-eol
+
+# Frozen third-party source and unified patches retain original whitespace.
+vendor/** -whitespace

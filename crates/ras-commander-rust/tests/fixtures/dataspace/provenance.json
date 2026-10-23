@@ -1,0 +1,7 @@
+{
+  "source": "synthetic h5py 3.16.0",
+  "cases": "NULL (h5py.Empty) / scalar / zero-length simple attributes on /g and /d, and the same as datasets under /datasets; NULL bitfield attribute via h5a.create",
+  "files": {
+    "dataspace.h5": "5fcd9adb4db34aeeab7bfd749ffe373f09daea96f806f259ab51247b6ba19bd9"
+  }
+}

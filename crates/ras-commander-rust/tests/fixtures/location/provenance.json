@@ -1,0 +1,21 @@
+{
+  "sources": {
+    "DavisStormSystem.p02.hdf": "8dac3b3c8764bfbd3dd566014035d5a03ccbe2744ca6b0c0deb650c6eab7a9b4",
+    "AustinOyster.p01.hdf": "c9eff69c9c477ea293dcc69aea16fe88da8adf24da388c1e7249fec954da90f8"
+  },
+  "mutations": "first two time rows, renamed network/variables, coincident cell/face/node counts, missing/unknown/contradictory Location, float/missing/short stored IDs, observed singular Cell alias; original literal values retained",
+  "files": {
+    "mesh_mismatch.h5": "a2b7872a8eb892404532ee3c67fc8a3e97f712c7efeda88d550d7ea41740c9e0",
+    "mesh_missing.h5": "045bf77adf980d31abf101dd5cbdf0ebe406299f7e6c2765d0f2cb4406c2cd5f",
+    "mesh_singular.h5": "51b35749dccb27b2d9e52cd6232cf03983108d1195bf9df859e0e063d4049f51",
+    "mesh_unknown.h5": "b3080cb82b71a38f07c9035b012f567349739195b8b4709d77021881112192c6",
+    "mesh_valid.h5": "9de338bb0da072ad84aabc1d895a77943827939d9fdeb44dfe4ab75bc6078e20",
+    "pipe_float_ids.h5": "c970828c70717938afe69d0419a2b027c0c8d5becbcea9769a121d3a227777c2",
+    "pipe_mismatch.h5": "b1779d8daea873db11dc3cf79cf27ffa6f2d87ec2678d802cb9001b5a4934b36",
+    "pipe_missing.h5": "4617b74a99cecadb8ff63c0ccbfeba61d429e9e37dfdbf60efb2dce5cf0a0165",
+    "pipe_missing_table.h5": "e3462dfecec3095b5a349d1335dbf4a6fb812de1d9aef40daa137b7d0e5d8076",
+    "pipe_short_ids.h5": "50e07a20e5575a86d3e492e82f508e212789e432bded13ec8eb68ca90e6d900e",
+    "pipe_unknown.h5": "a69d139ee9060bb0e1779f1252e7272877cf22aeeed55212585abd89af869c85",
+    "pipe_valid.h5": "7135f7173ef9ef4cec49713c11da7383d45fe6beec960063d719d22e8f7a5303"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "fixtures": {
+    "results_present.h5": "034f63afd2b89ec2ad08c5c2695da2fb6f107880440cea7bf13ea9586a3e39d8",
+    "results_present_mismatch.h5": "5951289edc5335f39ffff61467ef7410590f97abfc98458e81c9ffafea947dc6",
+    "results_present_rs_field.h5": "216d0e93daf3e45c7ee976ff36327ca9ba6dbb08629dca8187e2314c5fa15a4f",
+    "packed_only.h5": "8164ced01a25c41bb4ef91be139c84a1c0500714a948a7b34157beccd3c2dc82",
+    "geometry_fallback.h5": "d8a4a520373ddf340a2e1a47ca7c24e248bd0e80479d3274bec68a07fcec00b6",
+    "geometry_fallback_unsteady.h5": "bf30cded73ea07d7492300910dae25a29ac79db7160f3f7e75cd3812bd61c7a9",
+    "both_absent.h5": "fe5735cd20d8bec40b1d61e03dbe9917f670825c94b81e49fdbe6fb6d2fe937d",
+    "count_mismatch.h5": "f89f3ad6370b482719820ee2fea9340f596f02e29d9f9c462cc7161f97cb5efb",
+    "unproven_river.h5": "06c46169536f1f82809d12253f2fc24eacabb0493c26afaa64da2b152238aeca",
+    "unproven_station.h5": "6ba4240c7074d2a00243565024bfe7992f5ef3303a7855d1c7f2fb089b0e80c6",
+    "station_and_rs_disagree.h5": "53fb9968323cbc5c5ea214577868fa87005b5c48aa88c52b960277b7f4242c7e",
+    "case_ambiguous_rs.h5": "6ec010751060ab605ba0918e01c01c02da41a17c56b04e851c5314dc20e53c64",
+    "lowercase_fields.h5": "7ea4ffd3cad4bd625a64b3b7905a3d0ab82a8ee948a795086590fc2dacc65a00"
+  }
+}

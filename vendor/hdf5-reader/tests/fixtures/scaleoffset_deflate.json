@@ -1,0 +1,8 @@
+{
+  "h5py": "3.14.0",
+  "numpy": "2.3.3",
+  "expression": "(np.arange(64,dtype=np.uint32)*np.uint32(0x9e3779b9)).view(np.int32)",
+  "filters": "scaleoffset=0, compression=gzip, chunks=(64,)",
+  "sha256": "7c50e05c8be3f0af472b290ba2c7d930cfb2d05a6093cd646d1fcef43346ecaf",
+  "values_sha256": "9e5714721cfdc777dfa0c56e6524652be9fe91a6fa62a4fea29f7cbe7a77c3e3"
+}

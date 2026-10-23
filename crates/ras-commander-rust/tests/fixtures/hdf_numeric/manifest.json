@@ -1,0 +1,517 @@
+{
+  "source_commit": "4476c709105824cc25a5859b5005e3e545f56390",
+  "source_path": "tests/fixtures/rust_hdf_types",
+  "generator": "Regenerate using make_fixtures.py in Python ras-commander at source_commit; retain libver earliest and (v110,v112). Python is not needed to run these Rust tests.",
+  "source_license": "MIT; ras-commander LICENSE retained at repository root",
+  "oracle": "Independent h5py NumPy native bytes, type rejection classifications preserved from accepted manifest",
+  "fixtures": [
+    {
+      "file": "numeric_types_v1.h5",
+      "sha256": "a99cf7743d329f38d73d896c8fd4243b1210305ffbf27d00642e052937d07d14",
+      "cases": [
+        {
+          "path": "class/bool",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/compound",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/enum_u1",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/f16",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/fixed_string",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/uses_named_i4",
+          "verdict": "exact_or_reject",
+          "shape": [
+            5
+          ],
+          "sha256": "e528f4309e1413e6bc35aea5d8db8519384d2fcc33f9dd5d1126d73f104cf92a"
+        },
+        {
+          "path": "encoding/f32_exponent_bias100",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/f64_vax_order",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/i16_precision12_negative",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/i32_precision24_offset4",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/u16_precision12",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_f4",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_f8",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_i1",
+          "verdict": "exact",
+          "shape": [
+            4
+          ],
+          "sha256": "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8"
+        },
+        {
+          "path": "endian/be_i2",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_i4",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_u8",
+          "verdict": "reject"
+        },
+        {
+          "path": "fill/chunked_partial_i4",
+          "verdict": "exact",
+          "shape": [
+            10,
+            10
+          ],
+          "sha256": "597f6b48dd6c331abd0909297f30de24fb4114d2c416269748bf7de486eaa010"
+        },
+        {
+          "path": "fill/chunked_unwritten_u8",
+          "verdict": "exact",
+          "shape": [
+            5
+          ],
+          "sha256": "6ecd0f0bd7cf53c56d2129820911a26f815949eee418ca46b4f3d7a80cd969a7"
+        },
+        {
+          "path": "fill/contiguous_unwritten_f8",
+          "verdict": "exact",
+          "shape": [
+            6
+          ],
+          "sha256": "41ad5971c8ba82fa4aec02dd0dbb9aaf6a0da061a80484c488c9f09b7d796aa0"
+        },
+        {
+          "path": "filter/fletcher32_i8",
+          "verdict": "exact",
+          "shape": [
+            300
+          ],
+          "sha256": "98e038d3a30a991777ce2f66d2e9b9f377e44b6444635d2b5dd70d38ae78f241"
+        },
+        {
+          "path": "filter/gzip_shuffle_f8",
+          "verdict": "exact",
+          "shape": [
+            40,
+            50
+          ],
+          "sha256": "997f7f6f1621a314ff5473c174a9462ab513f7095881d48367360bb3b0aeb3f2"
+        },
+        {
+          "path": "float/f4_special",
+          "verdict": "exact",
+          "shape": [
+            7
+          ],
+          "sha256": "ee531330ec3bd905c1f0377184930a0db51155362fa5f70ea8b2edf7caee0631"
+        },
+        {
+          "path": "float/f8_special",
+          "verdict": "exact",
+          "shape": [
+            7
+          ],
+          "sha256": "be920268adfb5648bc8c4f7c6f4cd59a6d2aea9099f3b5c90b61edae63cd1ace"
+        },
+        {
+          "path": "header/continued_u4",
+          "verdict": "exact",
+          "shape": [
+            9
+          ],
+          "sha256": "921c803abfa6ac88f44f7ab19198e5c137d1c7183e8e6912757a6263e8dee0a5"
+        },
+        {
+          "path": "int/i1_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "5e1a380160b10e6ef4c9f650f57b6dae9ce4d70c8407f902551943fee37969c6"
+        },
+        {
+          "path": "int/i2_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "5208aec5df7ab19827e2a702aad19bbe0ab8444ffe0a061517aefae8c3c1467f"
+        },
+        {
+          "path": "int/i4_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "01934b958b7325445e336fba43fd6440479c7bccfe7b1a98d45b0b0ad18b1587"
+        },
+        {
+          "path": "int/i64_bounds",
+          "verdict": "exact",
+          "shape": [
+            6
+          ],
+          "sha256": "aac0db76e0c89edd256eadad5509b76f29118305092c4febba50e09c43a4e36b"
+        },
+        {
+          "path": "int/u1_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "ae974d4a74c2371d8cfe842b7aa4f6698de8570526eeb3db1941b0b72311d470"
+        },
+        {
+          "path": "int/u2_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "70bf5dd334d1d0f5346e284db74989aabf87c2c4d7da2aa764b599cac076909b"
+        },
+        {
+          "path": "int/u4_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "8c4a95f406e127070872385c098bdf99817a863af0d963a9ed0e65204f96171e"
+        },
+        {
+          "path": "int/u64_bounds",
+          "verdict": "exact",
+          "shape": [
+            8
+          ],
+          "sha256": "72dddb2eff10c97c1c99c710960e3702a56901accc6a74914350da9fe66b7b36"
+        },
+        {
+          "path": "shape/chunked_2d_f4",
+          "verdict": "exact",
+          "shape": [
+            37,
+            23
+          ],
+          "sha256": "1bead9b6f2092f58e2bfd617a2b6486e778e5f771a63914a1449e5f3b098a98b"
+        },
+        {
+          "path": "shape/empty_1d",
+          "verdict": "exact",
+          "shape": [
+            0
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "shape/empty_2d",
+          "verdict": "exact",
+          "shape": [
+            3,
+            0
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "shape/rank3_i2",
+          "verdict": "exact",
+          "shape": [
+            4,
+            5,
+            6
+          ],
+          "sha256": "881037d206276be1ba7d7cf00e006aed220e1bd6b955da1b75c4903f8afd279d"
+        },
+        {
+          "path": "shape/scalar_f8",
+          "verdict": "exact",
+          "shape": [],
+          "sha256": "3e10a43778297c121ed0ac6548e7da2e81b020867cb7cede04de84f408b825a3"
+        }
+      ]
+    },
+    {
+      "file": "numeric_types_v2.h5",
+      "sha256": "d8b8b55f89cf354110b47afc0ad470178c5dd5ec3a56f0de50da0fdae21f9ce8",
+      "cases": [
+        {
+          "path": "class/bool",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/compound",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/enum_u1",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/f16",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/fixed_string",
+          "verdict": "reject"
+        },
+        {
+          "path": "class/uses_named_i4",
+          "verdict": "exact_or_reject",
+          "shape": [
+            5
+          ],
+          "sha256": "e528f4309e1413e6bc35aea5d8db8519384d2fcc33f9dd5d1126d73f104cf92a"
+        },
+        {
+          "path": "encoding/f32_exponent_bias100",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/f64_vax_order",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/i16_precision12_negative",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/i32_precision24_offset4",
+          "verdict": "reject"
+        },
+        {
+          "path": "encoding/u16_precision12",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_f4",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_f8",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_i1",
+          "verdict": "exact",
+          "shape": [
+            4
+          ],
+          "sha256": "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8"
+        },
+        {
+          "path": "endian/be_i2",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_i4",
+          "verdict": "reject"
+        },
+        {
+          "path": "endian/be_u8",
+          "verdict": "reject"
+        },
+        {
+          "path": "fill/chunked_partial_i4",
+          "verdict": "exact",
+          "shape": [
+            10,
+            10
+          ],
+          "sha256": "597f6b48dd6c331abd0909297f30de24fb4114d2c416269748bf7de486eaa010"
+        },
+        {
+          "path": "fill/chunked_unwritten_u8",
+          "verdict": "exact",
+          "shape": [
+            5
+          ],
+          "sha256": "6ecd0f0bd7cf53c56d2129820911a26f815949eee418ca46b4f3d7a80cd969a7"
+        },
+        {
+          "path": "fill/contiguous_unwritten_f8",
+          "verdict": "exact",
+          "shape": [
+            6
+          ],
+          "sha256": "41ad5971c8ba82fa4aec02dd0dbb9aaf6a0da061a80484c488c9f09b7d796aa0"
+        },
+        {
+          "path": "filter/fletcher32_i8",
+          "verdict": "exact",
+          "shape": [
+            300
+          ],
+          "sha256": "98e038d3a30a991777ce2f66d2e9b9f377e44b6444635d2b5dd70d38ae78f241"
+        },
+        {
+          "path": "filter/gzip_shuffle_f8",
+          "verdict": "exact",
+          "shape": [
+            40,
+            50
+          ],
+          "sha256": "997f7f6f1621a314ff5473c174a9462ab513f7095881d48367360bb3b0aeb3f2"
+        },
+        {
+          "path": "float/f4_special",
+          "verdict": "exact",
+          "shape": [
+            7
+          ],
+          "sha256": "ee531330ec3bd905c1f0377184930a0db51155362fa5f70ea8b2edf7caee0631"
+        },
+        {
+          "path": "float/f8_special",
+          "verdict": "exact",
+          "shape": [
+            7
+          ],
+          "sha256": "be920268adfb5648bc8c4f7c6f4cd59a6d2aea9099f3b5c90b61edae63cd1ace"
+        },
+        {
+          "path": "header/continued_u4",
+          "verdict": "exact",
+          "shape": [
+            9
+          ],
+          "sha256": "921c803abfa6ac88f44f7ab19198e5c137d1c7183e8e6912757a6263e8dee0a5"
+        },
+        {
+          "path": "int/i1_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "5e1a380160b10e6ef4c9f650f57b6dae9ce4d70c8407f902551943fee37969c6"
+        },
+        {
+          "path": "int/i2_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "5208aec5df7ab19827e2a702aad19bbe0ab8444ffe0a061517aefae8c3c1467f"
+        },
+        {
+          "path": "int/i4_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "01934b958b7325445e336fba43fd6440479c7bccfe7b1a98d45b0b0ad18b1587"
+        },
+        {
+          "path": "int/i64_bounds",
+          "verdict": "exact",
+          "shape": [
+            6
+          ],
+          "sha256": "aac0db76e0c89edd256eadad5509b76f29118305092c4febba50e09c43a4e36b"
+        },
+        {
+          "path": "int/u1_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "ae974d4a74c2371d8cfe842b7aa4f6698de8570526eeb3db1941b0b72311d470"
+        },
+        {
+          "path": "int/u2_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "70bf5dd334d1d0f5346e284db74989aabf87c2c4d7da2aa764b599cac076909b"
+        },
+        {
+          "path": "int/u4_bounds",
+          "verdict": "exact",
+          "shape": [
+            3
+          ],
+          "sha256": "8c4a95f406e127070872385c098bdf99817a863af0d963a9ed0e65204f96171e"
+        },
+        {
+          "path": "int/u64_bounds",
+          "verdict": "exact",
+          "shape": [
+            8
+          ],
+          "sha256": "72dddb2eff10c97c1c99c710960e3702a56901accc6a74914350da9fe66b7b36"
+        },
+        {
+          "path": "shape/chunked_2d_f4",
+          "verdict": "exact",
+          "shape": [
+            37,
+            23
+          ],
+          "sha256": "1bead9b6f2092f58e2bfd617a2b6486e778e5f771a63914a1449e5f3b098a98b"
+        },
+        {
+          "path": "shape/empty_1d",
+          "verdict": "exact",
+          "shape": [
+            0
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "shape/empty_2d",
+          "verdict": "exact",
+          "shape": [
+            3,
+            0
+          ],
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "shape/rank3_i2",
+          "verdict": "exact",
+          "shape": [
+            4,
+            5,
+            6
+          ],
+          "sha256": "881037d206276be1ba7d7cf00e006aed220e1bd6b955da1b75c4903f8afd279d"
+        },
+        {
+          "path": "shape/scalar_f8",
+          "verdict": "exact",
+          "shape": [],
+          "sha256": "3e10a43778297c121ed0ac6548e7da2e81b020867cb7cede04de84f408b825a3"
+        }
+      ]
+    }
+  ]
+}

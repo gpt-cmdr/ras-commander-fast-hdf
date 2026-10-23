@@ -1,0 +1,76 @@
+{
+  "generator": "evidence/make_coverage_fixtures.py",
+  "h5py": "3.16.0",
+  "numpy": "2.5.4",
+  "hdf5": "2.0.0",
+  "files": [
+    {
+      "file": "coverage_mesh.h5",
+      "bytes": 63584,
+      "sha256": "ff8172ccd3ff76e643416faa474110e6ba8bf8ff218333e8423dbe8591491117"
+    },
+    {
+      "file": "coverage_mesh_nogeometry.h5",
+      "bytes": 2444,
+      "sha256": "3117dbec3e3c323ffbec8ea95728a55b3e592d5f792ab6fa15151902e0220485"
+    },
+    {
+      "file": "coverage_mesh_nogroups.h5",
+      "bytes": 5784,
+      "sha256": "4ed5ad7c89e14ff367a4a0ac34d2ea85c5b78913d651d62a49fe1eddedef84fd"
+    },
+    {
+      "file": "coverage_mesh_topology.h5",
+      "bytes": 84968,
+      "sha256": "fe4c8cf3e530c513fd13a0b3f5dd637de3c12d94183d2f2e2fa63401d150c3b5"
+    },
+    {
+      "file": "coverage_numeric_v1.h5",
+      "bytes": 147746,
+      "sha256": "b37cdf04017f104bc9368864bb545714e3289f8b3a308577ba7ea36eadebaa4b"
+    },
+    {
+      "file": "coverage_numeric_v2.h5",
+      "bytes": 105845,
+      "sha256": "d8cd7605041a4a40d96c975b279cb14f6c640ede8959b6540a2af4899dda330c"
+    }
+  ],
+  "chunk_info": {
+    "coverage_numeric_v1.h5": {
+      "filt/gzip_i4": {
+        "byte_offset": 5048,
+        "size": 49
+      },
+      "filt/fletcher32_f4": {
+        "byte_offset": 5742,
+        "size": 64
+      },
+      "filt/shuffle_fletcher_gzip_i2": {
+        "byte_offset": 6254,
+        "size": 44
+      },
+      "series/f4_chunked_gzip": {
+        "byte_offset": 59112,
+        "size": 913
+      }
+    },
+    "coverage_numeric_v2.h5": {
+      "filt/gzip_i4": {
+        "byte_offset": 2048,
+        "size": 49
+      },
+      "filt/fletcher32_f4": {
+        "byte_offset": 2742,
+        "size": 64
+      },
+      "filt/shuffle_fletcher_gzip_i2": {
+        "byte_offset": 3254,
+        "size": 44
+      },
+      "series/f4_chunked_gzip": {
+        "byte_offset": 26248,
+        "size": 913
+      }
+    }
+  }
+}

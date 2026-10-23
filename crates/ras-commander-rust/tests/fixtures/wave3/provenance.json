@@ -1,0 +1,11 @@
+{
+  "pipe_source_sha256": "8dac3b3c8764bfbd3dd566014035d5a03ccbe2744ca6b0c0deb650c6eab7a9b4",
+  "source_name": "AustinOyster.p01.hdf",
+  "source_sha256": "c9eff69c9c477ea293dcc69aea16fe88da8adf24da388c1e7249fec954da90f8",
+  "files": {
+    "pipe_bad_ranges.h5": "bfcb85a9143c16789d63ee752d61fce01f99b8ebb257f94fd5de85d4dd6ecb10",
+    "reference_bad_time.h5": "045ef03be0fd7b5f71ad2a35d42c9ffdd7d994d31b541d33dc66644405ae77d6",
+    "reference_excerpt.h5": "ff2cd885662a89d8b6f68285ad4e5748e85a0d6b1b647dd47612470cd1e8ac5a"
+  },
+  "mutation": "reference_bad_time: Flow first two rows, unchanged full block time axis"
+}

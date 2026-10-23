@@ -1,0 +1,44 @@
+{
+ "fixtures": {
+  "all_absent": {
+   "file": "all_absent.h5",
+   "sha256": "91f08219e6bdfe80a63e585417832457550d562b6d449df4899e86a1e4e80a28",
+   "expect": {
+    "rl": "Unavailable",
+    "rp": "Unavailable",
+    "bc": "Unavailable",
+    "cr": "Unavailable"
+   }
+  },
+  "all_present": {
+   "file": "all_present.h5",
+   "sha256": "db7d922a7ab0a236569226c461223b8f6f50344a4a83acb30fec5bf6230111b7",
+   "expect": {
+    "rl": "Unsupported:IdentityLayout",
+    "rp": "Unsupported:Schema",
+    "bc": "Unsupported:IdentityLayout",
+    "cr": "Unsupported:IdentityLayout"
+   }
+  },
+  "all_wrong_type": {
+   "file": "all_wrong_type.h5",
+   "sha256": "d3dfbc184fc9395c727c3a499b0be340fe21bf5613ef3d7bd1972f67c2ffd406",
+   "expect": {
+    "rl": "Corrupt",
+    "rp": "Corrupt",
+    "bc": "Corrupt",
+    "cr": "Corrupt"
+   }
+  },
+  "mixed_isolation": {
+   "file": "mixed_isolation.h5",
+   "sha256": "b718e2457d6ab3781db1dfe3a4f830310d4285a278aee227147a04e5ab971784",
+   "expect": {
+    "rl": "Unsupported:IdentityLayout",
+    "rp": "Corrupt",
+    "bc": "Unsupported:IdentityLayout",
+    "cr": "Unavailable"
+   }
+  }
+ }
+}

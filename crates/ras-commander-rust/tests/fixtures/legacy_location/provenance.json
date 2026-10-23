@@ -1,0 +1,17 @@
+{
+  "source": {
+    "name": "JUL2020_D100RAS.p04.hdf",
+    "sha256": "37d91b9f957f78067cb0a8ae5db7cf3355f9c5d7172cb40e7931c35be78b9683"
+  },
+  "mutations": "first two Time rows (three for rows_mismatch Depth); first 3 cells/4 faces/3 facepoints; Face Velocity/Face Shear Stress renamed to Face Area/Face Manning's n and Depth/Face Velocity to unknown names; Depth/Face Velocity column counts off by one; Location set to Nodes, Faces, a two-element array and an int; real Attributes table (Cell Count 340248) and a copy with Cell Count 2; time_missing drops Base Output Time and keeps the date stamps; cell_geometry_absent drops Cells Center Coordinate; real bitfield Property Tables LC Hash and SPACEPAD Geometry Info/2D Area(s) copied with exact datatypes; original literal values retained",
+  "files": {
+    "cell_geometry_absent.h5": "dc3d72d50d1a25d25a75794e703bb8afc50a20aaba4129e5cc174c767f423df8",
+    "invalid_location.h5": "a86e216db859ade006f64d783990eb97ca351f7312d051107a2ae109ef8aa56e",
+    "physical_count.h5": "4c025f169f7bf5dd9aa224fa92880ca414a1664e5ae9fe2b21b71fff9f9be22d",
+    "physical_count_ok.h5": "d1b695cc2c20e764ddb7884f9da04d0c2f92f8f920e2acf05637f73dda5661a6",
+    "rows_mismatch.h5": "4a9ccda9bf16739d3f07a5a7696d440c92f5ed5e59faf29085320955dbdeaa58",
+    "time_missing.h5": "3934c6b97f2104264a2912668dd92b3a8cfcccb18773d4f69f39c229b4f4ac5f",
+    "valid.h5": "ac616f88a903f9e98767714b7539884733096b5144cd3793ea2b9d63201e58a8",
+    "wrong_count.h5": "45aada4630bd02f3a8388a231ef337a4603eaeedd629f0b73f20eb725cdb65f7"
+  }
+}

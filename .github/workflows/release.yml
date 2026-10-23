@@ -1,0 +1,115 @@
+name: Release
+
+# Push a tag vX.Y.Z on a qualified commit of main (see docs/releasing.md).
+# Windows and Linux wheels build on CLB's self-hosted Slurm runners; macOS on GitHub-hosted.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+env:
+  WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles
+
+jobs:
+  wheels:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows
+            runs_on: '["self-hosted", "Windows", "X64", "clb-ci-windows"]'
+          - os: linux
+            runs_on: '["self-hosted", "Linux", "X64", "clb-ci-linux"]'
+          - os: macos
+            runs_on: '["macos-14"]'
+    runs-on: ${{ fromJSON(matrix.runs_on) }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tag matches the package version
+        shell: bash
+        run: |
+          version=$(grep -m1 '^version' python/pyproject.toml | cut -d'"' -f2)
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v6
+        id: py
+        with:
+          python-version: "3.13"
+      - name: Build wheel
+        shell: bash
+        run: |
+          py="${{ steps.py.outputs.python-path }}"
+          "$py" -m pip install --upgrade pip "maturin>=1.9,<2"
+          args=(--release --locked --manifest-path python/Cargo.toml --features "$WHEEL_FEATURES" --out dist)
+          if [ "$RUNNER_OS" = Linux ]; then
+            "$py" -m pip install ziglang
+            args+=(--zig --compatibility manylinux_2_28)
+          fi
+          "$py" -m maturin build "${args[@]}"
+          "$py" -m pip install --force-reinstall dist/*.whl
+          "$py" -I .github/scripts/smoke_wheel.py dist "$(git rev-parse HEAD)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  sdist:
+    runs-on: ["self-hosted", "Linux", "X64", "clb-ci-linux"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        id: py
+        with:
+          python-version: "3.13"
+      - name: Source distribution
+        shell: bash
+        run: |
+          "${{ steps.py.outputs.python-path }}" -m pip install "maturin>=1.9,<2"
+          "${{ steps.py.outputs.python-path }}" -m maturin sdist --manifest-path python/Cargo.toml --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  github-release:
+    needs: [wheels, sdist]
+    runs-on: ["self-hosted", "Linux", "X64", "clb-ci-linux"]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          body: See [CHANGELOG.md](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/CHANGELOG.md).
+
+  pypi:
+    # GitHub-hosted: the publish action runs in a Docker container. Opt-in: set the repository variable PUBLISH_PYPI to "true" once PyPI trusts
+    # this workflow (trusted publishing) or the pypi environment has PYPI_API_TOKEN.
+    if: vars.PUBLISH_PYPI == 'true'
+    needs: [github-release]
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}

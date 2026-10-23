@@ -1,0 +1,14 @@
+{
+  "sources": {
+    "00-LandCover.hdf": "54dcb43231e406ca15c41637ef7c5df29599b86a60d76c22582b28753c558759",
+    "sediment-2d-Weise.p01.hdf": "38f5121eff7b6217512c92ea881ad5310e4e11d4fd38cc4668a36d553910437a"
+  },
+  "files": {
+    "ambiguous_classes.h5": "f1499d7c688e9e2d3da0e5d89a401b86f4416601021f120d3086e20d97e19050",
+    "scalar_sediment_time.h5": "d826f6b1577894d6bde88bd1ee38331578bec420304062295731601290191f5a"
+  },
+  "mutations": [
+    "duplicate/orphan/unmatched class names",
+    "scalar Time with a real first2x1 sediment result excerpt"
+  ]
+}

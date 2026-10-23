@@ -1,0 +1,34 @@
+site_name: RAS Commander Fast HDF
+site_description: Native (Rust) HEC-RAS HDF engine and Python extension for ras-commander
+site_url: https://rascommander.info/fasthdf/
+repo_url: https://github.com/gpt-cmdr/ras-commander-fast-hdf
+repo_name: gpt-cmdr/ras-commander-fast-hdf
+edit_uri: edit/main/docs/
+theme:
+  name: material
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+nav:
+  - Overview: README.md
+  - Architecture: architecture.md
+  - Python extension: python-extension.md
+  - Rust engine: engine.md
+  - Building: building.md
+  - Testing and qualification: testing.md
+  - Releasing: releasing.md
+  - Reference:
+      - Engine API contract: reference/engine-api.md
+      - Read families: reference/read-families.md
+      - Mesh results: reference/mesh-results.md
+      - 1D geometry and results: reference/one-d.md
+      - Conformance: reference/conformance.md
+      - Extension contract: reference/extension-contract.md
+      - Sessions: reference/sessions.md
+      - Session performance design: reference/perf-session.md
+      - Validation: reference/validation.md
+      - Provenance: reference/provenance.md

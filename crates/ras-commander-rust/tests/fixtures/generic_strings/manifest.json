@@ -1,0 +1,46 @@
+[
+ {
+  "name": "vlen_valid.h5",
+  "expected": "unsupported",
+  "h5py": [
+   "Grass",
+   "Forest",
+   "Urban"
+  ],
+  "sha256": "bba1e69bc082e2c889b5a7bd51f6fe4af067f186abc10611d2e839cd5f797f5b"
+ },
+ {
+  "name": "vlen_missing_object.h5",
+  "expected": "unsupported",
+  "h5py": "OSError",
+  "sha256": "06b09f3940a1a08f07d270ea1a28c62188f6e665068f9d6cab2d19943e7175fc"
+ },
+ {
+  "name": "vlen_high_index.h5",
+  "expected": "unsupported",
+  "h5py": "OSError",
+  "sha256": "49a0b43e9cddb044fe3bfe0a76c41bed6d6a8d00e73fa0b6510069f745a47e46"
+ },
+ {
+  "name": "fixed_nullterm.h5",
+  "expected": "text",
+  "h5py": [
+   "Grass",
+   "Forest",
+   "Urban"
+  ],
+  "sha256": "f8e949f327cd662fc7151ed819d2f55fa8726d6fa9c4670035f8a64e4722c346"
+ },
+ {
+  "name": "fixed_reserved_padding.h5",
+  "expected": "unsupported",
+  "h5py": "OSError",
+  "sha256": "5f58f26bd4a333c4779cc2af7096a284a1edb7347433e6625323cdc1fe2c289a"
+ },
+ {
+  "name": "fixed_reserved_charset.h5",
+  "expected": "unsupported",
+  "h5py": "TypeError",
+  "sha256": "ba92f7b662ff87d8bb609a0ed85f85d6e35378ab3655781e045f793e90650754"
+ }
+]

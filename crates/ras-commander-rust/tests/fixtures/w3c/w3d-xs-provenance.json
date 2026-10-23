@@ -1,0 +1,32 @@
+{
+  "sources": {
+    "wave2_1d\\xs_fields.h5": "b5d2152740646857572e36b8e484be6f6aa3f602b3611c8f6d95463ea1a7c5e2"
+  },
+  "purpose": "Malformed-rank derivatives; preserve readable qualified siblings",
+  "datasets": [
+    {
+      "file": "htab_station_scalar.h5",
+      "shape": [],
+      "literal_f32": 0,
+      "sha256": "d1ffb765f0f1cb9748b8e69402856746dd25379f2b6f214168ff0a9569a16694"
+    },
+    {
+      "file": "htab_station_vector.h5",
+      "shape": [
+        1
+      ],
+      "literal_f32": 0,
+      "sha256": "718ca08f03601a48207a154bf0dfe2a1fb65732fa6d8edc1a217cde8805b4f71"
+    },
+    {
+      "file": "htab_station_rank3.h5",
+      "shape": [
+        1,
+        1,
+        1
+      ],
+      "literal_f32": 0,
+      "sha256": "1068580ac8b4dd4829072c11cd5b71f0c7dd2b40b1d76f18a5f23d6d42da9161"
+    }
+  ]
+}

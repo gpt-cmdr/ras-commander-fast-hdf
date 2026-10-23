@@ -1,0 +1,35 @@
+{
+  "sources": {
+    "w3c\\summary_valid.h5": "7246fd26914953a9384619fcc6cd21f80513a38f46a348b71311433345e672b7"
+  },
+  "purpose": "Malformed summary ranks; preserve readable qualified sibling",
+  "datasets": [
+    {
+      "file": "summary_scalar.h5",
+      "shape": [],
+      "literal_f32": 0,
+      "sha256": "38e4fafaf1e03294bce56a3742b4531f3cb1b2592822fef8be62f976a45fbd0c"
+    },
+    {
+      "file": "summary_rank3.h5",
+      "shape": [
+        1,
+        1,
+        1
+      ],
+      "literal_f32": 0,
+      "sha256": "bd43399af2e17f50fa2442e5849ea5d6a7db0338350be0767a36dc321ebd5edb"
+    },
+    {
+      "file": "summary_rank4.h5",
+      "shape": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "literal_f32": 0,
+      "sha256": "4b87924d80d07f2418c7e676d3872212668eabcaf487de1e875dd5195490beec"
+    }
+  ]
+}
