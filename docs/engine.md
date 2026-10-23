@@ -95,7 +95,7 @@ Qualified on files written by HEC-RAS 5.x, 6.x and 7.0.x. Layouts the corpus
 does not cover are refused (notably cross-section tables written before
 HEC-RAS 5.0.7), so ras-commander reads them with h5py.
 
-## Licences
+## Licenses
 
 MIT. The vendored `hdf5-reader` and `hdf5-core` are modified copies of
 [netcdf-rust](https://github.com/roteiro-gis/netcdf-rust), used under its MIT

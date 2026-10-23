@@ -23,7 +23,8 @@ first.
 
 - **Exact or refuse.** A read either returns exactly what h5py would give
   ras-commander (values, dtype, shape, strings, attributes, order) or returns a
-  typed error (`Unsupported`, `Corrupt`, `Missing`, over budget). Never guess,
+  typed error (`unsupported`, `corrupt`, `not_found`, or `unsupported` with
+  code `resource_limit` when over budget). Never guess,
   silently repair, coerce, skip or turn unavailable data into an empty result.
   In `auto` mode ras-commander falls back to h5py on any refusal, so a refusal is
   always safe and a wrong value never is.
@@ -43,7 +44,7 @@ first.
 
 - `python/src/lib.rs` defines `API_VERSION`. ras-commander uses the extension
   only when `API_VERSION` equals the value it was built against. Any change to
-  a function signature, return shape, error class or behaviour that
+  a function signature, return shape, error class or behavior that
   ras-commander relies on needs a new `API_VERSION` and a matching
   ras-commander change. Additive changes that ras-commander does not call yet
   can keep the version.
@@ -69,9 +70,9 @@ first.
 - Only publicly available models (HEC-RAS example projects, public agency
   data) may be named in code, tests or docs. Never commit client models, client
   file paths, credentials or machine-specific paths.
-- Regenerate the bundled licence notices when dependencies change
+- Regenerate the bundled license notices when dependencies change
   (`python/scripts/generate_third_party_notices.py`, see
   [docs/building.md](docs/building.md)); CI checks they are current.
 - Update [CHANGELOG.md](CHANGELOG.md) and the relevant page in `docs/` with
-  every behaviour change. Write docs for an engineer who uses HEC-RAS: plain
+  every behavior change. Write docs for an engineer who uses HEC-RAS: plain
   language, short sentences, exact terms.

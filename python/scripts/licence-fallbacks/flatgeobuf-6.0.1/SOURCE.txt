@@ -1,0 +1,4 @@
+The published flatgeobuf 6.0.1 crate package ships no licence file (BSD-2-Clause declared).
+These texts are copied unmodified from https://github.com/flatgeobuf/flatgeobuf at commit 080544c02ffae9ef2d724f7dec70f6953a2a8471 (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/flatgeobuf/flatgeobuf/080544c02ffae9ef2d724f7dec70f6953a2a8471/LICENSE
+Retrieved 2026-10-23.

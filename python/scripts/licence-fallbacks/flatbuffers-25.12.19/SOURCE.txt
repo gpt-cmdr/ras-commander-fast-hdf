@@ -1,0 +1,4 @@
+The published flatbuffers 25.12.19 crate package ships no licence file (Apache-2.0 declared).
+These texts are copied unmodified from https://github.com/google/flatbuffers at commit 7e163021e59cca4f8e1e35a7c828b5c6b7915953 (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/google/flatbuffers/7e163021e59cca4f8e1e35a7c828b5c6b7915953/LICENSE
+Retrieved 2026-10-23.

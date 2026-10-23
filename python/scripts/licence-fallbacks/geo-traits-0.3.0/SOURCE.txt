@@ -1,0 +1,5 @@
+The published geo-traits 0.3.0 crate package ships no licence file (MIT OR Apache-2.0 declared).
+These texts are copied unmodified from https://github.com/georust/geo at commit 4516cec59e0cbd832ac7f0e00204758e6f8bd3e4 (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/georust/geo/4516cec59e0cbd832ac7f0e00204758e6f8bd3e4/LICENSE-MIT
+  https://raw.githubusercontent.com/georust/geo/4516cec59e0cbd832ac7f0e00204758e6f8bd3e4/LICENSE-APACHE
+Retrieved 2026-10-23.

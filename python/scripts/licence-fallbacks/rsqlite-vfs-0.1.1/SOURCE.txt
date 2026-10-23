@@ -1,0 +1,4 @@
+The published rsqlite-vfs 0.1.1 crate package ships no licence file (MIT declared).
+These texts are copied unmodified from https://github.com/Spxg/sqlite-wasm-rs at commit 1bb309784f25c401ddf95131dcde4c4cdad7aee7 (the commit recorded in the crate's .cargo_vcs_info.json), path crates/rsqlite-vfs; the crate manifest declares no repository:
+  https://raw.githubusercontent.com/Spxg/sqlite-wasm-rs/1bb309784f25c401ddf95131dcde4c4cdad7aee7/LICENSE
+Retrieved 2026-10-23.

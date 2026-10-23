@@ -1,0 +1,5 @@
+The published geoarrow-array 0.9.0 crate package ships no licence file (MIT OR Apache-2.0 declared).
+These texts are copied unmodified from https://github.com/geoarrow/geoarrow-rs at commit 02985efd113aa5d5678a9eecbed1551a00bbc7f4 (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/geoarrow/geoarrow-rs/02985efd113aa5d5678a9eecbed1551a00bbc7f4/LICENSE_MIT
+  https://raw.githubusercontent.com/geoarrow/geoarrow-rs/02985efd113aa5d5678a9eecbed1551a00bbc7f4/LICENSE_APACHE
+Retrieved 2026-10-23.

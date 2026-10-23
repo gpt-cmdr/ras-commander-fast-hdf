@@ -1,0 +1,4 @@
+The published hotpath-macros 0.23.3 crate package ships no licence file (MIT declared).
+These texts are copied unmodified from https://github.com/pawurb/hotpath-rs at commit c7b64cadb337a0b79e5b1ddcbc1fbc9fb47d1b3e (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/pawurb/hotpath-rs/c7b64cadb337a0b79e5b1ddcbc1fbc9fb47d1b3e/LICENSE.txt
+Retrieved 2026-10-23.

@@ -5,7 +5,7 @@
 | Version | Where | Changes when |
 |---|---|---|
 | Package version (`0.1.0`) | `python/Cargo.toml` and `python/pyproject.toml` | Every release (semantic versioning; 0.x while the contract settles). |
-| Extension `API_VERSION` (11) | `python/src/lib.rs` | A change ras-commander must know about: a signature, return shape, error class or behaviour it relies on. |
+| Extension `API_VERSION` (11) | `python/src/lib.rs` | A change ras-commander must know about: a signature, return shape, error class or behavior it relies on. |
 | Engine `API_VERSION` (10) | `crates/ras-commander-rust/src/api.rs` | A change to the Rust engine's public surface. |
 | `TEXT_API_VERSION` (1) | `python/src/text_bindings.rs` | A change to the RAS text bindings. |
 
@@ -18,8 +18,8 @@ first, then the ras-commander version that requires it. A release that keeps
 
 1. Update `CHANGELOG.md` and the version in `python/Cargo.toml` and
    `python/pyproject.toml`.
-2. Regenerate the licence notices if `Cargo.lock` changed
-   ([Building](building.md#licence-notices)).
+2. Regenerate the license notices if `Cargo.lock` changed
+   ([Building](building.md#license-notices)).
 3. Merge to `main` with CI green.
 4. Qualify the CI-built wheels for Windows and Linux with ras-commander
    ([Testing](testing.md#qualifying-a-wheel-with-ras-commander)).

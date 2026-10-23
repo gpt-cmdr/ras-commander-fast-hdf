@@ -1,8 +1,12 @@
 # Architecture
 
+This page describes how the engine, the Python extension and ras-commander
+divide the work, how a read passes between them, and the rules that keep
+native results identical to h5py.
+
 ## Three layers
 
-```
+```text
 ras-commander (Python, separate repository)
   Hdf* classes ── public API, unchanged
   ras_commander/fast_hdf.py ── routing: auto | h5py | native, sessions, fallback

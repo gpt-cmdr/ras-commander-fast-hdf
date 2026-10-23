@@ -17,7 +17,7 @@ are slow and can fail on file locks.
 pip install "maturin>=1.9,<2"
 maturin build --release --locked \
     --manifest-path python/Cargo.toml \
-    --features extension-module,exports-all,exports-pmtiles
+    --features extension-module,exports-geojson,exports-flatgeobuf,exports-geoparquet,exports-pmtiles
 pip install --force-reinstall target/wheels/ras_commander_fast_hdf-*.whl
 python -c "import ras_commander_fast_hdf as n; print(n.__version__, n.API_VERSION, n.ENGINE_COMMIT)"
 ```
@@ -30,10 +30,11 @@ and later.
 |---|---|
 | `extension-module` | Required for a Python wheel (maturin enables it). |
 | `exports-pmtiles` | `export_pmtiles_ipc_file`. |
-| `exports-all` | GeoJSON, FlatGeobuf, GeoParquet and GeoPackage writers (`export_ipc_file`, `validate_export_wkb`). |
+| `exports-geojson`, `exports-flatgeobuf`, `exports-geoparquet` | GeoJSON, FlatGeobuf and GeoParquet writers (`export_ipc_file`, `validate_export_wkb`). |
+| `exports-geopackage` | GeoPackage writer. **Not in release wheels:** its `epsg-utils` dependency publishes no licence text and embeds EPSG data under IOGP terms. Asking a release wheel for `gpkg` fails with "writer feature is disabled". `exports-all` includes it. |
 
 For development, `maturin develop --release --manifest-path python/Cargo.toml
---features extension-module,exports-all,exports-pmtiles` builds and installs
+--features extension-module,exports-geojson,exports-flatgeobuf,exports-geoparquet,exports-pmtiles` builds and installs
 into the active virtual environment in one step.
 
 `ENGINE_COMMIT` comes from `git rev-parse HEAD` at build time. To build from a
@@ -48,7 +49,7 @@ the linker (no Docker needed):
 ```bash
 pip install ziglang
 maturin build --release --locked --manifest-path python/Cargo.toml \
-    --features extension-module,exports-all,exports-pmtiles \
+    --features extension-module,exports-geojson,exports-flatgeobuf,exports-geoparquet,exports-pmtiles \
     --zig --compatibility manylinux_2_28
 ```
 
@@ -69,7 +70,7 @@ cargo build --release --all-features          # engine with every feature
 cargo build --release --no-default-features --features catalog   # std-only catalog
 ```
 
-## Licence notices
+## License notices
 
 Two notice files must stay current; CI checks both.
 
@@ -79,10 +80,11 @@ python scripts/generate_third_party_notices.py --title "ras-commander-rust (all 
 
 # Wheel
 cd python
-python scripts/generate_third_party_notices.py --features extension-module \
-    --own-licence ../LICENSE --title "ras-commander-fast-hdf wheel (default features)"
+python scripts/generate_third_party_notices.py \
+    --features extension-module,exports-geojson,exports-flatgeobuf,exports-geoparquet,exports-pmtiles \
+    --own-licence ../LICENSE --title "ras-commander-fast-hdf wheel (release features)"
 ```
 
-Run them after any `Cargo.lock` change. A crate whose package ships no licence
+Run them after any `Cargo.lock` change. A crate whose package ships no license
 file needs its upstream texts under `scripts/licence-fallbacks/<crate>-<version>/`
 with a `SOURCE.txt`.

@@ -91,12 +91,13 @@ reference gives arguments and return shapes.
 | `assemble_cells(face_points, face_endpoints, face_perimeter_info, face_perimeter_values, cell_face_info, cell_face_values, threads=None, *, strict=True, return_diagnostics=False)` | Builds 2D cell polygons from the stored face topology: packed coordinates, ring offsets and cell IDs, in the same ring and vertex order as ras-commander's Python polygonizer. |
 | `assemble_rings`, `face_graph`, `NativeAnalysis` | Fluvial/pluvial boundary and polygon kernels (`HdfFluvialPluvial`). |
 | `write_pmtiles(layers, output, min_zoom, max_zoom, threads=None)` | Writes mesh polygons to a PMTiles vector tile archive. |
-| `export_ipc_file`, `export_pmtiles_ipc_file`, `validate_export_wkb` | Vector exports (GeoJSON, FlatGeobuf, GeoParquet, GeoPackage, PMTiles) from Arrow IPC; present when built with the `exports-*` features. |
+| `export_ipc_file`, `export_pmtiles_ipc_file`, `validate_export_wkb` | Vector exports (GeoJSON, FlatGeobuf, GeoParquet, PMTiles) from Arrow IPC; present when built with the `exports-*` features. GeoPackage is not in release wheels (see [Building](building.md)). |
 | `text_index`, `text_geometry_index`, `text_geometry_edit`, `text_apply_edits` | Fast parsing and editing of HEC-RAS text files (`ras_commander.fast_text`). |
 
 ## Threads and the GIL
 
 Reads release the GIL while the engine works. `threads=None` uses the number
-of available CPUs, at most 8; `threads=n` (1 to 1024) uses `n`. Thread pools are
-shared per size. `parallel=False` reads serially. Input NumPy arrays are copied before the GIL
-is released, so concurrent mutation by Python cannot affect a running kernel.
+of available CPUs, at most 8; `threads=n` (1 to 1024) uses `n`. Thread pools
+are shared per size. `parallel=False` reads serially. Input NumPy arrays are
+copied before the GIL is released, so concurrent mutation by Python cannot
+affect a running kernel.

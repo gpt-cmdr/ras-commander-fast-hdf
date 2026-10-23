@@ -1,0 +1,7 @@
+The published r-efi 6.0.0 crate package ships no LICENSE file (MIT OR Apache-2.0 OR LGPL-2.1-or-later declared);
+its README points to the AUTHORS file, which holds the licence statement, the MIT and Apache-2.0 notices and the copyright holders.
+LICENSE-AUTHORS is that AUTHORS file copied unmodified (renamed only so the notices generator picks it up) from
+https://github.com/r-efi/r-efi at commit 7e1b0322d31d625f81a5656096330934f9cd835d (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/r-efi/r-efi/7e1b0322d31d625f81a5656096330934f9cd835d/AUTHORS
+It is byte-identical to the AUTHORS file in the published crate.
+Retrieved 2026-10-23.

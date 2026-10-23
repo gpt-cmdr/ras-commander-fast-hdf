@@ -1,0 +1,5 @@
+The published geozero 0.15.1 crate package ships no licence file (MIT OR Apache-2.0 declared).
+These texts are copied unmodified from https://github.com/georust/geozero at commit 6889c5dcaa116fb46b2fa95dbcb9fb71512838be (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/georust/geozero/6889c5dcaa116fb46b2fa95dbcb9fb71512838be/LICENSE-MIT
+  https://raw.githubusercontent.com/georust/geozero/6889c5dcaa116fb46b2fa95dbcb9fb71512838be/LICENSE-APACHE
+Retrieved 2026-10-23.

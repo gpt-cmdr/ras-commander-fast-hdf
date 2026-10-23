@@ -1,0 +1,5 @@
+The published geopackage 0.10.0 crate package ships no licence file (MIT OR Apache-2.0 declared).
+These texts are copied unmodified from https://github.com/urschrei/geopackage at tag v0.10.0 (commit ea5c3040b073b621b44053d486af04116616c319; the crate has no .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/urschrei/geopackage/ea5c3040b073b621b44053d486af04116616c319/LICENSE-MIT
+  https://raw.githubusercontent.com/urschrei/geopackage/ea5c3040b073b621b44053d486af04116616c319/LICENSE-APACHE
+Retrieved 2026-10-23.

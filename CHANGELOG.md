@@ -6,15 +6,18 @@ First public release. The engine (previously the private
 `ras-commander-rust` repository) and the Python extension (previously
 `rust/fast-hdf` in ras-commander) now live together in this repository.
 
-- Extension `API_VERSION` 11, engine `API_VERSION` 10. Works with the first
-  ras-commander release after 0.106.1.
+- Extension `API_VERSION` 11, engine `API_VERSION` 10. Works with
+  ras-commander 0.107.0 and later.
 - Native reads for ras-commander's plan results, geometry, terrain and
   land-cover HDF access: numeric, compound and fixed-length string datasets,
   attributes, 2D mesh geometry, summaries, time series and boundary
   conditions, cross sections and 1D results, structures, reference lines and
   points, terrain modifications and stored classification tables.
 - Native 2D cell polygon assembly, fluvial/pluvial kernels, PMTiles and vector
-  exports, and RAS text-file parsing.
+  exports (GeoJSON, FlatGeobuf, GeoParquet), and RAS text-file parsing.
+- Release wheels do not include the GeoPackage writer: its `epsg-utils`
+  dependency publishes no licence text. `export_arrow(format="gpkg")` reports
+  "writer feature is disabled".
 - Qualified identical to h5py through ras-commander on 137 HEC-RAS 5.x–7.x
   files (3,800 method × file pairs in three modes) and 1,428 notebook calls,
   on Windows and Linux.

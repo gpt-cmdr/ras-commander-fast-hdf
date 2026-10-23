@@ -1,0 +1,5 @@
+The published objc2-io-kit 0.3.2 crate package ships no licence file (Zlib OR Apache-2.0 OR MIT declared).
+These texts are copied unmodified from https://github.com/madsmtm/objc2 at commit 7b1abfd750a2cacaea71d6a56ecfb83cb7de560b (the commit recorded in the crate's .cargo_vcs_info.json):
+  https://raw.githubusercontent.com/madsmtm/objc2/7b1abfd750a2cacaea71d6a56ecfb83cb7de560b/LICENSE.md
+Retrieved 2026-10-23.
+Upstream ships only this LICENSE.md (a licensing statement that links to the Zlib, Apache-2.0 and MIT texts); the repository contains no other licence file at this commit.

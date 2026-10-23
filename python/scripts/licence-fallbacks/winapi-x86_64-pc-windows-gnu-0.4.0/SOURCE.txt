@@ -1,0 +1,5 @@
+The published winapi-x86_64-pc-windows-gnu 0.4.0 crate package ships no licence file (MIT/Apache-2.0 declared).
+These texts are copied unmodified from https://github.com/retep998/winapi-rs at commit b76bbbf40dbfe5bec35a566caa70fd852824213a ("Publish 0.3.5"; the crate has no .cargo_vcs_info.json and no tag; this is the last commit before licence files were added to the import-library crates, with winapi-x86_64-pc-windows-gnu at version 0.4.0 and the same Cargo.toml include list as the published package):
+  https://raw.githubusercontent.com/retep998/winapi-rs/b76bbbf40dbfe5bec35a566caa70fd852824213a/LICENSE-MIT
+  https://raw.githubusercontent.com/retep998/winapi-rs/b76bbbf40dbfe5bec35a566caa70fd852824213a/LICENSE-APACHE
+Retrieved 2026-10-23.

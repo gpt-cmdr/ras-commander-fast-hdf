@@ -1,11 +1,14 @@
 # Performance
 
-How fast ras-commander's public methods are with the native engine compared
-with h5py, measured for the 0.1.0 release.
+This page compares the speed of ras-commander's public methods with the
+native engine and with h5py, measured for the 0.1.0 release.
 
-![Native speed-up by public method](images/speedup-by-method-light.svg)
+The first chart shows the native speed-up for each benchmarked method; the
+second shows how the cell-polygon gain changes with mesh size.
 
-![HdfMesh.get_mesh_cell_polygons: h5py vs native](images/mesh-polygons-light.svg)
+![Dot chart of the native speed-up for 19 public methods: cell polygons 18.3×, mesh time series 5.1× to 7.5×, fluvial-pluvial boundary 1.5×, most bulk summary reads about 1.0×, and small reads 0.4× to 0.9×.](images/speedup-by-method-light.svg)
+
+![Bar chart: HdfMesh.get_mesh_cell_polygons takes 17.2 s with h5py and 0.89 s natively on a 340,246-cell mesh, 4.34 s and 0.26 s on 87,039 cells, 0.28 s and 0.07 s on 4,425 cells, 0.23 s and 0.06 s on 3,314 cells.](images/mesh-polygons-light.svg)
 
 ## Results
 
@@ -39,12 +42,12 @@ the same timings within noise. Speed-up is h5py time divided by native time.
   **1.07×** faster on the first call in a process and **1.30×** faster on
   repeat calls.
 - Every case returned identical data in `h5py`, `auto` and `native` mode: the
-  benchmark hashed the normalised result (values, dtypes, columns, index, CRS
+  benchmark hashed the normalized result (values, dtypes, columns, index, CRS
   and geometry) of every run. There were 0 errors in 600 runs.
 - Results with few rows can still be expensive: `get_mesh_cells_timeseries`
   returns one cell's series but must locate it in a large compressed dataset.
 
-## Method
+## Benchmark method
 
 - **Harness:** each measurement runs in a fresh Python process. The mode is
   chosen only through `RAS_COMMANDER_FAST_HDF` (`h5py`, `auto`, `native`). The
@@ -52,7 +55,7 @@ the same timings within noise. Speed-up is h5py time divided by native time.
   drift affects them equally. Each process records the first call and two
   repeat calls.
 - **Cases:** 19 public methods on 7 HEC-RAS result files, from a 3,314-cell
-  mesh to a 340,248-cell mesh with 705,332 faces.
+  mesh to a mesh of about 340,000 cells and 705,000 faces.
 - **Machine:** Windows 11, Intel Core i7-11700K (8 logical CPUs available to
   the VM), 48 GB RAM, Python 3.13, h5py 3.14 (HDF5 1.14.6), numpy 2.3, pandas
   2.3. No other heavy process ran during the 31-minute run (CPU monitored
@@ -71,4 +74,4 @@ the same timings within noise. Speed-up is h5py time divided by native time.
   with zlib, and that dominates.
 - **Small losses** on small reads come from a fixed cost per native read
   (opening the session, proving the layout). They are a few milliseconds per
-  call and are the main target for future optimisation.
+  call and are the main target for future optimization.

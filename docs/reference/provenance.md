@@ -30,17 +30,17 @@ Apache-2.0`, copyright Ian Norden), based on upstream commit
 filtered fixed-array width fixes to read the qualified HEC-RAS corpus. Generic reader
 changes are kept generic: no RAS-specific parsing is hidden in the reader.
 
-- [`vendor/hdf5-reader/PROVENANCE.md`](../../vendor/hdf5-reader/PROVENANCE.md) is the
+- [`vendor/hdf5-reader/PROVENANCE.md`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/hdf5-reader/PROVENANCE.md) is the
   change notice for every modified file.
-- [`vendor/LOCAL_PATCHES.md`](../../vendor/LOCAL_PATCHES.md) summarises the patch series.
-- [`vendor/PROVENANCE.json`](../../vendor/PROVENANCE.json) records the upstream, base
+- [`vendor/LOCAL_PATCHES.md`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/LOCAL_PATCHES.md) summarises the patch series.
+- [`vendor/PROVENANCE.json`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/PROVENANCE.json) records the upstream, base
   commit and per-file SHA-256 hashes, which `scripts/prepare-reader.ps1` verifies.
 
 ## Copyright and licence notices
 
-- [`LICENSE`](../../LICENSE): MIT, copyright CLB Engineering Corporation. This covers the
+- [`LICENSE`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/LICENSE): MIT, copyright CLB Engineering Corporation. This covers the
   repository as a whole.
-- [`python/licenses/ras-commander-LICENSE.txt`](../../python/licenses/ras-commander-LICENSE.txt):
+- [`python/licenses/ras-commander-LICENSE.txt`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/python/licenses/ras-commander-LICENSE.txt):
   MIT, copyright William M. Katzenmeyer. This is the original ras-commander notice and is
   retained for the code extracted from ras-commander.
 - `vendor/LICENSE-MIT` and `vendor/LICENSE-APACHE`: the upstream licences of the vendored

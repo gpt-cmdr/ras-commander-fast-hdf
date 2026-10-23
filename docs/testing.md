@@ -50,7 +50,7 @@ environment with a ras-commander checkout and run them in each mode.
 | `rust_route_extents`, `rust_route_nonhdf` | Spatial extents, and project/text readers that touch HDF indirectly. |
 | `rust_fluvial_public` and `test_rust_fluvial_contract.py` | Fluvial/pluvial boundary and polygons, native against the reference. |
 | `rust_mesh_quarantine` | Mesh polygons on damaged and unusual topology. |
-| `rust_consumer_contract`, `rust_engine_bridge`, `rust_distribution` | The extension contract, panic containment, licence bundle and an installed-wheel gate. |
+| `rust_consumer_contract`, `rust_engine_bridge`, `rust_distribution` | The extension contract, panic containment, license bundle and an installed-wheel gate. |
 | the rest of `tests/` with `RAS_COMMANDER_FAST_HDF=auto` and `=h5py` | The ordinary suite gives the same results in both modes. |
 
 The route suites take their files from JSON manifests:
@@ -89,4 +89,4 @@ file pairs) and 1,428 notebook calls, on Windows and Linux, with CPython 3.10,
 Benchmarks are run only on a quiet machine, with each measurement in a fresh
 process and the three modes interleaved. Every benchmark row also checks that
 all three modes return identical data. Report whether the OS file cache was
-warm; it usually is, and it favours neither mode.
+warm; it usually is, and it favors neither mode.
