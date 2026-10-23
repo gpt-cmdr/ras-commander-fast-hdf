@@ -47,6 +47,18 @@ jobs:
       - name: Cargo on PATH
         shell: bash
         run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
+      - name: Diagnose toolchain (temporary)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          echo "CARGO_HOME=$CARGO_HOME RUSTUP_HOME=$RUSTUP_HOME HOME=$HOME"
+          echo "$PATH" | tr ':' '
+' | grep -i -E "rust|cargo" || true
+          ls -la "$CARGO_HOME/bin" || true
+          command -v rustup cargo rustc || true
+          rustup show || true
+          cmd //c "where cargo" || true
+          pwsh -NoProfile -Command 'Get-Command cargo -ErrorAction SilentlyContinue | Format-List Source; $env:PATH -split ";" | Select-String -Pattern "rust|cargo"' || true
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
