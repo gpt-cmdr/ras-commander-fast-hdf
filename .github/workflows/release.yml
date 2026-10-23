@@ -34,6 +34,11 @@ jobs:
           version=$(grep -m1 '^version' python/pyproject.toml | cut -d'"' -f2)
           test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
       - uses: dtolnay/rust-toolchain@stable
+      # Self-hosted Windows images can preset CARGO_HOME with rustup already
+      # installed; the toolchain action then skips adding Cargo's bin to PATH.
+      - name: Cargo on PATH
+        shell: bash
+        run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
       - uses: actions/setup-python@v6
         id: py
         with:

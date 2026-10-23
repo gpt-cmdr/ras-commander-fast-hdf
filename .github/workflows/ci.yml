@@ -42,6 +42,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      # Self-hosted Windows images can preset CARGO_HOME with rustup already
+      # installed; the toolchain action then skips adding Cargo's bin to PATH.
+      - name: Cargo on PATH
+        shell: bash
+        run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
