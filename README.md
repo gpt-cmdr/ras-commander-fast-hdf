@@ -61,13 +61,53 @@ ran natively. See [Architecture](docs/architecture.md).
   137 HEC-RAS 5.x–7.x result and geometry files: 3,800 method × file pairs in
   three modes, plus 1,428 calls replayed from the example notebooks. Methods
   the corpus has not exercised natively stay on h5py in `auto` mode.
-- **Speed** (ras-commander public calls, warm OS cache): 2D cell polygons about
-  12× faster (a 340,000-cell mesh drops from 17.2 s to 0.9 s), mesh time series
-  3–5×, all calls 1.3× on repeat. Small single reads are a few milliseconds
-  slower because of a fixed per-read setup cost.
+- **Speed:** 2D cell polygons 4–19× faster, depending on mesh size; mesh time
+  series 2–7× on large meshes; small single reads a few milliseconds slower.
+  See [Performance](#performance).
 - **Not supported natively** (ras-commander uses h5py for these in `auto`):
   cross-section tables written before HEC-RAS 5.0.7, and names containing
   non-ASCII characters.
+
+## Performance
+
+Timed through ras-commander's public methods on a quiet Windows workstation:
+50 method × file cases, 600 fresh processes, h5py mode against the default
+`auto` mode. Every case returned identical data in `h5py`, `auto` and `native`
+mode.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/mesh-polygons-dark.svg">
+  <img alt="Bar chart: HdfMesh.get_mesh_cell_polygons takes 17.2 s with h5py and 0.89 s natively on a 340,246-cell mesh, 4.34 s and 0.26 s on 87,039 cells, 0.28 s and 0.07 s on 4,425 cells, 0.23 s and 0.06 s on 3,314 cells." src="docs/images/mesh-polygons-light.svg" width="760">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/speedup-by-method-dark.svg">
+  <img alt="Dot chart of the native speed-up for 19 public methods: cell polygons 18.3×, mesh time series 5.1× to 7.5×, fluvial-pluvial boundary 1.5×, most bulk summary reads about 1.0×, and small reads 0.4× to 0.9×." src="docs/images/speedup-by-method-light.svg" width="760">
+</picture>
+
+Largest gains, repeat calls on the heaviest test file for each method:
+
+| Method | Result rows | h5py | Native | Speed-up |
+|---|---:|---:|---:|---:|
+| `HdfMesh.get_mesh_cell_polygons` | 340,246 | 17,145 ms | 939 ms | 18.3× |
+| `HdfResultsMesh.get_mesh_cells_timeseries` (water surface) | 1 | 1,372 ms | 184 ms | 7.5× |
+| `HdfResultsMesh.get_mesh_timeseries` (water surface) | 193 | 1,415 ms | 213 ms | 6.6× |
+| `HdfResultsMesh.get_mesh_timeseries` (face velocity) | 865 | 1,486 ms | 291 ms | 5.1× |
+| `HdfFluvialPluvial.calculate_fluvial_pluvial_boundary` | 4,569 | 10,452 ms | 6,831 ms | 1.5× |
+
+- **Where it helps:** building 2D cell polygons, and reading time series or
+  sparse cells from large compressed meshes.
+- **Where it doesn't:** whole-array summaries such as `get_mesh_max_ws` run at
+  about the same speed (within 6%), because both paths spend their time
+  decompressing the same data.
+- **Where it costs a little:** small reads (a few rows or one table) are up to
+  16 ms slower on repeat calls, and up to about 0.13 s slower on the first call
+  in a process, because each native read has a fixed setup cost. Across all
+  50 cases the native engine is 1.07× faster on the first call in a process and
+  1.30× on repeat calls (geometric mean).
+
+Timings are with the files already in the operating system's cache. The full
+table, method and environment are in [docs/performance.md](docs/performance.md).
 
 ## Building from source
 

@@ -18,6 +18,7 @@ nav:
   - Architecture: architecture.md
   - Python extension: python-extension.md
   - Rust engine: engine.md
+  - Performance: performance.md
   - Building: building.md
   - Testing and qualification: testing.md
   - Releasing: releasing.md
