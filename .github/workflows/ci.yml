@@ -20,7 +20,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  WHEEL_FEATURES: extension-module,exports-geojson,exports-flatgeobuf,exports-geoparquet,exports-pmtiles
+  WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles
 
 jobs:
   test:
@@ -86,7 +86,7 @@ jobs:
         shell: bash
         run: |
           "${{ steps.py313.outputs.python-path }}" scripts/generate_third_party_notices.py --title "ras-commander-rust (all features)" --check
-          cd python && "${{ steps.py313.outputs.python-path }}" scripts/generate_third_party_notices.py --features extension-module,exports-geojson,exports-flatgeobuf,exports-geoparquet,exports-pmtiles --own-licence ../LICENSE --title "ras-commander-fast-hdf wheel (release features)" --check
+          cd python && "${{ steps.py313.outputs.python-path }}" scripts/generate_third_party_notices.py --features extension-module,exports-all,exports-pmtiles --own-licence ../LICENSE --title "ras-commander-fast-hdf wheel (release features)" --check
       - name: Build wheel
         shell: bash
         run: |

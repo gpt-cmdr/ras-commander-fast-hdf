@@ -1,0 +1,6 @@
+The published epsg-utils 0.0.3 crate package ships no licence file, and the
+upstream repository https://github.com/yutannihilation/epsg-utils-rs has none
+at tag v0.0.3 (e0a1ea0b) or on main (checked 2026-10-23). Its Cargo manifest
+declares license = "MIT". LICENSE-MIT here is the standard MIT License text,
+reproduced on the basis of that declaration, with a note explaining this.
+Replace it with the upstream text if the author publishes one.

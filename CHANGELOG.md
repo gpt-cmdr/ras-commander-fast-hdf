@@ -14,10 +14,11 @@ First public release. The engine (previously the private
   conditions, cross sections and 1D results, structures, reference lines and
   points, terrain modifications and stored classification tables.
 - Native 2D cell polygon assembly, fluvial/pluvial kernels, PMTiles and vector
-  exports (GeoJSON, FlatGeobuf, GeoParquet), and RAS text-file parsing.
-- Release wheels do not include the GeoPackage writer: its `epsg-utils`
-  dependency publishes no licence text. `export_arrow(format="gpkg")` reports
-  "writer feature is disabled".
+  exports (GeoJSON, FlatGeobuf, GeoParquet, GeoPackage), and RAS text-file
+  parsing.
+- The wheel's `THIRD-PARTY-NOTICES.md` covers every bundled crate. `epsg-utils`
+  (used by the GeoPackage writer) declares MIT but publishes no licence text;
+  its notice reproduces the MIT text with an explanation.
 - Qualified identical to h5py through ras-commander on 137 HEC-RAS 5.x–7.x
   files (3,800 method × file pairs in three modes) and 1,428 notebook calls,
   on Windows and Linux.

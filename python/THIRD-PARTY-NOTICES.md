@@ -30,7 +30,7 @@ SOFTWARE.
 
 ## Components
 
-238 components.
+262 components.
 
 | Component | Version | Licence (SPDX, as declared) | Source | Licence texts |
 |---|---|---|---|---|
@@ -87,8 +87,10 @@ SOFTWARE.
 | dyn-clone | 1.0.20 | MIT OR Apache-2.0 | https://github.com/dtolnay/dyn-clone | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
 | earcutr | 0.4.3 | ISC | https://github.com/frewsxcv/earcutr/ | [ac0e50e523dd](#licence-ac0e50e523dd) |
 | either | 1.19.0 | MIT OR Apache-2.0 | https://github.com/rayon-rs/either | [143368af9701](#licence-143368af9701), [7576269ea71f](#licence-7576269ea71f) |
+| epsg-utils | 0.0.3 | MIT | https://github.com/yutannihilation/epsg-utils-rs/ | [4f2af8d9de1d](#licence-4f2af8d9de1d) |
 | equivalent | 1.0.3 | Apache-2.0 OR MIT | https://github.com/indexmap-rs/equivalent | [143368af9701](#licence-143368af9701), [7365cc8878a1](#licence-7365cc8878a1) |
 | errno | 0.3.14 | MIT OR Apache-2.0 | https://github.com/lambda-fairy/rust-errno | [143368af9701](#licence-143368af9701), [8764a5976757](#licence-8764a5976757) |
+| fallible-iterator | 0.3.0 | MIT/Apache-2.0 | https://github.com/sfackler/rust-fallible-iterator | [a8ad31b1c3f4](#licence-a8ad31b1c3f4), [0816e154b159](#licence-0816e154b159) |
 | fallible-streaming-iterator | 0.1.9 | MIT/Apache-2.0 | https://github.com/sfackler/fallible-streaming-iterator | [a8ad31b1c3f4](#licence-a8ad31b1c3f4), [8dcec5569a9b](#licence-8dcec5569a9b) |
 | fastrand | 2.5.0 | Apache-2.0 OR MIT | https://github.com/smol-rs/fastrand | [143368af9701](#licence-143368af9701), [23f18e03dc49](#licence-23f18e03dc49) |
 | flatbuffers | 24.12.23 | Apache-2.0 | https://github.com/google/flatbuffers | [50e6751797c5](#licence-50e6751797c5) |
@@ -111,6 +113,8 @@ SOFTWARE.
 | geoarrow-schema | 0.9.0 | MIT OR Apache-2.0 | https://github.com/geoarrow/geoarrow-rs | [b30df9a48463](#licence-b30df9a48463), [3fe5f499218f](#licence-3fe5f499218f) |
 | geographiclib-rs | 0.2.7 | MIT | https://github.com/georust/geographiclib-rs | [feb87a2e0c30](#licence-feb87a2e0c30) |
 | geojson | 0.24.2 | MIT/Apache-2.0 | https://github.com/georust/geojson | [143368af9701](#licence-143368af9701), [0621878e61f0](#licence-0621878e61f0) |
+| geopackage | 0.10.0 | MIT OR Apache-2.0 | https://github.com/urschrei/geopackage | [b30df9a48463](#licence-b30df9a48463), [f55c1db8edb3](#licence-f55c1db8edb3) |
+| geopackage-core | 0.10.2 | MIT OR Apache-2.0 | https://github.com/urschrei/geopackage | [b30df9a48463](#licence-b30df9a48463), [f55c1db8edb3](#licence-f55c1db8edb3) |
 | geoparquet | 0.9.0 | MIT OR Apache-2.0 | https://github.com/geoarrow/geoarrow-rs | [b30df9a48463](#licence-b30df9a48463), [3fe5f499218f](#licence-3fe5f499218f) |
 | geozero | 0.15.1 | MIT OR Apache-2.0 | https://github.com/georust/geozero | [143368af9701](#licence-143368af9701), [fd490a8762ee](#licence-fd490a8762ee) |
 | getrandom (compile time only) | 0.2.17 | MIT OR Apache-2.0 | https://github.com/rust-random/getrandom | [228e99750197](#licence-228e99750197), [42fa16951ce7](#licence-42fa16951ce7) |
@@ -122,6 +126,7 @@ SOFTWARE.
 | hashbrown | 0.15.5 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown | [143368af9701](#licence-143368af9701), [ff8f68cb076c](#licence-ff8f68cb076c) |
 | hashbrown | 0.16.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown | [143368af9701](#licence-143368af9701), [ff8f68cb076c](#licence-ff8f68cb076c) |
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown | [143368af9701](#licence-143368af9701), [ff8f68cb076c](#licence-ff8f68cb076c) |
+| hashlink | 0.12.2 | MIT OR Apache-2.0 | https://github.com/djc/hashlink | [af975c9737b3](#licence-af975c9737b3), [f1fa5f9e9d8f](#licence-f1fa5f9e9d8f) |
 | hdf5-core | 0.9.1 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
 | hdf5-reader | 0.9.1 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
 | heapless | 0.8.0 | MIT OR Apache-2.0 | https://github.com/rust-embedded/heapless | [143368af9701](#licence-143368af9701), [035e70219855](#licence-035e70219855) |
@@ -129,6 +134,8 @@ SOFTWARE.
 | heck (compile time only) | 0.5.0 | MIT OR Apache-2.0 | https://github.com/withoutboats/heck | [143368af9701](#licence-143368af9701), [7b63ecd5f190](#licence-7b63ecd5f190) |
 | hex | 0.4.3 | MIT OR Apache-2.0 | https://github.com/KokaKiwi/rust-hex | [a8ad31b1c3f4](#licence-a8ad31b1c3f4), [f7bdb3426d04](#licence-f7bdb3426d04) |
 | hilbert_2d | 1.1.0 | MIT OR Apache-2.0 | https://github.com/hbertoduarte/hilbert_2d/ | [469cd4fad80d](#licence-469cd4fad80d), [0ea0fbf4e333](#licence-0ea0fbf4e333) |
+| hotpath | 0.23.3 | MIT | https://github.com/pawurb/hotpath-rs | [15eab4bfb1ef](#licence-15eab4bfb1ef) |
+| hotpath-macros (compile time only) | 0.23.3 | MIT | https://github.com/pawurb/hotpath-rs | [15eab4bfb1ef](#licence-15eab4bfb1ef) |
 | i_float | 1.6.0 | MIT | https://github.com/iShape-Rust/iFloat | [260cc580f53a](#licence-260cc580f53a) |
 | i_key_sort | 0.2.0 | MIT | https://github.com/iShape-Rust/iKeySort | [47e00f18b265](#licence-47e00f18b265) |
 | i_overlay | 1.9.4 | MIT | https://github.com/iShape-Rust/iOverlay | [260cc580f53a](#licence-260cc580f53a) |
@@ -137,6 +144,7 @@ SOFTWARE.
 | iana-time-zone | 0.1.65 | MIT OR Apache-2.0 | https://github.com/strawlab/iana-time-zone | [fd45b9dd6fed](#licence-fd45b9dd6fed), [da28ccc6b158](#licence-da28ccc6b158) |
 | iana-time-zone-haiku | 0.1.2 | MIT OR Apache-2.0 | https://github.com/strawlab/iana-time-zone | [fd45b9dd6fed](#licence-fd45b9dd6fed), [da28ccc6b158](#licence-da28ccc6b158) |
 | ident_case (compile time only) | 1.0.1 | MIT/Apache-2.0 | https://github.com/TedDriggs/ident_case | [508a77d2e7b5](#licence-508a77d2e7b5) |
+| imagesize | 0.15.0 | MIT | https://github.com/Roughsketch/imagesize | [fa0d694967d5](#licence-fa0d694967d5) |
 | indexmap | 1.9.3 | Apache-2.0 OR MIT | https://github.com/bluss/indexmap | [143368af9701](#licence-143368af9701), [ecc269ef87fd](#licence-ecc269ef87fd) |
 | indexmap | 2.10.0 | Apache-2.0 OR MIT | https://github.com/indexmap-rs/indexmap | [143368af9701](#licence-143368af9701), [ecc269ef87fd](#licence-ecc269ef87fd) |
 | integer-encoding | 3.0.4 | MIT | https://github.com/dermesser/integer-encoding-rs | [ff7b7d58d69a](#licence-ff7b7d58d69a) |
@@ -153,6 +161,7 @@ SOFTWARE.
 | js-sys | 0.3.106 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/js-sys | [143368af9701](#licence-143368af9701), [378f5840b258](#licence-378f5840b258) |
 | libc | 0.2.191 | MIT OR Apache-2.0 | https://github.com/rust-lang/libc | [b30df9a48463](#licence-b30df9a48463), [123a331b5dbf](#licence-123a331b5dbf) |
 | libm | 0.2.16 | MIT | https://github.com/rust-lang/compiler-builtins | [3823dda7cf04](#licence-3823dda7cf04) |
+| libsqlite3-sys | 0.38.2 | MIT | https://github.com/rusqlite/rusqlite | [c10c1f273375](#licence-c10c1f273375) |
 | linux-raw-sys | 0.12.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/sunfishcode/linux-raw-sys | [3290ae0fbc9d](#licence-3290ae0fbc9d), [143368af9701](#licence-143368af9701), [ae6e99144a73](#licence-ae6e99144a73), [23f18e03dc49](#licence-23f18e03dc49) |
 | lock_api | 0.4.14 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot | [143368af9701](#licence-143368af9701), [c9a75f18b9ab](#licence-c9a75f18b9ab) |
 | log | 0.4.34 | MIT OR Apache-2.0 | https://github.com/rust-lang/log | [143368af9701](#licence-143368af9701), [6485b8ed310d](#licence-6485b8ed310d) |
@@ -163,6 +172,7 @@ SOFTWARE.
 | memmap2 | 0.9.11 | MIT OR Apache-2.0 | https://github.com/RazrFalcon/memmap2-rs | [688a07efeb90](#licence-688a07efeb90), [0d25d03b5ab4](#licence-0d25d03b5ab4) |
 | miniz_oxide | 0.9.1 | MIT OR Zlib OR Apache-2.0 | https://github.com/Frommi/miniz_oxide/tree/master/miniz_oxide | [4108245a1f2d](#licence-4108245a1f2d), [bb28c48e3e07](#licence-bb28c48e3e07), [799e9ca9d179](#licence-799e9ca9d179), [0a54e647fe54](#licence-0a54e647fe54) |
 | ndarray | 0.17.2 | MIT OR Apache-2.0 | https://github.com/rust-ndarray/ndarray | [143368af9701](#licence-143368af9701), [1fd6747d2c8e](#licence-1fd6747d2c8e) |
+| ntapi | 0.4.3 | Apache-2.0 OR MIT | https://github.com/MSxDOS/ntapi | [50e6751797c5](#licence-50e6751797c5), [11a7964ccc0d](#licence-11a7964ccc0d) |
 | num-bigint | 0.4.8 | MIT OR Apache-2.0 | https://github.com/rust-num/num-bigint | [143368af9701](#licence-143368af9701), [6485b8ed310d](#licence-6485b8ed310d) |
 | num-bigint | 0.5.1 | MIT OR Apache-2.0 | https://github.com/rust-num/num-bigint | [143368af9701](#licence-143368af9701), [6485b8ed310d](#licence-6485b8ed310d) |
 | num-complex | 0.4.6 | MIT OR Apache-2.0 | https://github.com/rust-num/num-complex | [143368af9701](#licence-143368af9701), [6485b8ed310d](#licence-6485b8ed310d) |
@@ -172,6 +182,8 @@ SOFTWARE.
 | num_enum | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 | https://github.com/illicitonion/num_enum | [b30df9a48463](#licence-b30df9a48463), [0be96d891d00](#licence-0be96d891d00), [23f18e03dc49](#licence-23f18e03dc49) |
 | num_enum_derive (compile time only) | 0.7.6 | BSD-3-Clause OR MIT OR Apache-2.0 | https://github.com/illicitonion/num_enum | [b30df9a48463](#licence-b30df9a48463), [0be96d891d00](#licence-0be96d891d00), [23f18e03dc49](#licence-23f18e03dc49) |
 | numpy | 0.30.0 | BSD-2-Clause | https://github.com/PyO3/rust-numpy | [57088c28c5ea](#licence-57088c28c5ea) |
+| objc2-core-foundation | 0.3.2 | Zlib OR Apache-2.0 OR MIT | https://github.com/madsmtm/objc2 | [7f976f7e9cb2](#licence-7f976f7e9cb2) |
+| objc2-io-kit | 0.3.2 | Zlib OR Apache-2.0 OR MIT | https://github.com/madsmtm/objc2 | [7f976f7e9cb2](#licence-7f976f7e9cb2) |
 | once_cell | 1.21.4 | MIT OR Apache-2.0 | https://github.com/matklad/once_cell | [143368af9701](#licence-143368af9701), [23f18e03dc49](#licence-23f18e03dc49) |
 | parking_lot | 0.12.5 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot | [143368af9701](#licence-143368af9701), [c9a75f18b9ab](#licence-c9a75f18b9ab) |
 | parking_lot_core | 0.9.12 | MIT OR Apache-2.0 | https://github.com/Amanieu/parking_lot | [143368af9701](#licence-143368af9701), [c9a75f18b9ab](#licence-c9a75f18b9ab) |
@@ -205,7 +217,9 @@ SOFTWARE.
 | ref-cast | 1.0.27 | MIT OR Apache-2.0 | https://github.com/dtolnay/ref-cast | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
 | ref-cast-impl (compile time only) | 1.0.27 | MIT OR Apache-2.0 | https://github.com/dtolnay/ref-cast | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
 | robust | 1.2.0 | MIT OR Apache-2.0 | https://github.com/georust/robust | [143368af9701](#licence-143368af9701), [ddb606a42266](#licence-ddb606a42266) |
+| rsqlite-vfs | 0.1.1 | MIT |  | [e1c1975c3474](#licence-e1c1975c3474) |
 | rstar | 0.12.2 | MIT OR Apache-2.0 | https://github.com/georust/rstar | [143368af9701](#licence-143368af9701), [9b3a76c27bac](#licence-9b3a76c27bac) |
+| rusqlite | 0.40.2 | MIT | https://github.com/rusqlite/rusqlite | [c10c1f273375](#licence-c10c1f273375) |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT | https://github.com/rust-lang/rustc-hash | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
 | rustix | 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/rustix | [377c2e7c5325](#licence-377c2e7c5325), [143368af9701](#licence-143368af9701), [ae6e99144a73](#licence-ae6e99144a73), [23f18e03dc49](#licence-23f18e03dc49) |
 | rustversion (compile time only) | 1.0.23 | MIT OR Apache-2.0 | https://github.com/dtolnay/rustversion | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
@@ -225,12 +239,14 @@ SOFTWARE.
 | smallvec | 1.16.3 | MIT OR Apache-2.0 | https://github.com/servo/rust-smallvec | [143368af9701](#licence-143368af9701), [0b28172679e0](#licence-0b28172679e0) |
 | snap | 1.1.2 | BSD-3-Clause | https://github.com/BurntSushi/rust-snappy | [7ca1297d2364](#licence-7ca1297d2364) |
 | spade | 2.13.1 | MIT OR Apache-2.0 | https://github.com/Stoeoef/spade | [50e6751797c5](#licence-50e6751797c5), [fc1a4c9482e8](#licence-fc1a4c9482e8) |
+| sqlite-wasm-rs | 0.5.5 | MIT | https://github.com/Spxg/sqlite-wasm-rs | [e1c1975c3474](#licence-e1c1975c3474) |
 | stable_deref_trait | 1.2.1 | MIT OR Apache-2.0 | https://github.com/storyyeller/stable_deref_trait | [143368af9701](#licence-143368af9701), [3c125f249fc6](#licence-3c125f249fc6) |
 | strsim (compile time only) | 0.10.0 | MIT | https://github.com/dguo/strsim-rs | [1e697ce8d214](#licence-1e697ce8d214) |
 | strsim (compile time only) | 0.11.1 | MIT | https://github.com/rapidfuzz/strsim-rs | [1e697ce8d214](#licence-1e697ce8d214) |
 | syn (compile time only) | 1.0.109 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn | [143368af9701](#licence-143368af9701), [23f18e03dc49](#licence-23f18e03dc49) |
 | syn (compile time only) | 2.0.119 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
 | syn (compile time only) | 3.0.9 | MIT OR Apache-2.0 | https://github.com/dtolnay/syn | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
+| sysinfo | 0.39.6 | MIT | https://github.com/GuillaumeGomez/sysinfo | [666ccdb468b5](#licence-666ccdb468b5) |
 | tap | 1.0.1 | MIT | https://github.com/myrrlyn/tap | [8b4e95f5cf0d](#licence-8b4e95f5cf0d) |
 | tempfile | 3.27.0 | MIT OR Apache-2.0 | https://github.com/Stebalien/tempfile | [143368af9701](#licence-143368af9701), [8b427f5bc501](#licence-8b427f5bc501) |
 | thiserror | 1.0.69 | MIT OR Apache-2.0 | https://github.com/dtolnay/thiserror | [b30df9a48463](#licence-b30df9a48463), [23f18e03dc49](#licence-23f18e03dc49) |
@@ -252,13 +268,21 @@ SOFTWARE.
 | wasm-bindgen-macro (compile time only) | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/macro | [143368af9701](#licence-143368af9701), [378f5840b258](#licence-378f5840b258) |
 | wasm-bindgen-macro-support (compile time only) | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/main/crates/macro-support | [143368af9701](#licence-143368af9701), [378f5840b258](#licence-378f5840b258) |
 | wasm-bindgen-shared | 0.2.129 | MIT OR Apache-2.0 | https://github.com/wasm-bindgen/wasm-bindgen/tree/master/crates/shared | [143368af9701](#licence-143368af9701), [378f5840b258](#licence-378f5840b258) |
+| winapi | 0.3.9 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs | [a8ad31b1c3f4](#licence-a8ad31b1c3f4), [ce7bc3499fee](#licence-ce7bc3499fee) |
+| winapi-i686-pc-windows-gnu | 0.4.0 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs | [a8ad31b1c3f4](#licence-a8ad31b1c3f4), [5b19674a1db6](#licence-5b19674a1db6) |
+| winapi-x86_64-pc-windows-gnu | 0.4.0 | MIT/Apache-2.0 | https://github.com/retep998/winapi-rs | [a8ad31b1c3f4](#licence-a8ad31b1c3f4), [5b19674a1db6](#licence-5b19674a1db6) |
+| windows | 0.62.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
+| windows-collections | 0.3.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | windows-core | 0.62.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
+| windows-future | 0.3.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | windows-implement (compile time only) | 0.60.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | windows-interface (compile time only) | 0.59.3 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | windows-link | 0.2.1 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
+| windows-numerics | 0.3.1 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | windows-result | 0.4.1 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | windows-strings | 0.5.1 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | windows-sys | 0.61.2 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
+| windows-threading | 0.2.1 | MIT OR Apache-2.0 | https://github.com/microsoft/windows-rs | [cb3b46a575dd](#licence-cb3b46a575dd), [3d4ada4e04d1](#licence-3d4ada4e04d1) |
 | winnow (compile time only) | 0.5.40 | MIT | https://github.com/winnow-rs/winnow | [cb5aedb296c5](#licence-cb5aedb296c5) |
 | wit-bindgen | 0.57.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | https://github.com/bytecodealliance/wit-bindgen | [143368af9701](#licence-143368af9701), [ae6e99144a73](#licence-ae6e99144a73), [23f18e03dc49](#licence-23f18e03dc49) |
 | wkb | 0.9.3 | MIT OR Apache-2.0 | https://github.com/georust/wkb | [143368af9701](#licence-143368af9701), [6daf4a7c885a](#licence-6daf4a7c885a) |
@@ -1277,7 +1301,7 @@ SOFTWARE.
 
 ### licence-50e6751797c5
 
-File(s): LICENSE, LICENSE-APACHE, LICENSE-APACHE.md, LICENSE.txt. Used by: approx 0.5.1, arrow-arith 59.0.0, arrow-array 59.0.0, arrow-data 59.0.0, arrow-ipc 59.0.0, arrow-ord 59.0.0, arrow-schema 59.0.0, arrow-select 59.0.0, flatbuffers 24.12.23, flatbuffers 25.12.19, parquet 59.0.0, spade 2.13.1, tinyvec 1.13.3.
+File(s): LICENSE, LICENSE-APACHE, LICENSE-APACHE.md, LICENSE.txt. Used by: approx 0.5.1, arrow-arith 59.0.0, arrow-array 59.0.0, arrow-data 59.0.0, arrow-ipc 59.0.0, arrow-ord 59.0.0, arrow-schema 59.0.0, arrow-select 59.0.0, flatbuffers 24.12.23, flatbuffers 25.12.19, ntapi 0.4.3, parquet 59.0.0, spade 2.13.1, tinyvec 1.13.3.
 
 ```text
 Apache License
@@ -1513,6 +1537,34 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+### licence-666ccdb468b5
+
+File(s): LICENSE. Used by: sysinfo 0.39.6.
+
+```text
+The MIT License (MIT)
+
+Copyright (c) 2015 Guillaume Gomez
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ### licence-6e24b7455f0b
@@ -1890,6 +1942,32 @@ Redistribution and use in source and binary forms, with or without modification,
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
+### licence-c10c1f273375
+
+File(s): LICENSE. Used by: libsqlite3-sys 0.38.2, rusqlite 0.40.2.
+
+```text
+Copyright (c) 2014 The rusqlite developers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+```
+
 ### licence-c6f7836d26fe
 
 File(s): LICENSE. Used by: ras-commander-rust 0.1.0, ras-export 0.1.0.
@@ -1953,6 +2031,34 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
+### licence-e1c1975c3474
+
+File(s): LICENSE. Used by: rsqlite-vfs 0.1.1, sqlite-wasm-rs 0.5.5.
+
+```text
+MIT License
+
+Copyright (c) 2024 Spxg
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ### licence-e72111c52b7d
 
 File(s): LICENSE. Used by: zlib-rs 0.6.8.
@@ -2006,6 +2112,34 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+### licence-fa0d694967d5
+
+File(s): LICENSE. Used by: imagesize 0.15.0.
+
+```text
+MIT License
+
+Copyright (c) 2017 Maiddog
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ### licence-fd0d2efcf9f0
@@ -3550,7 +3684,7 @@ limitations under the License.
 
 ### licence-a8ad31b1c3f4
 
-File(s): LICENSE-APACHE. Used by: crc32fast 1.5.2, fallible-streaming-iterator 0.1.9, hex 0.4.3, toml_datetime 0.6.11, toml_edit 0.19.15.
+File(s): LICENSE-APACHE. Used by: crc32fast 1.5.2, fallible-iterator 0.3.0, fallible-streaming-iterator 0.1.9, hex 0.4.3, toml_datetime 0.6.11, toml_edit 0.19.15, winapi 0.3.9, winapi-i686-pc-windows-gnu 0.4.0, winapi-x86_64-pc-windows-gnu 0.4.0.
 
 ```text
 Apache License
@@ -3758,7 +3892,7 @@ Apache License
 
 ### licence-af975c9737b3
 
-File(s): LICENSE-APACHE. Used by: defmt 1.2.0, defmt-macros 1.2.0, defmt-parser 1.1.0.
+File(s): LICENSE-APACHE. Used by: defmt 1.2.0, defmt-macros 1.2.0, defmt-parser 1.1.0, hashlink 0.12.2.
 
 ```text
 Apache License
@@ -3966,7 +4100,7 @@ limitations under the License.
 
 ### licence-b30df9a48463
 
-File(s): LICENSE-APACHE, LICENSE_APACHE. Used by: allocator-api2 0.2.21, anyhow 1.0.104, deku 0.15.1, deku_derive 0.15.1, dyn-clone 1.0.20, geoarrow-array 0.9.0, geoarrow-schema 0.9.0, geoparquet 0.9.0, itoa 1.0.18, libc 0.2.191, num_enum 0.7.6, num_enum_derive 0.7.6, paste 1.0.15, proc-macro2 1.0.107, quote 1.0.47, ref-cast 1.0.27, ref-cast-impl 1.0.27, rustc-hash 2.1.3, rustversion 1.0.23, seq-macro 0.3.6, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, syn 2.0.119, syn 3.0.9, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.27.
+File(s): LICENSE-APACHE, LICENSE_APACHE. Used by: allocator-api2 0.2.21, anyhow 1.0.104, deku 0.15.1, deku_derive 0.15.1, dyn-clone 1.0.20, geoarrow-array 0.9.0, geoarrow-schema 0.9.0, geopackage 0.10.0, geopackage-core 0.10.2, geoparquet 0.9.0, itoa 1.0.18, libc 0.2.191, num_enum 0.7.6, num_enum_derive 0.7.6, paste 1.0.15, proc-macro2 1.0.107, quote 1.0.47, ref-cast 1.0.27, ref-cast-impl 1.0.27, rustc-hash 2.1.3, rustversion 1.0.23, seq-macro 0.3.6, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, syn 2.0.119, syn 3.0.9, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.27.
 
 ```text
 Apache License
@@ -6148,6 +6282,32 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+### licence-0816e154b159
+
+File(s): LICENSE-MIT. Used by: fallible-iterator 0.3.0.
+
+```text
+Copyright (c) 2015 The rust-openssl-verify Developers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ### licence-0b28172679e0
 
 File(s): LICENSE-MIT. Used by: smallvec 1.16.3.
@@ -6327,6 +6487,30 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+
+### licence-11a7964ccc0d
+
+File(s): LICENSE-MIT. Used by: ntapi 0.4.3.
+
+```text
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"),to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
 ```
 
 ### licence-123a331b5dbf
@@ -6726,6 +6910,43 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
+### licence-4f2af8d9de1d
+
+File(s): LICENSE-MIT. Used by: epsg-utils 0.0.3.
+
+```text
+epsg-utils 0.0.3 declares `license = "MIT"` in its Cargo manifest but publishes
+no licence text and no copyright line (checked 2026-10-23: the crates.io
+package, and github.com/yutannihilation/epsg-utils-rs at tag v0.0.3 and on
+main). The standard MIT License text below is reproduced on the basis of that
+declaration; the copyright holder is the crate's author, Hiroaki Yutani
+(yutannihilation), as listed on crates.io. The crate also embeds EPSG Geodetic
+Parameter Dataset definitions obtained from epsg.org, which are subject to the
+IOGP EPSG Dataset terms of use (https://epsg.org/terms-of-use.html).
+
+MIT License
+
+Copyright (c) the epsg-utils authors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ### licence-523a42c25d24
 
 File(s): LICENSE-MIT. Used by: getrandom 0.4.3.
@@ -6819,6 +7040,32 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
 IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
+```
+
+### licence-5b19674a1db6
+
+File(s): LICENSE-MIT. Used by: winapi-i686-pc-windows-gnu 0.4.0, winapi-x86_64-pc-windows-gnu 0.4.0.
+
+```text
+Copyright (c) 2015 The winapi-rs Developers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ### licence-61d383b05b87
@@ -7520,6 +7767,32 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
+### licence-ce7bc3499fee
+
+File(s): LICENSE-MIT. Used by: winapi 0.3.9.
+
+```text
+Copyright (c) 2015-2018 The winapi-rs Developers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ### licence-da28ccc6b158
 
 File(s): LICENSE-MIT. Used by: iana-time-zone 0.1.65, iana-time-zone-haiku 0.1.2.
@@ -7617,6 +7890,71 @@ File(s): LICENSE-MIT. Used by: indexmap 1.9.3, indexmap 2.10.0.
 
 ```text
 Copyright (c) 2016--2017
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+### licence-f1fa5f9e9d8f
+
+File(s): LICENSE-MIT. Used by: hashlink 0.12.2.
+
+```text
+This work is derived in part from the `linked-hash-map` crate, Copyright (c)
+2015 The Rust Project Developers
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+### licence-f55c1db8edb3
+
+File(s): LICENSE-MIT. Used by: geopackage 0.10.0, geopackage-core 0.10.2.
+
+```text
+Copyright (c) The GeoRust Developers
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated
@@ -8053,6 +8391,47 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
+### licence-7f976f7e9cb2
+
+File(s): LICENSE.md. Used by: objc2-core-foundation 0.3.2, objc2-io-kit 0.3.2.
+
+```text
+# License
+
+The licensing of these crates is a bit complicated:
+- The crates `objc2`, `block2`, `objc2-foundation` and `objc2-encode` are
+  [currently][#23] licensed under [the MIT license][MIT].
+- All other crates are trio-licensed under the [Zlib], [Apache-2.0] or [MIT]
+  license, at your option.
+
+Furthermore, the crates are (usually automatically) derived from Apple SDKs,
+and that may have implications for licensing, see below for details.
+
+[#23]: https://github.com/madsmtm/objc2/issues/23
+[MIT]: https://opensource.org/license/MIT
+[Zlib]: https://zlib.net/zlib_license.html
+[Apache-2.0]: https://www.apache.org/licenses/LICENSE-2.0
+
+
+## Apple SDKs
+
+These crates are derived from Apple SDKs shipped with Xcode. You can obtain a
+copy of the Xcode license at:
+
+https://www.apple.com/legal/sla/docs/xcode.pdf
+
+Or by typing `xcodebuild -license` in your terminal.
+
+From reading the license, it is unclear whether distributing derived works
+such as these crates are allowed?
+
+But in any case, to practically use these crates, you will have to link, and
+that only works when you have the correct Xcode SDK available to provide the
+required `.tbd` files, which is why we choose to still use the normal SPDX
+identifiers in the crates (Xcode is required to use the crates, and when using
+Xcode you have already agreed to the Xcode license).
+```
+
 ### licence-f6ca04af604c
 
 File(s): LICENSE.note. Used by: freestiler-core 0.1.0.
@@ -8093,6 +8472,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+```
+
+### licence-15eab4bfb1ef
+
+File(s): LICENSE.txt. Used by: hotpath 0.23.3, hotpath-macros 0.23.3.
+
+```text
+The MIT License (MIT)
+
+Copyright © Paweł Urbanek 2025
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 ### licence-2200505ceae3
@@ -9014,7 +9422,7 @@ For more information, please refer to <http://unlicense.org/>
 
 ### licence-cb3b46a575dd
 
-File(s): license-apache-2.0. Used by: windows-core 0.62.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.2.1, windows-result 0.4.1, windows-strings 0.5.1, windows-sys 0.61.2.
+File(s): license-apache-2.0. Used by: windows 0.62.2, windows-collections 0.3.2, windows-core 0.62.2, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.2.1, windows-numerics 0.3.1, windows-result 0.4.1, windows-strings 0.5.1, windows-sys 0.61.2, windows-threading 0.2.1.
 
 ```text
 Apache License
@@ -9222,7 +9630,7 @@ Apache License
 
 ### licence-3d4ada4e04d1
 
-File(s): license-mit. Used by: windows-core 0.62.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.2.1, windows-result 0.4.1, windows-strings 0.5.1, windows-sys 0.61.2.
+File(s): license-mit. Used by: windows 0.62.2, windows-collections 0.3.2, windows-core 0.62.2, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.2.1, windows-numerics 0.3.1, windows-result 0.4.1, windows-strings 0.5.1, windows-sys 0.61.2, windows-threading 0.2.1.
 
 ```text
 MIT License

@@ -131,7 +131,7 @@ the Visual Studio C++ Build Tools.
 ```bash
 pip install maturin
 maturin build --release --locked --manifest-path python/Cargo.toml \
-    --features extension-module,exports-geojson,exports-flatgeobuf,exports-geoparquet,exports-pmtiles
+    --features extension-module,exports-all,exports-pmtiles
 pip install target/wheels/ras_commander_fast_hdf-*.whl
 
 cargo test --locked --all-features                       # engine
