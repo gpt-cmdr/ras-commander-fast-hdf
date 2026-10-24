@@ -84,6 +84,7 @@ fn a_count_contradiction_is_corrupt() {
 /// Values equal the literal dataset, and the stored cell-domain claim holds physically: for every
 /// drawn cell the maximum water surface is at or above `Cells Minimum Elevation`, with exact
 /// equality on dry cells.
+#[cfg(feature = "mesh")]
 #[test]
 #[ignore]
 fn real_5_0_summaries_are_literal_and_physically_cell_aligned() {
