@@ -1,4 +1,4 @@
-site_name: RAS Commander Fast HDF
+site_name: RAS Commander — Native Rust Engine
 site_description: Native (Rust) HEC-RAS HDF engine and Python extension for ras-commander
 site_url: https://rascommander.info/fasthdf/
 repo_url: https://github.com/gpt-cmdr/ras-commander-fast-hdf
