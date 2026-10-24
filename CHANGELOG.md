@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Engine (additive within API 10): `Topology::face_lines()` returns every 2D
+  face as a polyline (start point, stored perimeter vertices, end point) and
+  `read_mesh_perimeter()` returns an area's stored `Perimeter` as a closed ring,
+  both exactly as ras-commander's Python `get_mesh_cell_faces` and
+  `get_mesh_areas` build them (bit-identical on 20 public HEC example files).
+  The extension does not call them yet; its API is unchanged.
+
 - The engine no longer depends on `geo`. Cell-ring validation and winding now
   use the `robust` crate's adaptive-precision `orient2d` (the predicate `geo`
   used) and a port of `geo` 0.29's segment-contact classification. `geo` 0.29
