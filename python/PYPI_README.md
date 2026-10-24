@@ -8,14 +8,15 @@ ras-commander's `Hdf*` classes read plan results, geometry, terrain and
 land-cover HDF files through this engine. Results are identical to the h5py
 reference implementation (values, dtypes, columns, index, CRS, attributes and
 exceptions). Large reads are faster: 2D cell polygons 4–19× depending on mesh
-size, and mesh time series 2–7× on large meshes. Small reads are a few
+size, and mesh time series 2–8× on large meshes. Small reads are up to a few
 milliseconds slower. In the default `auto` mode, any read the engine refuses
 uses h5py.
 
 ## Install
 
-ras-commander 0.107.1 and later install this package automatically on
-Windows x64, Linux x64 and macOS arm64, so this is enough:
+ras-commander installs this package automatically on Windows x64, Linux x64
+and macOS arm64 (ras-commander 0.108.0 and later install 0.2.x; 0.107.1
+installs 0.1.x), so this is enough:
 
 ```bash
 pip install ras-commander

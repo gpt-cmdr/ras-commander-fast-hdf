@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased, pending qualification)
+## 0.2.0 (2026-10-24)
 
 - One Rust crate, `ras-commander-fast-hdf` (Rust import
   `ras_commander_fast_hdf`), at the repository root, ready to publish on
