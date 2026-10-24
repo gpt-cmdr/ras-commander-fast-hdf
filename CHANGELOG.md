@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- Path-based typed reads can share an open session. Every module-level
+  function that takes an HDF path for a typed read (typed attributes, fixed
+  strings, 1D line, geometry, result, summary and structure readers, 2D
+  geometry families, stored-family and output-block readers) now also accepts
+  an open `HdfSession` in place of the path. The call then reuses that
+  session's file mapping, chunk cache and metadata memo instead of opening the
+  file and repeating the layout and encoding proofs for each small read. The
+  values are the same. A closed session raises `ValueError("HDF session is
+  closed")`; a path behaves exactly as before. The module flag
+  `SESSION_SOURCES = True` lets callers detect support. This is additive:
+  `API_VERSION` stays 11.
+- Cross-section geometry reads other than the property table no longer decode
+  the whole HTAB value table (`Property Tables/XSEC Value`, stored by HEC-RAS
+  with one row per compressed chunk) only to count its leading section rows.
+  That count is used by the property-table field alone; it is now computed
+  when that field or the full `xs_geometry_inventory` is requested. Results are
+  unchanged. On the BaldEagle example the first cross-section read in a session
+  drops from about 40-70 ms to under 2 ms.
+
 ## 0.1.1 (2026-10-24)
 
 - Linux wheels for older and musl-based distributions: `manylinux2014`
