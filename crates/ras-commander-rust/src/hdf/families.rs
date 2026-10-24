@@ -128,59 +128,14 @@ fn refuse() -> Capability {
         "unqualified layout: this family has no qualified reader yet",
     )
 }
-/// Warm the session's `group_members` memo for the hierarchy under `root`, level by level
-/// on the session pool, once per session and root. Only successful listings are memoized
-/// (never errors), so the sequential walk in [`paths`] returns exactly what it would
-/// without this, including its hierarchy-limit refusals; this only spends the header
-/// parsing in parallel. Bounded like the walk (depth 24, 100,000 entries).
-fn prefetch_members(s: &ReadOnlyHdfSession, root: &str) {
-    if !s.parallel_metadata() {
-        return;
-    }
-    let _ = s.memo(format!("group_members_prefetch:{:?}", (root,)), || {
-        let mut level = vec![(root.to_owned(), 0usize)];
-        let mut seen = 0usize;
-        while !level.is_empty() {
-            let listed = s.ordered_map(&level, |(group, _)| s.group_members(group).ok());
-            let mut next = Vec::new();
-            for ((group, depth), members) in level.iter().zip(listed) {
-                let Some(members) = members else { continue };
-                seen += members.datasets.len() + members.groups.len();
-                if *depth >= MAX_WALK_DEPTH || seen > MAX_WALK_ENTRIES {
-                    return Ok(());
-                }
-                next.extend(
-                    members
-                        .groups
-                        .into_iter()
-                        .map(|n| (format!("{group}/{n}"), depth + 1)),
-                );
-            }
-            level = next;
-        }
-        Ok(())
-    });
-}
-/// Hierarchy bounds of the stored-family walk (refused as `ResourceLimit`).
-const MAX_WALK_DEPTH: usize = 24;
-const MAX_WALK_ENTRIES: usize = 100_000;
 fn paths(s: &ReadOnlyHdfSession, root: &str) -> Result<Vec<String>> {
-    paths_bounded(s, root, MAX_WALK_ENTRIES, MAX_WALK_DEPTH)
-}
-fn paths_bounded(
-    s: &ReadOnlyHdfSession,
-    root: &str,
-    max_entries: usize,
-    max_depth: usize,
-) -> Result<Vec<String>> {
     if absent_ok(s.file.group(root).map_err(map_error))?.is_none() {
         return Ok(Vec::new());
     }
-    prefetch_members(s, root);
     let mut pending = vec![(root.to_owned(), 0usize)];
     let mut out = Vec::new();
     while let Some((path, depth)) = pending.pop() {
-        if depth > max_depth || out.len() + pending.len() > max_entries {
+        if depth > 24 || out.len() + pending.len() > 100_000 {
             return Err(Error::unsupported(
                 UnsupportedCode::ResourceLimit,
                 "stored family hierarchy limit",
@@ -229,12 +184,9 @@ impl ReadOnlyHdfSession {
         let mut out = Vec::new();
         for name in m.groups.into_iter().filter(|n| n != "Base Output") {
             let path = format!("{OUTPUT}/{name}");
-            // Descriptors are independent; computed on the pool, first error in path order.
-            let datasets = self
-                .ordered_map(&paths(self, &path)?, |p| {
-                    stored::inventory_descriptor(self, p, max_bytes)
-                })
+            let datasets = paths(self, &path)?
                 .into_iter()
+                .map(|p| stored::inventory_descriptor(self, &p, max_bytes))
                 .collect::<Result<Vec<_>>>()?;
             out.push(OutputBlock {
                 name,
@@ -317,16 +269,11 @@ impl ReadOnlyHdfSession {
             _ => vec![OUTPUT],
         };
         for root in roots {
-            let members: Vec<String> = paths(self, root)?
-                .into_iter()
-                .filter(|path| root != OUTPUT || result_family(path, family))
-                .collect();
-            // Descriptors are independent; computed on the pool, then handled in path order
-            // exactly as the sequential loop did (the first propagated error wins).
-            let results = self.ordered_map(&members, |path| {
-                self.family_descriptor(family, path, max_bytes)
-            });
-            for (path, result) in members.into_iter().zip(results) {
+            for path in paths(self, root)? {
+                if root == OUTPUT && !result_family(&path, family) {
+                    continue;
+                }
+                let result = self.family_descriptor(family, &path, max_bytes);
                 let d = match result {
                     Ok(d) => d,
                     Err(e) => {
@@ -942,148 +889,5 @@ impl ReadOnlyHdfSession {
             }
         }
         Ok(d)
-    }
-}
-
-#[cfg(test)]
-mod walk_tests {
-    use super::*;
-
-    fn fixture(name: &str) -> std::path::PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/fixtures/stored_walk")
-            .join(name)
-    }
-    /// One-thread (sequential), parallel, and parallel-disabled sessions.
-    fn sessions(name: &str) -> Vec<ReadOnlyHdfSession> {
-        vec![
-            ReadOnlyHdfSession::with_options(fixture(name), 1, true).unwrap(),
-            ReadOnlyHdfSession::with_options(fixture(name), 8, true).unwrap(),
-            ReadOnlyHdfSession::with_options(fixture(name), 8, false).unwrap(),
-        ]
-    }
-    fn render<T: std::fmt::Debug>(r: &Result<T>) -> String {
-        match r {
-            Ok(v) => format!("Ok({v:?})"),
-            Err(e) => format!("Err({:?} {:?} {})", e.kind, e.code, e),
-        }
-    }
-
-    #[test]
-    fn family_and_block_inventories_do_not_depend_on_the_pool() {
-        for name in ["stored_walk.h5", "stored_walk_deep.h5"] {
-            let all = sessions(name);
-            assert!(all[1].parallel_metadata() && !all[0].parallel_metadata());
-            let mut reference: Option<Vec<String>> = None;
-            for s in &all {
-                let mut out: Vec<String> = READ_FAMILIES
-                    .iter()
-                    .map(|&f| render(&s.read_family_inventory(f, 64 << 20)))
-                    .collect();
-                out.push(render(&s.output_block_inventory(64 << 20)));
-                // A second pass on the same session (memo and prefetch warm) is unchanged.
-                out.push(render(&s.output_block_inventory(64 << 20)));
-                match &reference {
-                    None => reference = Some(out),
-                    Some(r) => assert_eq!(r, &out, "{name}"),
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn inventories_from_rayon_workers_stay_sequential_and_identical() {
-        use rayon::prelude::*;
-        let inventory = |s: &ReadOnlyHdfSession| -> Vec<String> {
-            let mut out: Vec<String> = READ_FAMILIES
-                .iter()
-                .map(|&f| render(&s.read_family_inventory(f, 64 << 20)))
-                .collect();
-            out.push(render(&s.output_block_inventory(64 << 20)));
-            out
-        };
-        let reference = inventory(&sessions("stored_walk.h5")[0]);
-        let foreign = rayon::ThreadPoolBuilder::new()
-            .num_threads(4)
-            .build()
-            .unwrap();
-        // Fresh sessions, so first calls race to initialize the same memo cells.
-        let own = &sessions("stored_walk.h5")[1];
-        own.pool.install(|| {
-            assert!(!own.parallel_metadata());
-            (0..8)
-                .into_par_iter()
-                .for_each(|_| assert_eq!(inventory(own), reference));
-        });
-        let shared = &sessions("stored_walk.h5")[1];
-        foreign.install(|| {
-            assert!(!shared.parallel_metadata());
-            (0..8)
-                .into_par_iter()
-                .for_each(|_| assert_eq!(inventory(shared), reference));
-        });
-    }
-
-    #[test]
-    fn hierarchy_limits_refuse_identically_with_and_without_the_pool() {
-        // Depth beyond 24 under Output Blocks: every walk of it is refused.
-        for s in sessions("stored_walk_deep.h5") {
-            let e = s.output_block_inventory(64 << 20).unwrap_err();
-            assert_eq!(e.kind, ErrorKind::Unsupported);
-            assert_eq!(e.code, Some(UnsupportedCode::ResourceLimit));
-            assert_eq!(
-                e.to_string(),
-                Error::unsupported(
-                    UnsupportedCode::ResourceLimit,
-                    "stored family hierarchy limit"
-                )
-                .to_string()
-            );
-            assert!(paths(&s, OUTPUT).is_err());
-        }
-        // The entry limit: every bound around the tree size gives the same outcome.
-        let total = paths(&sessions("stored_walk.h5")[0], OUTPUT).unwrap().len();
-        let (groups, entries) = (
-            0..=3usize,
-            [
-                0,
-                1,
-                2,
-                10,
-                50,
-                total - 1,
-                total,
-                total + 1,
-                total + 60,
-                MAX_WALK_ENTRIES,
-            ],
-        );
-        for depth in groups.chain([MAX_WALK_DEPTH]) {
-            for max in entries {
-                let outcomes: Vec<String> = sessions("stored_walk.h5")
-                    .iter()
-                    .map(|s| render(&paths_bounded(s, OUTPUT, max, depth)))
-                    .collect();
-                assert!(
-                    outcomes.windows(2).all(|w| w[0] == w[1]),
-                    "depth {depth} max {max}: {outcomes:?}"
-                );
-                // A session whose memo the prefetch already warmed gives the same outcome too.
-                let warm = &sessions("stored_walk.h5")[1];
-                paths(warm, OUTPUT).unwrap();
-                assert_eq!(
-                    render(&paths_bounded(warm, OUTPUT, max, depth)),
-                    outcomes[0]
-                );
-            }
-        }
-        let s = &sessions("stored_walk.h5")[1];
-        let e = paths_bounded(s, OUTPUT, 10, MAX_WALK_DEPTH).unwrap_err();
-        assert_eq!(
-            (e.kind, e.code),
-            (ErrorKind::Unsupported, Some(UnsupportedCode::ResourceLimit))
-        );
-        assert!(e.to_string().contains("stored family hierarchy limit"));
-        assert!(paths_bounded(s, OUTPUT, total, MAX_WALK_DEPTH).is_ok());
     }
 }

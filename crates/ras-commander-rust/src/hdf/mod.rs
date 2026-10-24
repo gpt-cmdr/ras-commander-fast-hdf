@@ -221,31 +221,6 @@ impl ReadOnlyHdfSession {
     pub(crate) fn parallel_enabled(&self) -> bool {
         self.parallel
     }
-    /// Whether independent metadata work may run on this session's pool. Never from a
-    /// thread that is itself a rayon worker (of this or any pool): waiting in `install`
-    /// there may steal a sibling task that needs a memo cell this thread is initializing
-    /// (OnceLock reentrancy), so such callers stay sequential as before.
-    pub(crate) fn parallel_metadata(&self) -> bool {
-        self.parallel
-            && self.pool.current_num_threads() > 1
-            && rayon::current_thread_index().is_none()
-    }
-    /// `items.iter().map(f).collect()`, evaluated on the session pool when
-    /// [`Self::parallel_metadata`] allows it. The results keep the order of `items`, so
-    /// callers that then process them in order (first error first) behave exactly as the
-    /// sequential loop.
-    pub(crate) fn ordered_map<T: Sync, R: Send>(
-        &self,
-        items: &[T],
-        f: impl Fn(&T) -> R + Sync + Send,
-    ) -> Vec<R> {
-        if items.len() > 1 && self.parallel_metadata() {
-            use rayon::prelude::*;
-            self.pool.install(|| items.par_iter().map(&f).collect())
-        } else {
-            items.iter().map(f).collect()
-        }
-    }
     /// Worker count of this session-owned pool (also used by mesh assembly).
     pub fn thread_count(&self) -> usize {
         self.pool.current_num_threads()
