@@ -1,14 +1,10 @@
 //! Source-exact mesh construction. Only proven invalid geometry may be quarantined.
+use crate::predicates::Point;
+use crate::predicates::{orient2d, segment_contact, Contact, Orientation, Segment};
 use crate::{Error, ErrorKind};
-use geo::{
-    kernels::{Kernel, Orientation, RobustKernel},
-    line_intersection::{line_intersection, LineIntersection},
-    Line,
-};
 use ndarray::Array2;
 use rayon::prelude::*;
 use std::collections::HashMap;
-type Point = [f64; 2];
 
 /// Validate source geometry without normalizing/removing any output vertices.
 /// Zero-length edges are ignored in this validation view, so arbitrary caller rings with
@@ -27,7 +23,7 @@ pub(crate) fn validate_ring(points: impl IntoIterator<Item = Point>) -> Result<(
             return Err("nonfinite cell ring coordinate".into());
         }
         if point != previous {
-            edges.push(Line::new(previous, point));
+            edges.push(Segment::new(previous, point));
         }
         previous = point;
     }
@@ -40,22 +36,24 @@ pub(crate) fn validate_ring(points: impl IntoIterator<Item = Point>) -> Result<(
     // Avoid a shoelace sum: cancellation at large projected coordinate origins
     // can misclassify a valid narrow cell. A simple non-collinear closed ring
     // has nonzero area; robust orientation plus intersection checks proves it.
-    if edges.iter().skip(1).all(|edge| {
-        RobustKernel::orient2d(edges[0].start, edges[0].end, edge.end) == Orientation::Collinear
-    }) {
+    if edges
+        .iter()
+        .skip(1)
+        .all(|edge| orient2d(edges[0].start, edges[0].end, edge.end) == Orientation::Collinear)
+    {
         return Err("zero-area (collinear) cell ring".into());
     }
     for i in 0..edges.len() {
         for j in i + 1..edges.len() {
-            // geo rejects disjoint bounding boxes before robust orientation.
-            let Some(intersection) = line_intersection(edges[i], edges[j]) else {
+            // Disjoint bounding boxes are rejected before robust orientation.
+            let Some(contact) = segment_contact(edges[i], edges[j]) else {
                 continue;
             };
             let adjacent = j == i + 1 || (i == 0 && j + 1 == edges.len());
             if !adjacent {
                 return Err("cell ring self-intersection or nonadjacent touch".into());
             }
-            if matches!(intersection, LineIntersection::Collinear { .. }) {
+            if contact == Contact::Collinear {
                 return Err("cell ring backtracks over an adjacent edge".into());
             }
         }
@@ -351,7 +349,7 @@ fn winding(ring: &[Point]) -> Orientation {
     let Some(next) = (1..n).map(|d| ring[(i + d) % n]).find(|p| *p != v) else {
         return Orientation::Collinear;
     };
-    RobustKernel::orient2d(prev.into(), v.into(), next.into())
+    orient2d(prev, v, next)
 }
 
 #[cfg(test)]

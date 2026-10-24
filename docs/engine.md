@@ -19,7 +19,7 @@ Minimum Rust version: 1.88. The crate is `#![forbid(unsafe_code)]`.
 |---|---|---|
 | `catalog` (default) | Project (`.prj`) and plan (`.p##`) records, linked geometry/flow files, declared simulation windows | Standard library only |
 | `hdf` | Read-only HDF sessions; numeric, compound, string and attribute reads; capabilities; 1D geometry and results; structures; read families; time and units; CRS evidence | `hdf5-reader` (vendored), `ndarray`, `rayon`, `flate2` |
-| `mesh` | 2D mesh topology and cell polygon assembly (implies `hdf`) | `geo` |
+| `mesh` | 2D mesh topology and cell polygon assembly (implies `hdf`) | `robust` |
 | `results` | Bounded temporal reduction of result arrays (implies `hdf`) | none extra |
 
 ## Main entry points
