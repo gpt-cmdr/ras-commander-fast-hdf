@@ -49,6 +49,9 @@ jobs:
         run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
       - uses: Swatinem/rust-cache@v2
         with:
+          # Never restore Cargo's bin folder: the self-hosted Windows image keeps
+          # rustup's cargo/rustc proxies there (CARGO_HOME is C:/rust/cargo).
+          cache-bin: "false"
           workspaces: |
             . -> target
             python -> python/target
