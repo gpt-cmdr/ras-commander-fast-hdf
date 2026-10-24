@@ -1,0 +1,606 @@
+From 3317e94de2334374f211a9b9bde68bba6e721eaf Mon Sep 17 00:00:00 2001
+From: "William Mark Katzenmeyer, P.E., C.F.M." <heccommander@gmail.com>
+Date: Sat, 24 Oct 2026 06:17:05 -0400
+Subject: [PATCH 13/14] hdf5-reader: sparse row/column gathers and uncached
+ full reads
+
+[L06] Status vs upstream v0.9.3: NOT UPSTREAM.
+Kind: performance + API. Proposed upstream grouping: PR-C performance/API (engine-shaped; discuss first).
+Applies on roteiro-gis/netcdf-rust v0.9.3 (3d708fd) after the earlier patches of this series.
+
+Add Dataset::read_rows_columns_chunked (and, with the rayon feature,
+read_rows_columns_chunked_parallel and read_rows_columns_chunked_in_pool):
+read a strided row range and an ordered, possibly repeated column list of
+a 2-D chunked dataset with one bounded chunk-index traversal and per-chunk
+compact gathers, without materialising the full row slab. Returns
+Ok(None) for layouts it does not handle so callers can fall back.
+
+Add Dataset::read_array_uncached(_parallel): a full read that neither
+inserts nor evicts cached chunks nor retains the hot-array copy. A chunk
+cache of zero bytes now bypasses the cache entirely, and
+ChunkCache::capacity_bytes, DEFAULT_CHUNK_CACHE_BYTES and
+DEFAULT_CHUNK_CACHE_SLOTS are exposed.
+
+Adds tests/fixtures/perf2/gather.h5.
+---
+ hdf5-reader/src/cache.rs                   |  19 +-
+ hdf5-reader/src/dataset.rs                 | 318 ++++++++++++++++++++-
+ hdf5-reader/src/lib.rs                     |   7 +-
+ hdf5-reader/tests/fixtures/perf2/gather.h5 | Bin 0 -> 31760 bytes
+ 4 files changed, 335 insertions(+), 9 deletions(-)
+ create mode 100644 hdf5-reader/tests/fixtures/perf2/gather.h5
+
+diff --git a/hdf5-reader/src/cache.rs b/hdf5-reader/src/cache.rs
+index f4ecb23..7c39e5c 100644
+--- a/hdf5-reader/src/cache.rs
++++ b/hdf5-reader/src/cache.rs
+@@ -99,6 +99,17 @@ impl ChunkCache {
+         }
+     }
+ 
++    /// Configured byte capacity (zero disables retained chunk data).
++    pub fn capacity_bytes(&self) -> usize {
++        self.max_bytes
++    }
++
++    /// Inspect residency without changing statistics or LRU order.
++    #[cfg(feature = "rayon")]
++    pub(crate) fn contains(&self, key: &ChunkKey) -> bool {
++        self.inner.lock().cache.contains(key)
++    }
++
+     /// Get a cached chunk, if present. Promotes the entry in LRU order.
+     pub fn get(&self, key: &ChunkKey) -> Option<Arc<Vec<u8>>> {
+         let mut cache = self.inner.lock();
+@@ -144,6 +155,9 @@ impl ChunkCache {
+     where
+         F: FnOnce() -> Result<Vec<u8>>,
+     {
++        if self.max_bytes == 0 {
++            return load().map(Arc::new);
++        }
+         loop {
+             let in_flight = {
+                 let mut state = self.inner.lock();
+@@ -201,7 +215,10 @@ impl ChunkCache {
+ 
+ impl Default for ChunkCache {
+     fn default() -> Self {
+-        Self::new(64 * 1024 * 1024, 521)
++        Self::new(
++            crate::DEFAULT_CHUNK_CACHE_BYTES,
++            crate::DEFAULT_CHUNK_CACHE_SLOTS,
++        )
+     }
+ }
+ 
+diff --git a/hdf5-reader/src/dataset.rs b/hdf5-reader/src/dataset.rs
+index 1a5949b..57b7e7a 100644
+--- a/hdf5-reader/src/dataset.rs
++++ b/hdf5-reader/src/dataset.rs
+@@ -32,6 +32,11 @@ use crate::object_header::ObjectHeader;
+ use crate::storage::DynStorage;
+ use crate::FileContext;
+ 
++#[cfg(feature = "rayon")]
++type GatherPool<'a> = Option<&'a rayon::ThreadPool>;
++#[cfg(not(feature = "rayon"))]
++type GatherPool<'a> = Option<&'a ()>;
++
+ const HOT_FULL_DATASET_CACHE_MAX_BYTES: usize = 32 * 1024 * 1024;
+ 
+ #[derive(Clone, Copy)]
+@@ -1660,7 +1665,8 @@ impl Dataset {
+         let total_elements = checked_usize(self.num_elements()?, "dataset element count")?;
+         let total_bytes = checked_mul_usize(total_elements, elem_size, "dataset size in bytes")?;
+ 
+-        if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES {
++        if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES && self.chunk_cache.capacity_bytes() != 0
++        {
+             if let Some(cached_bytes) = self.full_dataset_bytes.get() {
+                 return self.decode_raw_data::<T>(cached_bytes);
+             }
+@@ -1733,7 +1739,9 @@ impl Dataset {
+                     }
+                 }
+ 
+-                if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES {
++                if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
++                    && self.chunk_cache.capacity_bytes() != 0
++                {
+                     let mut cached_bytes = try_zeroed_bytes(total_bytes)?;
+                     // SAFETY: full chunk coverage initialized all
+                     // `total_bytes` at `result_ptr`, and both allocations are
+@@ -1791,7 +1799,9 @@ impl Dataset {
+             // SAFETY: exact, duplicate-free chunk-grid coverage was validated
+             // above and every chunk was copied successfully.
+             let flat_data = unsafe { assume_init_u8_vec(flat_data) };
+-            if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES {
++            if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
++                && self.chunk_cache.capacity_bytes() != 0
++            {
+                 let _ = self.full_dataset_bytes.set(Arc::new(flat_data.clone()));
+             }
+             return self.decode_raw_data::<T>(&flat_data);
+@@ -1919,7 +1929,8 @@ impl Dataset {
+         let total_elements = checked_usize(self.num_elements()?, "dataset element count")?;
+         let total_bytes = checked_mul_usize(total_elements, elem_size, "dataset size in bytes")?;
+ 
+-        if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES {
++        if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES && self.chunk_cache.capacity_bytes() != 0
++        {
+             if let Some(cached_bytes) = self.full_dataset_bytes.get() {
+                 return self.decode_raw_data::<T>(cached_bytes);
+             }
+@@ -1998,7 +2009,9 @@ impl Dataset {
+                 for &dim in shape {
+                     result_shape.push(checked_usize(dim, "dataset dimension")?);
+                 }
+-                if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES {
++                if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
++                    && self.chunk_cache.capacity_bytes() != 0
++                {
+                     let mut cached_bytes = try_zeroed_bytes(total_bytes)?;
+                     // SAFETY: full chunk coverage initialized all
+                     // `total_bytes` at `flat.ptr`, and both allocations are
+@@ -2053,7 +2066,9 @@ impl Dataset {
+             // SAFETY: exact, duplicate-free chunk-grid coverage was validated
+             // above and all parallel copies completed.
+             let flat_data = unsafe { assume_init_u8_vec(flat_data) };
+-            if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES {
++            if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
++                && self.chunk_cache.capacity_bytes() != 0
++            {
+                 let _ = self.full_dataset_bytes.set(Arc::new(flat_data.clone()));
+             }
+             return self.decode_raw_data::<T>(&flat_data);
+@@ -2240,6 +2255,239 @@ impl Dataset {
+         Ok(entries)
+     }
+ 
++    /// Read ordered/duplicate columns of a 2D chunked dataset without a wide
++    /// intermediate slab. None requests the caller's fallback for other layouts.
++    pub fn read_rows_columns_chunked<T: H5Type>(
++        &self,
++        rows: (u64, u64, u64),
++        columns: &[u64],
++    ) -> Result<Option<ArrayD<T>>> {
++        self.read_rows_columns_impl(rows, columns, false, None)
++    }
++    /// Parallel chunk decode with compact per-chunk gathers, using the current pool.
++    #[cfg(feature = "rayon")]
++    pub fn read_rows_columns_chunked_parallel<T: H5Type>(
++        &self,
++        rows: (u64, u64, u64),
++        columns: &[u64],
++    ) -> Result<Option<ArrayD<T>>> {
++        self.read_rows_columns_impl(rows, columns, true, None)
++    }
++    /// Check residency on the calling thread; enter the supplied pool only for cold decode.
++    #[cfg(feature = "rayon")]
++    pub fn read_rows_columns_chunked_in_pool<T: H5Type>(
++        &self,
++        rows: (u64, u64, u64),
++        columns: &[u64],
++        pool: &rayon::ThreadPool,
++    ) -> Result<Option<ArrayD<T>>> {
++        self.read_rows_columns_impl(rows, columns, true, Some(pool))
++    }
++    fn read_rows_columns_impl<T: H5Type>(
++        &self,
++        rows: (u64, u64, u64),
++        columns: &[u64],
++        parallel: bool,
++        pool: GatherPool<'_>,
++    ) -> Result<Option<ArrayD<T>>> {
++        #[cfg(not(feature = "rayon"))]
++        let _ = (parallel, pool);
++        let DataLayout::Chunked {
++            address,
++            dims,
++            chunk_indexing,
++            ..
++        } = &self.layout
++        else {
++            return Ok(None);
++        };
++        let shape = &self.dataspace.dims;
++        if shape.len() != 2 {
++            return Ok(None);
++        }
++        let chunk_shape: Vec<u64> = dims.iter().map(|&n| u64::from(n)).collect();
++        validate_chunk_shape(shape, &chunk_shape)?;
++        if rows.2 == 0
++            || rows.0 > rows.1
++            || rows.1 > shape[0]
++            || columns.iter().any(|&c| c >= shape[1])
++        {
++            return Err(Error::InvalidData("invalid row/column selection".into()));
++        }
++        let nr = checked_usize((rows.1 - rows.0).div_ceil(rows.2), "selected rows")?;
++        let count = checked_mul_usize(nr, columns.len(), "gather elements")?;
++        let elem_size = self.raw_element_size()?;
++        let len = checked_mul_usize(count, elem_size, "gather bytes")?;
++        let mut output = self.make_output_buffer(len)?;
++        if nr == 0
++            || columns.is_empty()
++            || Cursor::is_undefined_offset(*address, self.offset_size())
++        {
++            return self
++                .decode_buffer_with_shape::<T>(&output, count, &[nr, columns.len()])
++                .map(Some);
++        }
++        let mut groups = std::collections::BTreeMap::<u64, Vec<(usize, u64)>>::new();
++        for (i, &c) in columns.iter().enumerate() {
++            groups.entry(c / chunk_shape[1]).or_default().push((i, c));
++        }
++        let first_row = rows.0 / chunk_shape[0];
++        let last_selected = rows.0 + ((rows.1 - rows.0 - 1) / rows.2) * rows.2;
++        let last_row = last_selected / chunk_shape[0];
++        // One bounded index walk for the entire selection, not one per column bucket.
++        let first = [first_row, *groups.first_key_value().unwrap().0];
++        let last = [last_row, *groups.last_key_value().unwrap().0];
++        let entries = self.collect_chunk_entries(
++            *address,
++            dims,
++            chunk_indexing.as_ref(),
++            ChunkEntrySelection {
++                shape,
++                ndim: 2,
++                elem_size,
++                chunk_bounds: Some((&first, &last)),
++            },
++        )?;
++        let mut by_column = std::collections::BTreeMap::<u64, Vec<chunk_index::ChunkEntry>>::new();
++        for entry in entries {
++            if entry.offsets.len() != 2 {
++                return Err(Error::InvalidData("chunk rank mismatch".into()));
++            }
++            let col = entry.offsets[1] / chunk_shape[1];
++            if groups.contains_key(&col) {
++                by_column.entry(col).or_default().push(entry);
++            }
++        }
++        for (column_chunk, selected) in groups {
++            let first = [first_row, column_chunk];
++            let last = [last_row, column_chunk];
++            let mut entries = by_column.remove(&column_chunk).unwrap_or_default();
++            validate_chunk_grid_coverage(&mut entries, shape, &chunk_shape, &first, &last)?;
++            let gather_chunk = |entry: &chunk_index::ChunkEntry,
++                                mut direct: Option<&mut [u8]>|
++             -> Result<Vec<(usize, Vec<u8>)>> {
++                let mut pieces = Vec::new();
++                let chunk_start = entry.offsets[0];
++                let chunk_end = chunk_start
++                    .checked_add(chunk_shape[0])
++                    .ok_or_else(|| Error::InvalidData("chunk range overflow".into()))?
++                    .min(rows.1);
++                let first_selected = if chunk_start <= rows.0 {
++                    rows.0
++                } else {
++                    rows.0
++                        .checked_add(
++                            (chunk_start - rows.0)
++                                .div_ceil(rows.2)
++                                .checked_mul(rows.2)
++                                .ok_or_else(|| Error::InvalidData("row overflow".into()))?,
++                        )
++                        .ok_or_else(|| Error::InvalidData("row overflow".into()))?
++                };
++                if first_selected >= chunk_end {
++                    return Ok(pieces);
++                }
++                let data = self.load_exact_chunk_data(entry, *address, &chunk_shape, elem_size)?;
++                let mut row = first_selected;
++                while row < chunk_end {
++                    let out_row = checked_usize((row - rows.0) / rows.2, "output row")?;
++                    let mut row_data = if direct.is_none() {
++                        Vec::with_capacity(selected.len() * elem_size)
++                    } else {
++                        Vec::new()
++                    };
++                    for &(out_col, col) in &selected {
++                        let local = (row - chunk_start)
++                            .checked_mul(chunk_shape[1])
++                            .and_then(|n| n.checked_add(col - entry.offsets[1]))
++                            .ok_or_else(|| {
++                                Error::InvalidData("chunk gather offset overflow".into())
++                            })?;
++                        let src = checked_mul_usize(
++                            checked_usize(local, "chunk element")?,
++                            elem_size,
++                            "chunk byte offset",
++                        )?;
++                        let source = data
++                            .get(src..src + elem_size)
++                            .ok_or_else(|| Error::InvalidData("chunk gather bounds".into()))?;
++                        if let Some(ref mut target) = direct {
++                            let dst = (out_row * columns.len() + out_col) * elem_size;
++                            target[dst..dst + elem_size].copy_from_slice(source);
++                        } else {
++                            row_data.extend_from_slice(source);
++                        }
++                    }
++                    if direct.is_none() {
++                        pieces.push((out_row, row_data));
++                    }
++                    let Some(next) = row.checked_add(rows.2) else {
++                        break;
++                    };
++                    row = next;
++                }
++                Ok(pieces)
++            };
++            #[cfg(feature = "rayon")]
++            let mut scatter = |pieces: Vec<(usize, Vec<u8>)>| {
++                for (row, data) in pieces {
++                    for (i, &(col, _)) in selected.iter().enumerate() {
++                        let dst = (row * columns.len() + col) * elem_size;
++                        output[dst..dst + elem_size]
++                            .copy_from_slice(&data[i * elem_size..(i + 1) * elem_size]);
++                    }
++                }
++            };
++            #[cfg(feature = "rayon")]
++            let use_parallel = parallel
++                && entries.len() > 1
++                && entries.first().is_some_and(|e| {
++                    !self.chunk_cache.contains(&ChunkKey {
++                        dataset_addr: *address,
++                        chunk_offsets: SmallVec::from_slice(&e.offsets),
++                    })
++                });
++            #[cfg(feature = "rayon")]
++            if use_parallel {
++                let decode = || {
++                    entries
++                        .par_iter()
++                        .map(|entry| gather_chunk(entry, None))
++                        .collect::<Result<Vec<_>>>()
++                };
++                let pieces = if let Some(pool) = pool {
++                    pool.install(decode)
++                } else {
++                    decode()
++                }?;
++                for piece in pieces {
++                    scatter(piece);
++                }
++                continue;
++            }
++            for entry in &entries {
++                gather_chunk(entry, Some(&mut output))?;
++            }
++        }
++        self.decode_buffer_with_shape::<T>(&output, count, &[nr, columns.len()])
++            .map(Some)
++    }
++    /// Full read without inserting/evicting chunks or retaining a hot-array copy.
++    /// Metadata/index caches remain shared. Decoder scratch is still per chunk.
++    pub fn read_array_uncached<T: H5Type>(&self) -> Result<ArrayD<T>> {
++        let mut dataset = Self::from_template(self.context.clone(), self.template());
++        dataset.chunk_cache = Arc::new(ChunkCache::new(0, 1));
++        dataset.full_dataset_bytes = Arc::new(OnceLock::new());
++        dataset.read_array::<T>()
++    }
++    #[cfg(feature = "rayon")]
++    pub fn read_array_uncached_parallel<T: H5Type>(&self) -> Result<ArrayD<T>> {
++        let mut dataset = Self::from_template(self.context.clone(), self.template());
++        dataset.chunk_cache = Arc::new(ChunkCache::new(0, 1));
++        dataset.full_dataset_bytes = Arc::new(OnceLock::new());
++        dataset.read_array_parallel::<T>()
++    }
++
+     fn load_chunk_data(
+         &self,
+         entry: &chunk_index::ChunkEntry,
+@@ -4166,6 +4414,64 @@ fn slice_array<T: H5Type + Clone>(
+ 
+ #[cfg(test)]
+ mod tests {
++    #[test]
++    fn perf2_gather_and_uncached_reads() {
++        let file = crate::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
++            .unwrap();
++        macro_rules! check {
++            ($ty:ty,$name:expr) => {{
++                let d = file.dataset($name).unwrap();
++                let full = d.read_array::<$ty>().unwrap();
++                let cols = [18, 0, 7, 7, 13];
++                let got = d
++                    .read_rows_columns_chunked::<$ty>((2, 17, 3), &cols)
++                    .unwrap()
++                    .unwrap();
++                for (out, row) in (2..17).step_by(3).enumerate() {
++                    for (col, &id) in cols.iter().enumerate() {
++                        assert_eq!(got[[out, col]], full[[row, id as usize]]);
++                    }
++                }
++                #[cfg(feature = "rayon")]
++                {
++                    let pool = rayon::ThreadPoolBuilder::new()
++                        .num_threads(4)
++                        .build()
++                        .unwrap();
++                    let cold = crate::Hdf5File::from_bytes(include_bytes!(
++                        "../tests/fixtures/perf2/gather.h5"
++                    ))
++                    .unwrap()
++                    .dataset($name)
++                    .unwrap();
++                    let parallel = pool
++                        .install(|| {
++                            cold.read_rows_columns_chunked_parallel::<$ty>((2, 17, 3), &cols)
++                        })
++                        .unwrap()
++                        .unwrap();
++                    assert_eq!(parallel, got);
++                }
++                assert_eq!(d.read_array_uncached::<$ty>().unwrap(), full);
++                #[cfg(feature = "rayon")]
++                assert_eq!(d.read_array_uncached_parallel::<$ty>().unwrap(), full);
++                assert!(d
++                    .read_rows_columns_chunked::<$ty>((0, 18, 1), &cols)
++                    .is_err());
++                assert!(d
++                    .read_rows_columns_chunked::<$ty>((0, 17, 1), &[])
++                    .unwrap()
++                    .unwrap()
++                    .is_empty());
++            }};
++        }
++        for suffix in ["plain", "filtered"] {
++            check!(f32, &format!("lef4{suffix}"));
++            check!(i32, &format!("bei4{suffix}"));
++            check!(f64, &format!("lef8{suffix}"));
++        }
++        check!(i32, "fill");
++    }
+     use super::*;
+     use crate::storage::BytesStorage;
+ 
+diff --git a/hdf5-reader/src/lib.rs b/hdf5-reader/src/lib.rs
+index a3fee1b..c727d98 100644
+--- a/hdf5-reader/src/lib.rs
++++ b/hdf5-reader/src/lib.rs
+@@ -76,6 +76,8 @@ pub use storage::{
+     RangeRequestStorage, Storage, StorageBuffer,
+ };
+ 
++pub const DEFAULT_CHUNK_CACHE_BYTES: usize = 64 * 1024 * 1024;
++pub const DEFAULT_CHUNK_CACHE_SLOTS: usize = 521;
+ /// Default largest decoded chunk a dataset read will allocate: 256 MiB.
+ ///
+ /// Real HDF5 writers keep chunks far smaller (h5py and netCDF target about
+@@ -88,6 +90,7 @@ pub const HDF5_MAX_CHUNK_BYTES: usize = u32::MAX as usize;
+ /// Configuration options for opening an HDF5 file.
+ pub struct OpenOptions {
+     /// Maximum bytes for the chunk cache. Default: 64 MiB.
++    /// Zero disables both chunk retention and the optional 32 MiB hot-array copy.
+     pub chunk_cache_bytes: usize,
+     /// Maximum number of chunk cache slots. Default: 521.
+     pub chunk_cache_slots: usize,
+@@ -108,8 +111,8 @@ pub struct OpenOptions {
+ impl Default for OpenOptions {
+     fn default() -> Self {
+         OpenOptions {
+-            chunk_cache_bytes: 64 * 1024 * 1024,
+-            chunk_cache_slots: 521,
++            chunk_cache_bytes: DEFAULT_CHUNK_CACHE_BYTES,
++            chunk_cache_slots: DEFAULT_CHUNK_CACHE_SLOTS,
+             filter_registry: None,
+             external_file_resolver: None,
+             external_link_resolver: None,
+diff --git a/hdf5-reader/tests/fixtures/perf2/gather.h5 b/hdf5-reader/tests/fixtures/perf2/gather.h5
+new file mode 100644
+index 0000000000000000000000000000000000000000..556d9ef593e34b9928f9814233c8eb911f72318e
+GIT binary patch
+literal 31760
+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
+T&48K#H3Mn})C~OBX5fDSe+3>-
+
+literal 0
+HcmV?d00001
+

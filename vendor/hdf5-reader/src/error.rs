@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 /// Errors produced by the HDF5 reader.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -163,12 +165,12 @@ impl Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
-pub use hdf5_core::ByteOrder;
+pub use crate::hdf5_core::ByteOrder;
 
-impl From<hdf5_core::Error> for Error {
-    fn from(err: hdf5_core::Error) -> Self {
+impl From<crate::hdf5_core::Error> for Error {
+    fn from(err: crate::hdf5_core::Error) -> Self {
         match err {
-            hdf5_core::Error::InvalidData(message) => Error::InvalidData(message),
+            crate::hdf5_core::Error::InvalidData(message) => Error::InvalidData(message),
         }
     }
 }

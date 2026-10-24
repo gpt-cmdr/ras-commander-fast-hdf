@@ -1,0 +1,219 @@
+From 9c2746011a455ee6e72abc3b06c239ac0bb25514 Mon Sep 17 00:00:00 2001
+From: "William Mark Katzenmeyer, P.E., C.F.M." <heccommander@gmail.com>
+Date: Sat, 24 Oct 2026 06:13:14 -0400
+Subject: [PATCH 06/14] hdf5-reader: configurable per-chunk allocation limit
+
+[L12] Status vs upstream v0.9.3: PARTLY UPSTREAM (PR #100 / 1638711 bounds DEFLATE/LZ4 reserves; vendored DEFLATE/LZ4 changes dropped here).
+Kind: safety fix + API. Proposed upstream grouping: PR-B hardening (new API: OpenOptions field, Error variant).
+Applies on roteiro-gis/netcdf-rust v0.9.3 (3d708fd) after the earlier patches of this series.
+
+Add OpenOptions::max_chunk_bytes (default DEFAULT_MAX_CHUNK_BYTES =
+256 MiB, clamped to HDF5_MAX_CHUNK_BYTES = 4 GiB) and Error::ResourceLimit.
+The decoded chunk size is checked before the cache, the raw read or any
+filter allocates for it: chunk dimensions are not bounded by the dataset
+extent, so a 4x4 dataset could declare 2^20 x 2^20 chunks. Every built-in
+filter call is also clamped to the format maximum, including calls
+without a caller limit.
+---
+ hdf5-reader/src/dataset.rs     | 10 ++++++++++
+ hdf5-reader/src/error.rs       |  5 +++++
+ hdf5-reader/src/filters/mod.rs | 32 ++++++++++++--------------------
+ hdf5-reader/src/lib.rs         | 17 +++++++++++++++++
+ netcdf-reader/src/lib.rs       |  1 +
+ netcdf-reader/src/nc4/mod.rs   |  3 +++
+ 6 files changed, 48 insertions(+), 20 deletions(-)
+
+diff --git a/hdf5-reader/src/dataset.rs b/hdf5-reader/src/dataset.rs
+index 155f606..01b9928 100644
+--- a/hdf5-reader/src/dataset.rs
++++ b/hdf5-reader/src/dataset.rs
+@@ -2235,6 +2235,15 @@ impl Dataset {
+             chunk_offsets: smallvec::SmallVec::from_slice(&entry.offsets),
+         };
+         let expected_len = decoded_chunk_expected_len(chunk_shape, elem_size)?;
++        // Chunk dimensions come from the file and are not bounded by the
++        // dataset extent, so a tiny dataset can declare a huge chunk. Refuse it
++        // before the cache, the raw read or any filter allocates for it.
++        if expected_len > self.context.max_chunk_bytes {
++            return Err(Error::ResourceLimit(format!(
++                "decoded chunk of {expected_len} bytes exceeds the {} byte chunk limit",
++                self.context.max_chunk_bytes
++            )));
++        }
+         let filter_output_limit =
+             checked_add_usize(expected_len, 1, "decoded chunk filter output limit")?;
+ 
+@@ -4181,6 +4190,7 @@ mod tests {
+             external_file_resolver: None,
+             external_link_resolver: None,
+             external_file_cache: Mutex::new(HashMap::new()),
++            max_chunk_bytes: crate::DEFAULT_MAX_CHUNK_BYTES,
+             sohm_table: OnceLock::new(),
+             full_file_cache: OnceLock::new(),
+         })
+diff --git a/hdf5-reader/src/error.rs b/hdf5-reader/src/error.rs
+index f95cb27..fae719a 100644
+--- a/hdf5-reader/src/error.rs
++++ b/hdf5-reader/src/error.rs
+@@ -133,6 +133,11 @@ pub enum Error {
+     #[error("invalid data: {0}")]
+     InvalidData(String),
+ 
++    /// The file asks for more memory than the reader's configured limit
++    /// allows; nothing was allocated.
++    #[error("resource limit: {0}")]
++    ResourceLimit(String),
++
+     #[error("slice out of bounds: dimension {dim}, index {index}, size {size}")]
+     SliceOutOfBounds { dim: usize, index: u64, size: u64 },
+ 
+diff --git a/hdf5-reader/src/filters/mod.rs b/hdf5-reader/src/filters/mod.rs
+index 28f0a00..be778a5 100644
+--- a/hdf5-reader/src/filters/mod.rs
++++ b/hdf5-reader/src/filters/mod.rs
+@@ -188,37 +188,29 @@ pub fn apply_pipeline_with_limit(
+     Ok(output)
+ }
+ 
++/// Absolute ceiling on one built-in filter's decoded output: one byte past
++/// the largest chunk HDF5 permits, so the usual `expected + 1` limit still
++/// detects over-long streams at the format maximum.
++const MAX_FILTER_OUTPUT: usize = crate::HDF5_MAX_CHUNK_BYTES.saturating_add(1);
++
+ fn apply_builtin_filter_with_limit(
+     filter: &FilterDescription,
+     data: &[u8],
+     element_size: usize,
+     max_output_len: Option<usize>,
+ ) -> Result<Vec<u8>> {
++    // Built-in decoders size their output from file content, so every call is
++    // bounded, including callers that pass no limit.
++    let limit = max_output_len.map_or(MAX_FILTER_OUTPUT, |n| n.min(MAX_FILTER_OUTPUT));
+     match filter.id {
+-        FILTER_DEFLATE => match max_output_len {
+-            Some(max_output_len) => deflate::decompress_with_limit(data, max_output_len),
+-            None => deflate::decompress(data),
+-        },
++        FILTER_DEFLATE => deflate::decompress_with_limit(data, limit),
+         FILTER_SHUFFLE => Ok(shuffle::unshuffle(data, element_size)),
+         FILTER_FLETCHER32 => fletcher32::verify_and_strip(data),
+         FILTER_SZIP => Err(Error::UnsupportedFilter("szip".into())),
+-        FILTER_NBIT => match max_output_len {
+-            Some(max_output_len) => {
+-                nbit::decompress_with_limit(data, &filter.client_data, max_output_len)
+-            }
+-            None => nbit::decompress(data, &filter.client_data),
+-        },
+-        FILTER_SCALEOFFSET => match max_output_len {
+-            Some(max_output_len) => {
+-                scaleoffset::decompress_with_limit(data, &filter.client_data, max_output_len)
+-            }
+-            None => scaleoffset::decompress(data, &filter.client_data),
+-        },
++        FILTER_NBIT => nbit::decompress_with_limit(data, &filter.client_data, limit),
++        FILTER_SCALEOFFSET => scaleoffset::decompress_with_limit(data, &filter.client_data, limit),
+         #[cfg(feature = "lz4")]
+-        FILTER_LZ4 => match max_output_len {
+-            Some(max_output_len) => lz4::decompress_with_limit(data, max_output_len),
+-            None => lz4::decompress(data),
+-        },
++        FILTER_LZ4 => lz4::decompress_with_limit(data, limit),
+         id => Err(Error::UnsupportedFilter(format!("filter id {}", id))),
+     }
+ }
+diff --git a/hdf5-reader/src/lib.rs b/hdf5-reader/src/lib.rs
+index ca34722..1803cc7 100644
+--- a/hdf5-reader/src/lib.rs
++++ b/hdf5-reader/src/lib.rs
+@@ -76,6 +76,15 @@ pub use storage::{
+     RangeRequestStorage, Storage, StorageBuffer,
+ };
+ 
++/// Default largest decoded chunk a dataset read will allocate: 256 MiB.
++///
++/// Real HDF5 writers keep chunks far smaller (h5py and netCDF target about
++/// 1-4 MiB). The bound applies before any buffer for the chunk is allocated,
++/// and each parallel decode worker can hold one such chunk.
++pub const DEFAULT_MAX_CHUNK_BYTES: usize = 256 * 1024 * 1024;
++/// Largest decoded chunk the HDF5 format permits (chunk sizes are 32-bit).
++pub const HDF5_MAX_CHUNK_BYTES: usize = u32::MAX as usize;
++
+ /// Configuration options for opening an HDF5 file.
+ pub struct OpenOptions {
+     /// Maximum bytes for the chunk cache. Default: 64 MiB.
+@@ -89,6 +98,11 @@ pub struct OpenOptions {
+     pub external_file_resolver: Option<Arc<dyn ExternalFileResolver>>,
+     /// Optional resolver for HDF5 external links.
+     pub external_link_resolver: Option<Arc<dyn ExternalLinkResolver>>,
++    /// Largest decoded chunk (chunk dimensions times element size) a read
++    /// may allocate. Larger chunks are refused with [`Error::ResourceLimit`]
++    /// before allocation. Default: [`DEFAULT_MAX_CHUNK_BYTES`]; values above
++    /// [`HDF5_MAX_CHUNK_BYTES`] are clamped to it.
++    pub max_chunk_bytes: usize,
+ }
+ 
+ impl Default for OpenOptions {
+@@ -99,6 +113,7 @@ impl Default for OpenOptions {
+             filter_registry: None,
+             external_file_resolver: None,
+             external_link_resolver: None,
++            max_chunk_bytes: DEFAULT_MAX_CHUNK_BYTES,
+         }
+     }
+ }
+@@ -431,6 +446,7 @@ pub(crate) struct FileContext {
+     pub(crate) external_file_resolver: Option<Arc<dyn ExternalFileResolver>>,
+     pub(crate) external_link_resolver: Option<Arc<dyn ExternalLinkResolver>>,
+     pub(crate) external_file_cache: parking_lot::Mutex<HashMap<String, DynStorage>>,
++    pub(crate) max_chunk_bytes: usize,
+     sohm_table: OnceLock<std::result::Result<Option<SharedMessageTableRef>, String>>,
+     full_file_cache: OnceLock<StorageBuffer>,
+ }
+@@ -581,6 +597,7 @@ impl Hdf5File {
+                 external_file_resolver,
+                 external_link_resolver,
+                 external_file_cache: parking_lot::Mutex::new(HashMap::new()),
++                max_chunk_bytes: options.max_chunk_bytes.min(HDF5_MAX_CHUNK_BYTES),
+                 sohm_table: OnceLock::new(),
+                 full_file_cache: OnceLock::new(),
+             }),
+diff --git a/netcdf-reader/src/lib.rs b/netcdf-reader/src/lib.rs
+index b17fd50..60dced9 100644
+--- a/netcdf-reader/src/lib.rs
++++ b/netcdf-reader/src/lib.rs
+@@ -807,6 +807,7 @@ impl NcFile {
+                             filter_registry: options.filter_registry,
+                             external_file_resolver: options.external_file_resolver,
+                             external_link_resolver: options.external_link_resolver,
++                            max_chunk_bytes: hdf5_reader::DEFAULT_MAX_CHUNK_BYTES,
+                         },
+                     )?;
+                     let nc4 = nc4::Nc4File::from_hdf5(hdf5, metadata_mode)?;
+diff --git a/netcdf-reader/src/nc4/mod.rs b/netcdf-reader/src/nc4/mod.rs
+index 097dfd5..b6351c6 100644
+--- a/netcdf-reader/src/nc4/mod.rs
++++ b/netcdf-reader/src/nc4/mod.rs
+@@ -170,6 +170,7 @@ impl Nc4File {
+                 filter_registry: options.filter_registry,
+                 external_file_resolver: options.external_file_resolver,
+                 external_link_resolver: options.external_link_resolver,
++                max_chunk_bytes: hdf5_reader::DEFAULT_MAX_CHUNK_BYTES,
+             },
+         )?;
+         Nc4File::from_hdf5(hdf5, metadata_mode)
+@@ -191,6 +192,7 @@ impl Nc4File {
+                 filter_registry: options.filter_registry,
+                 external_file_resolver: options.external_file_resolver,
+                 external_link_resolver: options.external_link_resolver,
++                max_chunk_bytes: hdf5_reader::DEFAULT_MAX_CHUNK_BYTES,
+             },
+         )?;
+         Nc4File::from_hdf5(hdf5, metadata_mode)
+@@ -215,6 +217,7 @@ impl Nc4File {
+                 filter_registry: options.filter_registry,
+                 external_file_resolver: options.external_file_resolver,
+                 external_link_resolver: options.external_link_resolver,
++                max_chunk_bytes: hdf5_reader::DEFAULT_MAX_CHUNK_BYTES,
+             },
+         )?;
+         Nc4File::from_hdf5(hdf5, metadata_mode)

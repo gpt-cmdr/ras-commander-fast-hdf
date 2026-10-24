@@ -8,7 +8,9 @@ ras-commander's default HDF engine: a native (Rust) HEC-RAS HDF reader and its P
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 This repository contains a native (Rust) reader for HEC-RAS HDF files and the
-Python extension through which ras-commander uses it. It is ras-commander's
+Python extension through which ras-commander uses it. Both are one Rust crate,
+`ras-commander-fast-hdf`, which also builds the Python wheel of the same name.
+It is ras-commander's
 default HDF engine: ras-commander 0.107.1 and later install it automatically
 on Windows x64, Linux x64 and macOS arm64.
 
@@ -25,6 +27,7 @@ h5py for every read.
 |---|---|
 | [Native Rust HDF engine](https://rascommander.info/ras/native-engine/) (ras-commander site) | User guide: engine modes, what is qualified, performance, limitations. |
 | [Developer documentation](docs/README.md) | The engine itself: architecture, the Python module contract, building, testing and releasing. |
+| [Rust API](https://docs.rs/ras-commander-fast-hdf) (docs.rs) | The crate's public Rust API. |
 | [Changelog](CHANGELOG.md) | Changes in each release. |
 
 ## Quick start
@@ -59,7 +62,7 @@ No code changes are needed. To choose the engine, set
 
 | Item | Status |
 |---|---|
-| Version | **0.1.0**, Python extension `API_VERSION` 11. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
+| Version | **0.2.0** (unreleased; 0.1.1 is the current release), Python extension `API_VERSION` 11. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
 | Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 are qualified; Linux wheels cover glibc 2.17 or later (`manylinux2014`) and musl (`musllinux_1_2`, Alpine). macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. ras-commander 0.107.1 and later install the engine on these three platforms; elsewhere they use h5py. |
 | Equivalence with h5py | Identical results to h5py on 201 public ras-commander method cases across 137 HEC-RAS 5.x–7.x result and geometry files: 3,800 method × file pairs in three modes, plus 1,428 calls replayed from the example notebooks. Methods the corpus has not exercised natively stay on h5py in `auto` mode. |
 | Speed | 2D cell polygons 4–19× faster, depending on mesh size; mesh time series 2–7× faster on large meshes; small single reads a few milliseconds slower. See [Performance](#performance). |
@@ -112,9 +115,9 @@ table, method and environment are in [docs/performance.md](docs/performance.md).
 your code ──> ras-commander (Hdf* classes, unchanged API)
                   │  RAS_COMMANDER_FAST_HDF = auto | h5py | native
                   ├──> h5py + HDF5 C library        (reference path)
-                  └──> ras_commander_fast_hdf       (this repo, python/)
-                           └──> ras-commander-rust  (this repo, crates/)
-                                    └──> hdf5-reader (vendor/, pure Rust)
+                  └──> ras_commander_fast_hdf       (this repo, src/python/)
+                           └──> engine              (this repo, src/)
+                                    └──> hdf5-reader (embedded from vendor/, pure Rust)
 ```
 
 In the default `auto` mode, ras-commander tries the native read first and
@@ -123,13 +126,36 @@ over budget, damaged data), so results never differ. `native` mode raises
 instead of falling back, which is how qualification proves a workflow ran
 natively. See [Architecture](docs/architecture.md).
 
+## Using the engine from Rust
+
+From 0.2.0 the same crate is published on crates.io for Rust programs. The
+Rust import is `ras_commander_fast_hdf`.
+
+```toml
+[dependencies]
+ras-commander-fast-hdf = { version = "0.2", features = ["hdf", "mesh", "results"] }
+```
+
+| Feature | Adds |
+|---|---|
+| `catalog` (default) | Project and plan text catalogue; standard library only. |
+| `hdf` | Read-only HDF5 sessions and reads; pure Rust, with the embedded reader. |
+| `mesh` | 2D mesh geometry and topology (implies `hdf`). |
+| `results` | 1D/2D results, summaries and time series (implies `hdf`). |
+| `python`, `extension-module`, `exports-*` | The Python extension and its export writers; only for wheel builds. |
+
+Without `python`, no PyO3 or NumPy is in the dependency tree. See
+[Rust engine](docs/engine.md).
+
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| [`crates/ras-commander-rust`](crates/ras-commander-rust) | The engine: a Rust library with no Python dependency. It reads HEC-RAS project and plan files and the HDF5 files HEC-RAS writes (numeric, compound and string datasets, attributes, mesh topology, 1D and 2D results, structures, terrain modifications), and refuses anything it cannot read exactly. |
-| [`python`](python) | The Python extension `ras_commander_fast_hdf` (PyO3 + maturin), built as the `ras-commander-fast-hdf` wheel. It exposes the engine to ras-commander, plus native mesh-polygon assembly, fluvial/pluvial kernels and PMTiles/vector exports. |
-| [`vendor`](vendor) | A vendored, locally patched copy of the pure-Rust `hdf5-reader` and `hdf5-core` crates (MIT/Apache-2.0). See [`vendor/LOCAL_PATCHES.md`](vendor/LOCAL_PATCHES.md). |
+| [`src`](src) | The engine: a read-only Rust library for HEC-RAS project and plan files and the HDF5 files HEC-RAS writes (numeric, compound and string datasets, attributes, mesh topology, 1D and 2D results, structures, terrain modifications). It refuses anything it cannot read exactly. |
+| [`src/python`](src/python) | The Python extension `ras_commander_fast_hdf` (PyO3, feature `python`). It exposes the engine to ras-commander, plus native mesh-polygon assembly, fluvial/pluvial kernels and PMTiles tiling. The vector export writers are in [`src/exports`](src/exports). |
+| [`python`](python) | Python packaging: `pyproject.toml` builds the `ras-commander-fast-hdf` wheel from this crate with maturin. |
+| [`tests`](tests) | Rust integration tests and their committed fixtures. |
+| [`vendor`](vendor) | Third-party source compiled into the crate as private modules: a patched copy of `hdf5-reader` and `hdf5-core` 0.9.3 (MIT OR Apache-2.0) and a copy of `freestiler-core` (MIT AND ISC). See [`vendor/LOCAL_PATCHES.md`](vendor/LOCAL_PATCHES.md) and `vendor/PROVENANCE.json`. |
 | [`docs`](docs/README.md) | Developer documentation. |
 
 ## Building from source
@@ -138,13 +164,14 @@ Requirements: Rust 1.88 or later and Python 3.10 or later. On Windows, install
 the Visual Studio C++ Build Tools.
 
 ```bash
-pip install maturin
-maturin build --release --locked --manifest-path python/Cargo.toml \
-    --features extension-module,exports-all,exports-pmtiles
-pip install target/wheels/ras_commander_fast_hdf-*.whl
+pip install "maturin>=1.9,<2"
+cd python
+maturin build --release --locked --features extension-module,exports-all,exports-pmtiles --out ../dist
+pip install ../dist/ras_commander_fast_hdf-*.whl
+cd ..
 
-cargo test --locked --all-features                       # engine
-cargo test --locked --manifest-path python/Cargo.toml    # Python bridge (Rust side)
+cargo test --locked --no-default-features --features catalog,hdf,mesh,results   # engine
+cargo test --locked --features python,exports-all,exports-pmtiles                # engine and Python bridge
 ```
 
 See [Building](docs/building.md) and [Testing](docs/testing.md).
@@ -158,8 +185,12 @@ contributors: start with [AGENTS.md](AGENTS.md).
 
 ## License
 
-MIT; see [LICENSE](LICENSE). The wheel bundles the licenses of every linked
-crate in [`python/THIRD-PARTY-NOTICES.md`](python/THIRD-PARTY-NOTICES.md).
+MIT; see [LICENSE](LICENSE). The embedded third-party source keeps its own
+licences (`hdf5-reader` and `hdf5-core`: MIT OR Apache-2.0; `freestiler-core`:
+MIT AND ISC); the texts are in [`vendor`](vendor). The licences of every linked
+crate are in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) (crate, all
+features) and [`python/licenses/THIRD-PARTY-NOTICES.md`](python/licenses/THIRD-PARTY-NOTICES.md)
+(wheel).
 
 ras-commander-fast-hdf is an independent open source project. HEC-RAS is
 developed by the U.S. Army Corps of Engineers Hydrologic Engineering Center

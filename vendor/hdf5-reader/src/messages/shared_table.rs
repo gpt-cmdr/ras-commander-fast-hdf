@@ -1,10 +1,12 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Shared Message Table object-header message (type 0x000F).
 //!
 //! This message appears in the superblock extension and points at the file's
 //! SOHM master table.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
 
 /// Pointer to the file-level shared object-header message table.
 #[derive(Debug, Clone)]

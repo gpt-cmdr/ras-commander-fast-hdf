@@ -1,12 +1,14 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Fill Value messages.
 //!
 //! Two message types carry fill value information:
 //! - Old fill value (type 0x0004): raw bytes, length = message size.
 //! - New fill value (type 0x0005): versioned, with allocation/write time and defined flag.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-pub use hdf5_core::{FillTime, FillValueMessage};
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+pub use crate::hdf5_core::{FillTime, FillValueMessage};
 
 /// Parse the old fill value message (type 0x0004).
 ///

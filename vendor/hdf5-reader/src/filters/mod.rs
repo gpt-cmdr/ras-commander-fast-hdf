@@ -1,6 +1,8 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 pub mod deflate;
 pub mod fletcher32;
-#[cfg(feature = "lz4")]
+#[cfg(feature = "hdf")]
 pub mod lz4;
 pub mod nbit;
 pub mod scaleoffset;
@@ -8,8 +10,8 @@ pub mod shuffle;
 
 use std::collections::HashMap;
 
-use crate::error::{Error, Result};
-use crate::messages::filter_pipeline::FilterDescription;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::messages::filter_pipeline::FilterDescription;
 
 /// Standard HDF5 filter IDs.
 pub const FILTER_DEFLATE: u16 = 1;
@@ -51,7 +53,7 @@ impl FilterRegistry {
         registry.register_builtin(FILTER_FLETCHER32);
         registry.register_builtin(FILTER_NBIT);
         registry.register_builtin(FILTER_SCALEOFFSET);
-        #[cfg(feature = "lz4")]
+        #[cfg(feature = "hdf")]
         registry.register_builtin(FILTER_LZ4);
         registry
     }
@@ -244,7 +246,7 @@ fn encoded_size_bound(id: u16, n: usize) -> Result<usize> {
 /// Absolute ceiling on one built-in filter's decoded output: one byte past
 /// the largest chunk HDF5 permits, so the usual `expected + 1` limit still
 /// detects over-long streams at the format maximum.
-const MAX_FILTER_OUTPUT: usize = crate::HDF5_MAX_CHUNK_BYTES.saturating_add(1);
+const MAX_FILTER_OUTPUT: usize = crate::hdf5_reader::HDF5_MAX_CHUNK_BYTES.saturating_add(1);
 
 fn apply_builtin_filter_with_limit(
     filter: &FilterDescription,
@@ -262,10 +264,21 @@ fn apply_builtin_filter_with_limit(
         FILTER_SZIP => Err(Error::UnsupportedFilter("szip".into())),
         FILTER_NBIT => nbit::decompress_with_limit(data, &filter.client_data, limit),
         FILTER_SCALEOFFSET => scaleoffset::decompress_with_limit(data, &filter.client_data, limit),
-        #[cfg(feature = "lz4")]
+        #[cfg(feature = "hdf")]
         FILTER_LZ4 => lz4::decompress_with_limit(data, limit),
         id => Err(Error::UnsupportedFilter(format!("filter id {}", id))),
     }
+}
+
+/// A zero-filled filter output buffer, or an error when it cannot be allocated: a corrupted
+/// chunk shape or size field must fail the read, not abort the process.
+pub(crate) fn zeroed_output(len: usize, context: &str) -> Result<Vec<u8>> {
+    let mut out = Vec::new();
+    out.try_reserve_exact(len).map_err(|_| {
+        Error::DecompressionError(format!("{context}: cannot allocate {len} output bytes"))
+    })?;
+    out.resize(len, 0);
+    Ok(out)
 }
 
 fn validate_output_limit(context: &str, len: usize, max_output_len: Option<usize>) -> Result<()> {
@@ -288,7 +301,8 @@ mod tests {
 
     #[test]
     fn repeated_deflate_keeps_intermediate_zlib_wrapper() {
-        // Exact compressed chunk from DavisStormSystem.p02 DSS Profile Time.
+        // Exact compressed chunk from a HEC-RAS 6.x plan file (DSS Profile Time):
+        // the dataset applies DEFLATE twice to an eight-byte chunk.
         let compressed = [
             0x78, 0x01, 0xab, 0x60, 0x4c, 0x4e, 0x60, 0x68, 0x66, 0x63, 0x60, 0xe8, 0x60, 0x68,
             0x04, 0x00, 0x12, 0xc7, 0x02, 0xcf,
@@ -376,7 +390,7 @@ mod tests {
     }
     #[test]
     fn scaleoffset_then_deflate_matches_full_h5py_values() {
-        let file = crate::Hdf5File::from_bytes(include_bytes!(
+        let file = crate::hdf5_reader::Hdf5File::from_bytes(include_bytes!(
             "../../tests/fixtures/scaleoffset_deflate.h5"
         ))
         .unwrap();

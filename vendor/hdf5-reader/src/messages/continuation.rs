@@ -1,10 +1,12 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Header Continuation message (type 0x0010).
 //!
 //! Indicates that additional header messages are stored at another location
 //! in the file. The parser follows these to read the complete object header.
 
-use crate::error::Result;
-use crate::io::Cursor;
+use crate::hdf5_reader::error::Result;
+use crate::hdf5_reader::io::Cursor;
 
 /// Parsed continuation message.
 #[derive(Debug, Clone)]

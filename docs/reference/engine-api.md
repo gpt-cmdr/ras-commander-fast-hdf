@@ -1,7 +1,8 @@
 # Engine API contract
 
-This page is the reference contract for the Rust engine crate `ras-commander-rust`
-(`ras_commander_rust` in Rust source), currently at engine `API_VERSION` 10. It describes
+This page is the reference contract for the Rust engine in the crate `ras-commander-fast-hdf`
+(`ras_commander_fast_hdf` in Rust source; formerly `ras-commander-rust`), currently at engine
+`API_VERSION` 10. It describes
 what the engine reads from HEC-RAS project text and HDF files, how every result reports
 whether it is supported, unavailable, unsupported or corrupt, how byte budgets and errors
 work, and the exact rules for each reader. Families with their own detailed pages are

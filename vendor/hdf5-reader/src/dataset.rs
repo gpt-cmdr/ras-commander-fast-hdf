@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 use std::mem::MaybeUninit;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, OnceLock};
@@ -5,45 +7,36 @@ use std::sync::{Arc, OnceLock};
 use lru::LruCache;
 use ndarray::{ArrayD, IxDyn};
 use parking_lot::Mutex;
-#[cfg(feature = "rayon")]
+#[cfg(feature = "hdf")]
 use rayon::prelude::*;
 use smallvec::SmallVec;
 
-use crate::attribute_api::{
+use crate::hdf5_reader::attribute_api::{
     collect_attribute_messages_storage, decode_string, decoded_vlen_strings_storage,
     read_one_vlen_string_storage, resolve_vlen_bytes_storage, Attribute,
 };
-use crate::cache::{ChunkCache, ChunkCacheStats, ChunkKey};
-use crate::chunk_index;
-use crate::datatype_api::H5Type;
-use crate::error::{ByteOrder, Error, Result};
-use crate::filters::{self, FilterRegistry};
-use crate::io::Cursor;
-use crate::local_heap::LocalHeap;
-use crate::messages::attribute::AttributeMessage;
-use crate::messages::dataspace::{DataspaceMessage, DataspaceType};
-use crate::messages::datatype::{Datatype, StringSize, VarLenKind};
-use crate::messages::external_files::ExternalFilesMessage;
-use crate::messages::fill_value::{FillTime, FillValueMessage};
-use crate::messages::filter_pipeline::FilterPipelineMessage;
-use crate::messages::layout::{ChunkIndexing, DataLayout};
-use crate::messages::HdfMessage;
-use crate::object_header::ObjectHeader;
-use crate::storage::DynStorage;
-use crate::FileContext;
+use crate::hdf5_reader::cache::{ChunkCache, ChunkCacheStats, ChunkKey};
+use crate::hdf5_reader::chunk_index;
+use crate::hdf5_reader::datatype_api::H5Type;
+use crate::hdf5_reader::error::{ByteOrder, Error, Result};
+use crate::hdf5_reader::filters::{self, FilterRegistry};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::local_heap::LocalHeap;
+use crate::hdf5_reader::messages::attribute::AttributeMessage;
+use crate::hdf5_reader::messages::dataspace::{DataspaceMessage, DataspaceType};
+use crate::hdf5_reader::messages::datatype::{Datatype, StringSize, VarLenKind};
+use crate::hdf5_reader::messages::external_files::ExternalFilesMessage;
+use crate::hdf5_reader::messages::fill_value::{FillTime, FillValueMessage};
+use crate::hdf5_reader::messages::filter_pipeline::FilterPipelineMessage;
+use crate::hdf5_reader::messages::layout::{ChunkIndexing, DataLayout};
+use crate::hdf5_reader::messages::HdfMessage;
+use crate::hdf5_reader::object_header::ObjectHeader;
+use crate::hdf5_reader::storage::DynStorage;
+use crate::hdf5_reader::FileContext;
 
-#[cfg(all(test, feature = "rayon"))]
-static PERF_WORKERS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-#[cfg(test)]
-static PERF_INDEX_WALKS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-#[cfg(test)]
-static PERF_DECODES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-#[cfg(test)]
-static PERF_INFLATED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-#[cfg(feature = "rayon")]
+#[cfg(feature = "hdf")]
 type GatherPool<'a> = Option<&'a rayon::ThreadPool>;
-#[cfg(not(feature = "rayon"))]
+#[cfg(not(feature = "hdf"))]
 type GatherPool<'a> = Option<&'a ()>;
 
 const HOT_FULL_DATASET_CACHE_MAX_BYTES: usize = 32 * 1024 * 1024;
@@ -112,7 +105,7 @@ unsafe impl Send for FlatBufferPtr {}
 unsafe impl Sync for FlatBufferPtr {}
 
 impl FlatBufferPtr {
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[inline(always)]
     unsafe fn copy_chunk(self, chunk_data: &[u8], layout: ChunkCopyLayout<'_>) -> Result<()> {
         // SAFETY: the caller upholds this method's allocation-lifetime and
@@ -120,7 +113,7 @@ impl FlatBufferPtr {
         unsafe { copy_chunk_to_flat_with_strides_ptr(chunk_data, self, layout) }
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[inline(always)]
     unsafe fn copy_selected(
         self,
@@ -147,7 +140,7 @@ impl FlatBufferPtr {
         }
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[inline(always)]
     unsafe fn copy_unit_stride_chunk_overlap(
         self,
@@ -500,6 +493,34 @@ unsafe fn assume_init_u8_vec(mut buffer: Vec<MaybeUninit<u8>>) -> Vec<u8> {
     // SAFETY: guaranteed by the caller; `u8` and `MaybeUninit<u8>` have the
     // same layout, and ownership of the allocation was transferred by forget.
     unsafe { Vec::from_raw_parts(ptr, len, capacity) }
+}
+
+/// `len` uninitialised slots, or an error when the allocation cannot be satisfied: a corrupt
+/// dataspace (one dimension of 2.8e14) asked for petabytes and aborted the process instead of
+/// failing the read (ModernViewer MV-110 fuzzing).
+fn try_uninit_vec<T>(len: usize) -> Result<Vec<MaybeUninit<T>>> {
+    let mut buffer: Vec<MaybeUninit<T>> = Vec::new();
+    buffer.try_reserve_exact(len).map_err(|_| {
+        Error::InvalidData(format!(
+            "cannot allocate {len} elements of {} bytes for the selection; the dataspace may be corrupt",
+            std::mem::size_of::<T>()
+        ))
+    })?;
+    // SAFETY: the capacity is reserved and `MaybeUninit` needs no initialisation.
+    unsafe { buffer.set_len(len) };
+    Ok(buffer)
+}
+
+/// `len` zero bytes, failing like [`try_uninit_vec`] instead of aborting.
+fn try_zeroed_bytes(len: usize) -> Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    buffer.try_reserve_exact(len).map_err(|_| {
+        Error::InvalidData(format!(
+            "cannot allocate {len} bytes for the selection; the dataspace may be corrupt"
+        ))
+    })?;
+    buffer.resize(len, 0);
+    Ok(buffer)
 }
 
 /// Convert an allocation of maybe-uninitialized values without copying it.
@@ -1102,7 +1123,7 @@ impl Dataset {
                 encoding,
                 padding,
             } => {
-                if !matches!(base.as_ref(), Datatype::FixedPoint { size: 1, .. }) {
+                if !base.is_vlen_string_base() {
                     return Err(Error::TypeMismatch {
                         expected: "String dataset".into(),
                         actual: format!("{:?}", self.datatype),
@@ -1204,7 +1225,7 @@ impl Dataset {
     /// Read the entire dataset using internal chunk-level parallelism when possible.
     ///
     /// Non-chunked datasets fall back to `read_array`.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_array_parallel<T: H5Type>(&self) -> Result<ArrayD<T>> {
         match &self.layout {
             DataLayout::Chunked {
@@ -1225,7 +1246,7 @@ impl Dataset {
     /// Read the entire dataset using the provided Rayon thread pool.
     ///
     /// Non-chunked datasets fall back to `read_array`.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_array_in_pool<T: H5Type>(&self, pool: &rayon::ThreadPool) -> Result<ArrayD<T>> {
         match &self.layout {
             DataLayout::Chunked {
@@ -1249,7 +1270,7 @@ impl Dataset {
     ///
     /// Chunked datasets decompress overlapping chunks in parallel via Rayon.
     /// Non-chunked layouts fall back to `read_slice`.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_slice_parallel<T: H5Type>(&self, selection: &SliceInfo) -> Result<ArrayD<T>> {
         let resolved = normalize_selection(selection, &self.dataspace.dims)?;
 
@@ -1309,7 +1330,7 @@ impl Dataset {
     pub fn read_raw_bytes(&self) -> Result<Vec<u8>> {
         let result: Result<Vec<u8>> = (|| {
             let total_bytes = self.raw_byte_len()?;
-            let mut output = vec![0u8; total_bytes];
+            let mut output = try_zeroed_bytes(total_bytes)?;
             self.read_raw_bytes_into_inner(&mut output)?;
             Ok(output)
         })();
@@ -1348,7 +1369,7 @@ impl Dataset {
     pub fn read_native_bytes(&self) -> Result<Vec<u8>> {
         let result: Result<Vec<u8>> = (|| {
             let total_bytes = self.raw_byte_len()?;
-            let mut output = vec![0u8; total_bytes];
+            let mut output = try_zeroed_bytes(total_bytes)?;
             self.read_raw_bytes_into_inner(&mut output)?;
             self.convert_to_native_endian(&mut output)?;
             Ok(output)
@@ -1437,7 +1458,7 @@ impl Dataset {
 
         let expected_bytes =
             checked_mul_usize(seq_len, base_element_size, "vlen sequence byte size")?;
-        let collection = crate::global_heap::GlobalHeapCollection::parse_at_storage(
+        let collection = crate::hdf5_reader::global_heap::GlobalHeapCollection::parse_at_storage(
             self.context.storage.as_ref(),
             heap_addr,
             self.offset_size(),
@@ -1687,10 +1708,7 @@ impl Dataset {
         };
         if full_chunk_coverage {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
-                let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(total_elements)
-                        .collect();
+                let mut result_values: Vec<MaybeUninit<T>> = try_uninit_vec::<T>(total_elements)?;
                 let result_ptr = result_values.as_mut_ptr() as *mut u8;
                 let result_len = checked_mul_usize(
                     result_values.len(),
@@ -1726,7 +1744,7 @@ impl Dataset {
                 if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
                     && self.chunk_cache.capacity_bytes() != 0
                 {
-                    let mut cached_bytes = vec![0u8; total_bytes];
+                    let mut cached_bytes = try_zeroed_bytes(total_bytes)?;
                     // SAFETY: full chunk coverage initialized all
                     // `total_bytes` at `result_ptr`, and both allocations are
                     // live and distinct.
@@ -1751,7 +1769,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut flat_data = vec![MaybeUninit::<u8>::uninit(); total_bytes];
+            let mut flat_data = try_uninit_vec::<u8>(total_bytes)?;
             let flat_ptr = flat_data.as_mut_ptr() as *mut u8;
             let flat_len = flat_data.len();
 
@@ -1791,7 +1809,7 @@ impl Dataset {
             return self.decode_raw_data::<T>(&flat_data);
         }
 
-        let mut flat_data = self.make_output_buffer(total_bytes);
+        let mut flat_data = self.make_output_buffer(total_bytes)?;
         for entry in &entries {
             let chunk_data =
                 self.load_exact_chunk_data(entry, index_address, &chunk_shape, elem_size)?;
@@ -1895,7 +1913,7 @@ impl Dataset {
         Ok(())
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     fn read_chunked_parallel<T: H5Type>(
         &self,
         index_address: u64,
@@ -1954,10 +1972,7 @@ impl Dataset {
         };
         if full_chunk_coverage {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
-                let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(total_elements)
-                        .collect();
+                let mut result_values: Vec<MaybeUninit<T>> = try_uninit_vec::<T>(total_elements)?;
                 let flat = FlatBufferPtr {
                     ptr: result_values.as_mut_ptr() as *mut u8,
                     len: checked_mul_usize(
@@ -1999,7 +2014,7 @@ impl Dataset {
                 if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
                     && self.chunk_cache.capacity_bytes() != 0
                 {
-                    let mut cached_bytes = vec![0u8; total_bytes];
+                    let mut cached_bytes = try_zeroed_bytes(total_bytes)?;
                     // SAFETY: full chunk coverage initialized all
                     // `total_bytes` at `flat.ptr`, and both allocations are
                     // live and distinct.
@@ -2019,7 +2034,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut flat_data = vec![MaybeUninit::<u8>::uninit(); total_bytes];
+            let mut flat_data = try_uninit_vec::<u8>(total_bytes)?;
             let flat = FlatBufferPtr {
                 ptr: flat_data.as_mut_ptr() as *mut u8,
                 len: flat_data.len(),
@@ -2061,7 +2076,7 @@ impl Dataset {
             return self.decode_raw_data::<T>(&flat_data);
         }
 
-        let mut flat_data = self.make_output_buffer(total_bytes);
+        let mut flat_data = self.make_output_buffer(total_bytes)?;
         let flat = FlatBufferPtr {
             ptr: flat_data.as_mut_ptr(),
             len: flat_data.len(),
@@ -2127,8 +2142,6 @@ impl Dataset {
             }
         }
 
-        #[cfg(test)]
-        PERF_INDEX_WALKS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut entries = match chunk_indexing {
             None => {
                 // V1-V3: B-tree v1 chunk indexing
@@ -2166,7 +2179,7 @@ impl Dataset {
                 self.context.storage.len(),
             ),
             Some(ChunkIndexing::FixedArray { .. }) => {
-                crate::fixed_array::collect_fixed_array_chunk_entries_storage(
+                crate::hdf5_reader::fixed_array::collect_fixed_array_chunk_entries_storage(
                     self.context.storage.as_ref(),
                     index_address,
                     self.offset_size(),
@@ -2177,7 +2190,7 @@ impl Dataset {
                 )
             }
             Some(ChunkIndexing::ExtensibleArray { .. }) => {
-                crate::extensible_array::collect_extensible_array_chunk_entries_storage(
+                crate::hdf5_reader::extensible_array::collect_extensible_array_chunk_entries_storage(
                     self.context.storage.as_ref(),
                     index_address,
                     self.offset_size(),
@@ -2209,7 +2222,7 @@ impl Dataset {
         chunk_dims: &[u32],
         chunk_bounds: Option<(&[u64], &[u64])>,
     ) -> Result<Vec<chunk_index::ChunkEntry>> {
-        let leaves = crate::btree_v1::collect_btree_v1_leaves_storage(
+        let leaves = crate::hdf5_reader::btree_v1::collect_btree_v1_leaves_storage(
             self.context.storage.as_ref(),
             btree_address,
             self.offset_size(),
@@ -2222,7 +2235,7 @@ impl Dataset {
         let mut entries = Vec::with_capacity(leaves.len());
         for (key, chunk_addr) in &leaves {
             match key {
-                crate::btree_v1::BTreeV1Key::RawData {
+                crate::hdf5_reader::btree_v1::BTreeV1Key::RawData {
                     chunk_size,
                     filter_mask,
                     offsets,
@@ -2254,7 +2267,7 @@ impl Dataset {
         self.read_rows_columns_impl(rows, columns, false, None)
     }
     /// Parallel chunk decode with compact per-chunk gathers, using the current pool.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_rows_columns_chunked_parallel<T: H5Type>(
         &self,
         rows: (u64, u64, u64),
@@ -2263,7 +2276,7 @@ impl Dataset {
         self.read_rows_columns_impl(rows, columns, true, None)
     }
     /// Check residency on the calling thread; enter the supplied pool only for cold decode.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_rows_columns_chunked_in_pool<T: H5Type>(
         &self,
         rows: (u64, u64, u64),
@@ -2279,7 +2292,7 @@ impl Dataset {
         parallel: bool,
         pool: GatherPool<'_>,
     ) -> Result<Option<ArrayD<T>>> {
-        #[cfg(not(feature = "rayon"))]
+        #[cfg(not(feature = "hdf"))]
         let _ = (parallel, pool);
         let DataLayout::Chunked {
             address,
@@ -2307,7 +2320,7 @@ impl Dataset {
         let count = checked_mul_usize(nr, columns.len(), "gather elements")?;
         let elem_size = self.raw_element_size()?;
         let len = checked_mul_usize(count, elem_size, "gather bytes")?;
-        let mut output = self.make_output_buffer(len);
+        let mut output = self.make_output_buffer(len)?;
         if nr == 0
             || columns.is_empty()
             || Cursor::is_undefined_offset(*address, self.offset_size())
@@ -2376,7 +2389,7 @@ impl Dataset {
                 if first_selected >= chunk_end {
                     return Ok(pieces);
                 }
-                let data = self.load_exact_chunk_data(&entry, *address, &chunk_shape, elem_size)?;
+                let data = self.load_exact_chunk_data(entry, *address, &chunk_shape, elem_size)?;
                 let mut row = first_selected;
                 while row < chunk_end {
                     let out_row = checked_usize((row - rows.0) / rows.2, "output row")?;
@@ -2417,6 +2430,7 @@ impl Dataset {
                 }
                 Ok(pieces)
             };
+            #[cfg(feature = "hdf")]
             let mut scatter = |pieces: Vec<(usize, Vec<u8>)>| {
                 for (row, data) in pieces {
                     for (i, &(col, _)) in selected.iter().enumerate() {
@@ -2426,7 +2440,7 @@ impl Dataset {
                     }
                 }
             };
-            #[cfg(feature = "rayon")]
+            #[cfg(feature = "hdf")]
             let use_parallel = parallel
                 && entries.len() > 1
                 && entries.first().is_some_and(|e| {
@@ -2435,7 +2449,7 @@ impl Dataset {
                         chunk_offsets: SmallVec::from_slice(&e.offsets),
                     })
                 });
-            #[cfg(feature = "rayon")]
+            #[cfg(feature = "hdf")]
             if use_parallel {
                 let decode = || {
                     entries
@@ -2468,7 +2482,7 @@ impl Dataset {
         dataset.full_dataset_bytes = Arc::new(OnceLock::new());
         dataset.read_array::<T>()
     }
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_array_uncached_parallel<T: H5Type>(&self) -> Result<ArrayD<T>> {
         let mut dataset = Self::from_template(self.context.clone(), self.template());
         dataset.chunk_cache = Arc::new(ChunkCache::new(0, 1));
@@ -2501,15 +2515,6 @@ impl Dataset {
             checked_add_usize(expected_len, 1, "decoded chunk filter output limit")?;
 
         self.chunk_cache.get_or_insert_with(cache_key, || {
-            #[cfg(test)]
-            {
-                #[cfg(feature = "rayon")]
-                if let Some(i) = rayon::current_thread_index() {
-                    PERF_WORKERS.fetch_or(1u64 << (i % 64), std::sync::atomic::Ordering::Relaxed);
-                }
-                PERF_DECODES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                PERF_INFLATED.fetch_add(expected_len as u64, std::sync::atomic::Ordering::Relaxed);
-            }
             let size = if entry.size > 0 {
                 checked_usize(entry.size, "encoded chunk size")?
             } else {
@@ -2639,9 +2644,7 @@ impl Dataset {
         if fully_covered_unit_stride {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
                 let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(resolved.result_elements)
-                        .collect();
+                    try_uninit_vec::<T>(resolved.result_elements)?;
                 let result_ptr = result_values.as_mut_ptr() as *mut u8;
                 let result_len = checked_mul_usize(
                     result_values.len(),
@@ -2683,7 +2686,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut result_buf = vec![MaybeUninit::<u8>::uninit(); result_total_bytes];
+            let mut result_buf = try_uninit_vec::<u8>(result_total_bytes)?;
             let result_ptr = result_buf.as_mut_ptr() as *mut u8;
             let result_len = result_buf.len();
 
@@ -2724,7 +2727,7 @@ impl Dataset {
             );
         }
 
-        let mut result_buf = self.make_output_buffer(result_total_bytes);
+        let mut result_buf = self.make_output_buffer(result_total_bytes)?;
 
         // For each overlapping chunk: decompress and copy matching elements.
         for entry in &overlapping {
@@ -2887,10 +2890,7 @@ impl Dataset {
         let chunk_cols = checked_usize(chunk_shape[1], "single chunk column extent")?;
         let row_bytes = checked_mul_usize(col_count, elem_size, "single chunk slice row bytes")?;
 
-        let mut result_values: Vec<MaybeUninit<T>> =
-            std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                .take(resolved.result_elements)
-                .collect();
+        let mut result_values: Vec<MaybeUninit<T>> = try_uninit_vec::<T>(resolved.result_elements)?;
         let result_ptr = result_values.as_mut_ptr() as *mut u8;
         let result_len = checked_mul_usize(
             result_values.len(),
@@ -2958,7 +2958,7 @@ impl Dataset {
     ///
     /// Each chunk writes to a disjoint region of the result buffer (chunks don't
     /// overlap in output space), so this is safe to parallelize.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     fn read_chunked_slice_parallel<T: H5Type>(
         &self,
         index_address: u64,
@@ -3039,9 +3039,7 @@ impl Dataset {
         if fully_covered_unit_stride {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
                 let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(resolved.result_elements)
-                        .collect();
+                    try_uninit_vec::<T>(resolved.result_elements)?;
                 let flat = FlatBufferPtr {
                     ptr: result_values.as_mut_ptr() as *mut u8,
                     len: checked_mul_usize(
@@ -3090,7 +3088,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut result_buf = vec![MaybeUninit::<u8>::uninit(); result_total_bytes];
+            let mut result_buf = try_uninit_vec::<u8>(result_total_bytes)?;
             let flat = FlatBufferPtr {
                 ptr: result_buf.as_mut_ptr() as *mut u8,
                 len: result_buf.len(),
@@ -3134,7 +3132,7 @@ impl Dataset {
             );
         }
 
-        let mut result_buf = self.make_output_buffer(result_total_bytes);
+        let mut result_buf = self.make_output_buffer(result_total_bytes)?;
 
         let flat = FlatBufferPtr {
             ptr: result_buf.as_mut_ptr(),
@@ -3315,7 +3313,7 @@ impl Dataset {
             layout.elem_size,
             "contiguous slice block size in bytes",
         )?;
-        let mut result_buf = self.make_output_buffer(layout.result_total_bytes);
+        let mut result_buf = self.make_output_buffer(layout.result_total_bytes)?;
 
         let prefix_blocks =
             resolved.dims[..tail_start]
@@ -3499,14 +3497,14 @@ impl Dataset {
     ) -> Result<ArrayD<T>> {
         let elem_size = self.raw_element_size()?;
         let total_bytes = checked_mul_usize(element_count, elem_size, "fill result size in bytes")?;
-        let fill = self.make_output_buffer(total_bytes);
+        let fill = self.make_output_buffer(total_bytes)?;
         self.decode_buffer_with_shape::<T>(&fill, element_count, shape)
     }
 
-    fn make_output_buffer(&self, total_bytes: usize) -> Vec<u8> {
-        let mut buf = vec![0u8; total_bytes];
+    fn make_output_buffer(&self, total_bytes: usize) -> Result<Vec<u8>> {
+        let mut buf = try_zeroed_bytes(total_bytes)?;
         self.fill_output_buffer(&mut buf);
-        buf
+        Ok(buf)
     }
 
     fn fill_output_buffer(&self, buf: &mut [u8]) {
@@ -3666,9 +3664,7 @@ fn attribute_from_message_storage(message: &AttributeMessage, context: &FileCont
             base,
             kind: VarLenKind::String,
             ..
-        } if matches!(base.as_ref(), Datatype::FixedPoint { size: 1, .. })
-            && matches!(message.dataspace.num_elements(), Ok(1)) =>
-        {
+        } if base.is_vlen_string_base() && matches!(message.dataspace.num_elements(), Ok(1)) => {
             resolve_vlen_bytes_storage(
                 &message.raw_data,
                 context.storage.as_ref(),
@@ -4240,7 +4236,7 @@ fn copy_selected_elements(
 ///
 /// The caller must guarantee that no two concurrent calls write to the same
 /// byte range within `[result_ptr .. result_ptr + result_len)`.
-#[cfg(feature = "rayon")]
+#[cfg(feature = "hdf")]
 #[allow(clippy::too_many_arguments)]
 #[inline(always)]
 unsafe fn copy_selected_elements_ptr(
@@ -4421,89 +4417,8 @@ fn slice_array<T: H5Type + Clone>(
 #[cfg(test)]
 mod tests {
     #[test]
-    #[cfg(feature = "rayon")]
-    #[ignore = "RAS_PERF2B_FIXTURES real immutable fixtures, counters only; run alone"]
-    fn perf2b_work_counters() {
-        use super::*;
-        use std::sync::atomic::Ordering::Relaxed;
-        let pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(8)
-            .build()
-            .unwrap();
-        let root = std::env::var("RAS_PERF2B_FIXTURES").expect("RAS_PERF2B_FIXTURES required");
-        for (name, area) in [
-            ("JUL2020_D100RAS.p04.hdf", "D601"),
-            ("1101001306.p01.hdf", "default geometry"),
-        ] {
-            for mode in ["fresh", "reused"] {
-                let mut file = None;
-                let mut expected = None;
-                for run in 0..3 {
-                    if mode == "fresh" || file.is_none() {
-                        file = Some(
-                            crate::Hdf5File::open(std::path::Path::new(&root).join(name)).unwrap(),
-                        );
-                    }
-                    let path = format!("/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/{}/Water Surface", area);
-                    let d = file.as_ref().unwrap().dataset(&path).unwrap();
-                    let n = d.shape()[1];
-                    let rows = d.shape()[0].min(24);
-                    let ids = (0..500).map(|i| i * (n - 1) / 499).collect::<Vec<_>>();
-                    PERF_WORKERS.store(0, Relaxed);
-                    PERF_INDEX_WALKS.store(0, Relaxed);
-                    PERF_DECODES.store(0, Relaxed);
-                    PERF_INFLATED.store(0, Relaxed);
-                    let a = d
-                        .read_rows_columns_chunked_in_pool::<f32>((0, rows, 1), &ids, &pool)
-                        .unwrap()
-                        .unwrap();
-                    let bits = a.iter().map(|v| v.to_bits()).collect::<Vec<_>>();
-                    if let Some(ref e) = expected {
-                        assert_eq!(&bits, e);
-                    } else {
-                        expected = Some(bits);
-                    }
-                    assert_eq!(
-                        PERF_INDEX_WALKS.load(Relaxed),
-                        u64::from(mode == "fresh" || run == 0)
-                    );
-                    assert_eq!(
-                        PERF_DECODES.load(Relaxed),
-                        if mode == "fresh" || run == 0 { rows } else { 0 }
-                    );
-                    println!(
-                        "WORKERS fixture={name} mode={mode} run={run} used={}",
-                        PERF_WORKERS.load(Relaxed).count_ones()
-                    );
-                    println!("COUNTERS fixture={name} mode={mode} run={run} index_walks={} chunk_decodes={} bytes_inflated={} output_bytes={}",PERF_INDEX_WALKS.load(Relaxed),PERF_DECODES.load(Relaxed),PERF_INFLATED.load(Relaxed),rows*500*4);
-                }
-            }
-        }
-        // Multi-column layout: exactly one traversal and one decode per touched chunk.
-        let file = crate::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
-            .unwrap();
-        let d = file.dataset("lef4filtered").unwrap();
-        let DataLayout::Chunked { dims, .. } = &d.layout else {
-            panic!("chunked fixture required")
-        };
-        let cols = [18, 0, 7, 7, 13];
-        let needed = (2..17)
-            .step_by(3)
-            .flat_map(|row| cols.map(|col| (row / dims[0] as u64, col / dims[1] as u64)))
-            .collect::<std::collections::BTreeSet<_>>()
-            .len();
-        PERF_INDEX_WALKS.store(0, Relaxed);
-        PERF_DECODES.store(0, Relaxed);
-        d.read_rows_columns_chunked_parallel::<f32>((2, 17, 3), &cols)
-            .unwrap()
-            .unwrap();
-        assert_eq!(PERF_INDEX_WALKS.load(Relaxed), 1);
-        assert_eq!(PERF_DECODES.load(Relaxed), needed as u64);
-        println!("MULTI_COLUMN index_walks=1 chunk_decodes={needed} unique_needed_chunks={needed}");
-    }
-    #[test]
     fn perf2_gather_and_uncached_reads() {
-        let file = crate::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
+        let file = crate::hdf5_reader::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
             .unwrap();
         macro_rules! check {
             ($ty:ty,$name:expr) => {{
@@ -4519,13 +4434,13 @@ mod tests {
                         assert_eq!(got[[out, col]], full[[row, id as usize]]);
                     }
                 }
-                #[cfg(feature = "rayon")]
+                #[cfg(feature = "hdf")]
                 {
                     let pool = rayon::ThreadPoolBuilder::new()
                         .num_threads(4)
                         .build()
                         .unwrap();
-                    let cold = crate::Hdf5File::from_bytes(include_bytes!(
+                    let cold = crate::hdf5_reader::Hdf5File::from_bytes(include_bytes!(
                         "../tests/fixtures/perf2/gather.h5"
                     ))
                     .unwrap()
@@ -4540,7 +4455,7 @@ mod tests {
                     assert_eq!(parallel, got);
                 }
                 assert_eq!(d.read_array_uncached::<$ty>().unwrap(), full);
-                #[cfg(feature = "rayon")]
+                #[cfg(feature = "hdf")]
                 assert_eq!(d.read_array_uncached_parallel::<$ty>().unwrap(), full);
                 assert!(d
                     .read_rows_columns_chunked::<$ty>((0, 18, 1), &cols)
@@ -4560,8 +4475,17 @@ mod tests {
         check!(i32, "fill");
     }
     use super::*;
-    use crate::storage::BytesStorage;
-    use crate::superblock::Superblock;
+    use crate::hdf5_reader::storage::BytesStorage;
+
+    /// Buffers sized from a corrupt dataspace fail the read instead of aborting.
+    #[test]
+    fn impossible_selection_buffers_are_errors() {
+        assert!(try_uninit_vec::<u64>(usize::MAX / 4).is_err());
+        assert!(try_zeroed_bytes(usize::MAX / 2).is_err());
+        assert_eq!(try_uninit_vec::<u64>(3).unwrap().len(), 3);
+        assert_eq!(try_zeroed_bytes(5).unwrap(), vec![0u8; 5]);
+    }
+    use crate::hdf5_reader::superblock::Superblock;
     use std::collections::HashMap;
 
     fn test_context_with_offset_size(bytes: Vec<u8>, offset_size: u8) -> Arc<FileContext> {
@@ -4592,7 +4516,7 @@ mod tests {
             external_file_resolver: None,
             external_link_resolver: None,
             external_file_cache: Mutex::new(HashMap::new()),
-            max_chunk_bytes: crate::DEFAULT_MAX_CHUNK_BYTES,
+            max_chunk_bytes: crate::hdf5_reader::DEFAULT_MAX_CHUNK_BYTES,
             sohm_table: OnceLock::new(),
             full_file_cache: OnceLock::new(),
         })
@@ -4652,8 +4576,8 @@ mod tests {
             },
             datatype: Datatype::String {
                 size: StringSize::Variable,
-                encoding: crate::messages::datatype::StringEncoding::Ascii,
-                padding: crate::messages::datatype::StringPadding::NullTerminate,
+                encoding: crate::hdf5_reader::messages::datatype::StringEncoding::Ascii,
+                padding: crate::hdf5_reader::messages::datatype::StringPadding::NullTerminate,
             },
             layout,
             fill_value,
@@ -4685,7 +4609,7 @@ mod tests {
         }
 
         fn element_size(dtype: &Datatype) -> usize {
-            crate::datatype_api::dtype_element_size(dtype).unwrap_or(0)
+            crate::hdf5_reader::datatype_api::dtype_element_size(dtype).unwrap_or(0)
         }
     }
 
@@ -4701,11 +4625,11 @@ mod tests {
             base: Box::new(Datatype::FixedPoint {
                 size: 1,
                 signed: false,
-                byte_order: crate::error::ByteOrder::LittleEndian,
+                byte_order: crate::hdf5_reader::error::ByteOrder::LittleEndian,
             }),
             kind: VarLenKind::Sequence,
-            encoding: crate::messages::datatype::StringEncoding::Ascii,
-            padding: crate::messages::datatype::StringPadding::NullTerminate,
+            encoding: crate::hdf5_reader::messages::datatype::StringEncoding::Ascii,
+            padding: crate::hdf5_reader::messages::datatype::StringPadding::NullTerminate,
         };
 
         assert_eq!(raw_element_size_for_datatype(&dtype, 12).unwrap(), 12);
@@ -4753,7 +4677,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[test]
     fn parallel_chunked_vlen_slice_uses_file_reference_width() {
         for (offset_size, ref_size) in [(2u8, 10usize), (4u8, 12usize)] {
@@ -4830,7 +4754,7 @@ mod tests {
             base: Box::new(Datatype::FixedPoint {
                 size: 8,
                 signed: false,
-                byte_order: crate::error::ByteOrder::LittleEndian,
+                byte_order: crate::hdf5_reader::error::ByteOrder::LittleEndian,
             }),
             dims: vec![u64::MAX, 2],
         };

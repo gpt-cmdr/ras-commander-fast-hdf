@@ -1,11 +1,13 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Link Info message (type 0x002A / 0x000A depending on spec version).
 //!
 //! Provides information about how links within a group are stored:
 //! compactly (inline in the object header) or densely (in a fractal heap
 //! indexed by a v2 B-tree).
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
 
 /// Parsed link info message.
 #[derive(Debug, Clone)]

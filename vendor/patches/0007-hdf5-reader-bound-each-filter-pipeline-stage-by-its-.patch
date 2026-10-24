@@ -1,0 +1,191 @@
+From 592c38f9fd76c4e3d8253958d0c242ff38114ffe Mon Sep 17 00:00:00 2001
+From: "William Mark Katzenmeyer, P.E., C.F.M." <heccommander@gmail.com>
+Date: Sat, 24 Oct 2026 06:14:06 -0400
+Subject: [PATCH 07/14] hdf5-reader: bound each filter pipeline stage by its
+ encoded-size bound
+
+[L08a] Status vs upstream v0.9.3: NOT UPSTREAM.
+Kind: bug fix. Proposed upstream grouping: PR-A spec conformance.
+Applies on roteiro-gis/netcdf-rust v0.9.3 (3d708fd) after the earlier patches of this series.
+
+In a multi-filter pipeline the intermediate output of a stage can still be
+compressed by an earlier filter, so it may legitimately exceed the final
+chunk size. Each stage was limited to the final chunk size + 1, so two
+DEFLATE filters on an eight-byte chunk (written by HEC-RAS) and
+scale-offset followed by DEFLATE (h5py) failed with 'exceeds limit'.
+Bound each stage by the forward encoded-size bound of the active earlier
+filters; a prefix without a known bound leaves the stage to the per-filter
+ceiling, and the final output is still checked.
+
+Adds tests/fixtures/scaleoffset_deflate.h5 (h5py 3.14) with its recipe.
+---
+ hdf5-reader/src/filters/mod.rs                | 100 +++++++++++++++++-
+ .../tests/fixtures/scaleoffset_deflate.h5     | Bin 0 -> 3782 bytes
+ .../tests/fixtures/scaleoffset_deflate.json   |   8 ++
+ 3 files changed, 106 insertions(+), 2 deletions(-)
+ create mode 100644 hdf5-reader/tests/fixtures/scaleoffset_deflate.h5
+ create mode 100644 hdf5-reader/tests/fixtures/scaleoffset_deflate.json
+
+diff --git a/hdf5-reader/src/filters/mod.rs b/hdf5-reader/src/filters/mod.rs
+index be778a5..fda4c95 100644
+--- a/hdf5-reader/src/filters/mod.rs
++++ b/hdf5-reader/src/filters/mod.rs
+@@ -176,10 +176,34 @@ pub fn apply_pipeline_with_limit(
+             None => data,
+         };
+ 
++        // A decoded intermediate may still be compressed by an earlier filter.
++        // Its bound is the forward encoded-size bound of that prefix, not the
++        // final chunk size (e.g. two DEFLATE filters on an eight-byte chunk).
++        // A prefix with no known bound leaves the stage to the per-filter
++        // ceiling; the final output is still checked against the limit.
++        let stage_limit = max_output_len.and_then(|n| {
++            filters[..i]
++                .iter()
++                .enumerate()
++                .filter(|(j, _)| filter_mask & (1 << j) == 0)
++                .try_fold(n, |n, (_, earlier)| {
++                    let custom = registry.is_some_and(|reg| {
++                        matches!(
++                            reg.filters.get(&earlier.id),
++                            Some(FilterImplementation::Custom(_))
++                        )
++                    });
++                    if custom {
++                        None
++                    } else {
++                        encoded_size_bound(earlier.id, n)
++                    }
++                })
++        });
+         owned = Some(if let Some(reg) = registry {
+-            reg.apply_with_limit(filter, input, element_size, max_output_len)?
++            reg.apply_with_limit(filter, input, element_size, stage_limit)?
+         } else {
+-            apply_builtin_filter_with_limit(filter, input, element_size, max_output_len)?
++            apply_builtin_filter_with_limit(filter, input, element_size, stage_limit)?
+         });
+     }
+ 
+@@ -188,6 +212,24 @@ pub fn apply_pipeline_with_limit(
+     Ok(output)
+ }
+ 
++/// Forward encoded-size bound of a built-in filter applied to `n` bytes, or
++/// `None` when the codec has no bound qualified here (unknown filters, LZ4
++/// framing).
++fn encoded_size_bound(id: u16, n: usize) -> Option<usize> {
++    Some(match id {
++        FILTER_DEFLATE => n
++            .saturating_add(n >> 12)
++            .saturating_add(n >> 14)
++            .saturating_add(n >> 25)
++            .saturating_add(13),
++        FILTER_FLETCHER32 => n.saturating_add(4),
++        // HDF5 scale-offset header plus at most one padding byte.
++        FILTER_SCALEOFFSET => n.saturating_add(22),
++        FILTER_SHUFFLE | FILTER_NBIT => n,
++        _ => return None,
++    })
++}
++
+ /// Absolute ceiling on one built-in filter's decoded output: one byte past
+ /// the largest chunk HDF5 permits, so the usual `expected + 1` limit still
+ /// detects over-long streams at the format maximum.
+@@ -244,6 +286,60 @@ mod tests {
+     use flate2::Compression;
+     use std::io::Write;
+ 
++    #[test]
++    fn repeated_deflate_keeps_intermediate_zlib_wrapper() {
++        // Exact compressed chunk from a HEC-RAS 6.x plan file (DSS Profile Time):
++        // the dataset applies DEFLATE twice to an eight-byte chunk.
++        let compressed = [
++            0x78, 0x01, 0xab, 0x60, 0x4c, 0x4e, 0x60, 0x68, 0x66, 0x63, 0x60, 0xe8, 0x60, 0x68,
++            0x04, 0x00, 0x12, 0xc7, 0x02, 0xcf,
++        ];
++        let filters = vec![
++            FilterDescription {
++                id: FILTER_DEFLATE,
++                name: None,
++                client_data: vec![1]
++            };
++            2
++        ];
++        let expected = (-0.0f64).to_le_bytes();
++        for registry in [None, Some(FilterRegistry::new())] {
++            assert_eq!(
++                apply_pipeline_with_limit(&compressed, &filters, 0, 8, registry.as_ref(), Some(8))
++                    .unwrap(),
++                expected
++            );
++            // Masked first stage leaves one real DEFLATE stream and unchanged limit.
++            let inner = deflate::decompress(&compressed).unwrap();
++            assert_eq!(
++                apply_pipeline_with_limit(&inner, &filters, 2, 8, registry.as_ref(), Some(8))
++                    .unwrap(),
++                expected
++            );
++        }
++    }
++    #[test]
++    fn expanding_prefix_bounds() {
++        assert_eq!(encoded_size_bound(FILTER_SCALEOFFSET, 256), Some(278));
++        assert_eq!(
++            encoded_size_bound(FILTER_SCALEOFFSET, usize::MAX),
++            Some(usize::MAX)
++        );
++        assert_eq!(encoded_size_bound(50000, 256), None);
++    }
++    #[test]
++    fn scaleoffset_then_deflate_matches_full_h5py_values() {
++        let file = crate::Hdf5File::from_bytes(include_bytes!(
++            "../../tests/fixtures/scaleoffset_deflate.h5"
++        ))
++        .unwrap();
++        let values = file.dataset("values").unwrap().read_array::<i32>().unwrap();
++        let expected: Vec<i32> = (0..64u32)
++            .map(|i| i.wrapping_mul(0x9e3779b9) as i32)
++            .collect();
++        assert_eq!(values.as_slice().unwrap(), expected);
++    }
++
+     #[test]
+     fn filter_registry_default() {
+         let registry = FilterRegistry::new();
+diff --git a/hdf5-reader/tests/fixtures/scaleoffset_deflate.h5 b/hdf5-reader/tests/fixtures/scaleoffset_deflate.h5
+new file mode 100644
+index 0000000000000000000000000000000000000000..0d40eb3642d472bebf68c9ea92a669b157a4e670
+GIT binary patch
+literal 3782
+zcmeD5aB<`1lHy_j0S*oZ76t(@6Gr@pf@6FT5f~pPp8#brLg@}Dy@CnCU}OM61_lYJ
+zxFFPgbaf#?uC5F~l`!*RG*lad0Sko10TURdM^p%SxH<-aJRAY_H7u2$fTlB8V3Z~1
+zl%^JgQW6Asz$D0|85!6hW<d>Pgr;OhMu>m|)La<N3{2l383ABIg(O)8unJZN4zM^A
+zGZR=NH$w-Q&j@ut8(5zRLveCqPHKKyT5)O#SRc%L4qzU{OsG>J?t+RFOEH4o!N`!3
+znwFDTk_vSrFzZA8#mvN1!3r_V0Z2h}9m4crKYtfcj)vt!1!jcYD2w<I0F`&3aD<g}
+zFj@{4xoAeM;6)X1fO0V+2vylAZ!`o(Ltr!nMnhmU1V%$(2!}vLTyR1{!h;VYvG;$-
+zb4W}$aL(&<rR)69Ia`XS->v%eChzDSmcWl2qV1x8I!876&$;_|<Hf(l`>#6c?mZvo
+znSL#2=FF+9$|pMKu^#{Qx{Gg}aN2ZxwwWid{P(FdZ@;r|(y|K@ckONW&zmYY)A0Y_
+z{LLLck5@PKZ|?Fxsw0%MudH~lZ^MH7*C)&6U$ZnXS^EC&x`he<{@pmso3(QCmPa%8
+zPWOpDp;UgY?tRI$>eMDP(_eRw2I)tHy^o0auA%d){Ym)4MF&o%$CXQLTPA0bU;e-P
+z-FJ@KdA!pvg{A&F^Etq(?CZ_k>U-BTtz)Ou_Ga^KT6<S!fBf68_q$lVig}hUS`+6x
+iuOiv-{mD%;%Gd$}-MY^{U-gOk_I{meeg;qDrda@+AmoAo
+
+literal 0
+HcmV?d00001
+
+diff --git a/hdf5-reader/tests/fixtures/scaleoffset_deflate.json b/hdf5-reader/tests/fixtures/scaleoffset_deflate.json
+new file mode 100644
+index 0000000..48059dc
+--- /dev/null
++++ b/hdf5-reader/tests/fixtures/scaleoffset_deflate.json
+@@ -0,0 +1,8 @@
++{
++  "h5py": "3.14.0",
++  "numpy": "2.3.3",
++  "expression": "(np.arange(64,dtype=np.uint32)*np.uint32(0x9e3779b9)).view(np.int32)",
++  "filters": "scaleoffset=0, compression=gzip, chunks=(64,)",
++  "sha256": "7c50e05c8be3f0af472b290ba2c7d930cfb2d05a6093cd646d1fcef43346ecaf",
++  "values_sha256": "9e5714721cfdc777dfa0c56e6524652be9fe91a6fa62a4fea29f7cbe7a77c3e3"
++}
+\ No newline at end of file

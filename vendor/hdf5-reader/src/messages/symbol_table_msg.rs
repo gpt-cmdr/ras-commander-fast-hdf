@@ -1,10 +1,12 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Symbol Table message (type 0x0011).
 //!
 //! This is only found in v0/v1 object headers and points to the B-tree and
 //! local heap used for group membership in the older format.
 
-use crate::error::Result;
-use crate::io::Cursor;
+use crate::hdf5_reader::error::Result;
+use crate::hdf5_reader::io::Cursor;
 
 /// Parsed symbol table message.
 #[derive(Debug, Clone)]

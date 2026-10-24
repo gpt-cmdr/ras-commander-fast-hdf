@@ -8,13 +8,21 @@ COPYING*, NOTICE*, COPYRIGHT*, UNLICENSE, plus the manifest's `license-file`). I
 texts are printed once, with every crate that uses them. Bundled C sources (zstd in
 zstd-sys) are reported with their own licence files.
 
-Usage (from the directory that holds the Cargo.toml: the repository root for the engine,
-or python/ for the wheel):
+Source compiled into the crate itself is listed as well: the engine (under its former
+crate name `ras-commander-rust`, which ras-commander's wheel gate looks for) and the
+third-party code embedded from `vendor/` (hdf5-reader/hdf5-core with the `hdf` feature,
+freestiler-core with the `python` feature), with the licence texts recorded in
+`vendor/PROVENANCE.json`.
 
-    python scripts/generate_third_party_notices.py                 # write THIRD-PARTY-NOTICES.md
-    python scripts/generate_third_party_notices.py --check         # exit 1 if it is out of date
-    python scripts/generate_third_party_notices.py --manifest-path python/Cargo.toml \
-        --package ras-commander-fast-hdf --features extension-module --output python/THIRD-PARTY-NOTICES.md
+Usage (from the repository root):
+
+    # Crate (all features): THIRD-PARTY-NOTICES.md
+    python scripts/generate_third_party_notices.py --title "ras-commander-fast-hdf (all features)"
+    # Wheel (release features): python/licenses/THIRD-PARTY-NOTICES.md
+    python scripts/generate_third_party_notices.py \
+        --features python,extension-module,exports-all,exports-pmtiles \
+        --title "ras-commander-fast-hdf wheel (release features)" --output python/licenses/THIRD-PARTY-NOTICES.md
+    # Add --check to either to exit 1 if the file is out of date.
 
 Output is deterministic: sorted, with no timestamps. Regenerate after any Cargo.lock change.
 """
@@ -130,12 +138,33 @@ def bundled_c(pkg: dict) -> list[tuple[str, str, list[tuple[str, str]]]]:
     return [(label, f"{pkg['name']} {pkg['version']}/{sub}", texts)]
 
 
+ROOT = Path(__file__).resolve().parent.parent
+
+
+def embedded_components(features: set[str], version: str) -> list[tuple[str, str, str, str, list[tuple[str, str]]]]:
+    """Source compiled into the crate: (name, version, licence, source, [(file, text)])."""
+    rows = [("ras-commander-rust", version, "MIT",
+             "https://github.com/gpt-cmdr/ras-commander-fast-hdf (the engine modules of this crate)",
+             [("LICENSE", read_text(ROOT / "LICENSE"))])]
+    manifest = json.loads((ROOT / "vendor" / "PROVENANCE.json").read_text(encoding="utf-8"))
+    wanted = {"hdf5": "hdf", "freestiler": "python"}
+    for name, comp in manifest["components"].items():
+        if wanted.get(name) not in features:
+            continue
+        texts = [(Path(f).name, read_text(ROOT / "vendor" / f)) for f in comp["licence_files"]]
+        ref = comp["tag"] or comp["commit"][:7]
+        for crate, crate_version in comp["crates"].items():
+            rows.append((f"{crate} (embedded source, modified; vendor/{comp['change_notice']})",
+                         f"{crate_version} ({ref})", comp["license"], comp["upstream"], texts))
+    return rows
+
+
 def read_text(path: Path) -> str:
     return path.read_bytes().decode("utf-8", errors="replace").replace("\r\n", "\n").strip() + "\n"
 
 
 def render(title: str, root_names: list[str], pkgs: list[dict], own_licence: Path | None,
-           compile_time: frozenset = frozenset()) -> str:
+           compile_time: frozenset = frozenset(), embedded: list | None = None) -> str:
     groups: dict[str, dict] = {}
     rows = []
     missing = []
@@ -146,6 +175,10 @@ def render(title: str, root_names: list[str], pkgs: list[dict], own_licence: Pat
         g["names"].add(name)
         g["users"].append(owner)
         return key
+
+    for name, version, lic, repo, texts in embedded or []:
+        owner = f"{name.split(' (')[0]} {version}"
+        rows.append((name, version, lic, repo, [add(owner, n, t) for n, t in texts]))
 
     for pkg in pkgs:
         owner = f"{pkg['name']} {pkg['version']}"
@@ -168,7 +201,9 @@ def render(title: str, root_names: list[str], pkgs: list[dict], own_licence: Pat
         f"Root crate(s): {', '.join(root_names)}. Listed: every crate statically linked "
         "for any target platform (normal dependencies) and bundled C libraries. Proc-macro "
         "crates and their dependencies run only at build time and are not linked; they are "
-        "listed too, marked \"compile time only\". Build scripts and dev-dependencies are omitted.")
+        "listed too, marked \"compile time only\". Build scripts and dev-dependencies are omitted. "
+        "Source compiled into the crate itself (its engine modules and the third-party code "
+        "embedded from vendor/) is listed first.")
     out.append("")
     if own_licence:
         out += ["## Licence of this software", "", "```text", read_text(own_licence).rstrip(), "```", ""]
@@ -213,9 +248,12 @@ def main() -> int:
     linked = {p["id"] for p in linked_packages(meta, roots)}
     pkgs = [p for p in linked_packages(meta, roots, proc_macros=True) if p["id"] not in roots]
     compile_time = frozenset(p["id"] for p in pkgs if p["id"] not in linked)
+    nodes = {n["id"]: n for n in meta["resolve"]["nodes"]}
+    features = {f for r in roots for f in nodes[r]["features"]}
+    version = next(p["version"] for p in meta["packages"] if p["id"] == roots[0])
     text = render(a.title or ", ".join(root_names), root_names, pkgs,
                   a.own_licence if a.own_licence and a.own_licence.is_file() else None,
-                  compile_time)
+                  compile_time, embedded_components(features, version))
     if a.check:
         current = a.output.read_text(encoding="utf-8") if a.output.is_file() else ""
         if current.replace("\r\n", "\n") != text:

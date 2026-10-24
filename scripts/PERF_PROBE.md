@@ -1,7 +1,9 @@
 # Release performance probe
 
-This is a measurement-only harness. It uses the public engine and
-vendored-reader APIs; it does not instrument or alter engine code.
+This is a measurement-only harness. It uses the public engine API and, for
+the raw mode, its own copy of the embedded HDF5 reader modules (compiled from
+`vendor/` as `src/lib.rs` does, because the crate keeps them private). It does
+not instrument or alter engine code.
 
 ## Requirements
 
@@ -18,7 +20,7 @@ PowerShell):
 
 ```bash
 export CARGO_TARGET_DIR="$PWD/target"
-cargo build --release -p ras-commander-rust --features hdf --example perf_probe
+cargo build --release --features hdf --example perf_probe
 
 # Fixtures may be passed with --files, or through RAS_PERF_FIXTURES
 # (paths separated by ':' on Linux/macOS or ';' on Windows).

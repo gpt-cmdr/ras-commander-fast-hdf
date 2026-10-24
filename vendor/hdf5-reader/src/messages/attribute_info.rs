@@ -1,10 +1,12 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Attribute Info message (type 0x0015).
 //!
 //! Provides information about how attributes are stored on an object:
 //! compactly (inline) or densely (in a fractal heap + v2 B-tree).
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
 
 /// Parsed attribute info message.
 #[derive(Debug, Clone)]

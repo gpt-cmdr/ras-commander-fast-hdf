@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Symbol Table Entry and Symbol Table Node (SNOD).
 //!
 //! Symbol table entries appear in the superblock (root group) and inside
@@ -8,8 +10,8 @@
 //! Symbol table nodes (SNOD) are the leaf containers for these entries and
 //! are stored at addresses referenced by v1 B-tree group nodes.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
 
 // ---------------------------------------------------------------------------
 // Symbol Table Entry
