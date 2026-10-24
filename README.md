@@ -1,6 +1,6 @@
 # ras-commander-fast-hdf
 
-Native (Rust) HEC-RAS HDF engine and Python extension for [ras-commander](https://github.com/gpt-cmdr/ras-commander).
+ras-commander's default HDF engine: a native (Rust) HEC-RAS HDF reader and its Python extension for [ras-commander](https://github.com/gpt-cmdr/ras-commander).
 
 [![CI](https://github.com/gpt-cmdr/ras-commander-fast-hdf/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gpt-cmdr/ras-commander-fast-hdf/actions/workflows/ci.yml)
 [![PyPI version](https://img.shields.io/pypi/v/ras-commander-fast-hdf)](https://pypi.org/project/ras-commander-fast-hdf/)
@@ -8,13 +8,18 @@ Native (Rust) HEC-RAS HDF engine and Python extension for [ras-commander](https:
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 This repository contains a native (Rust) reader for HEC-RAS HDF files and the
-optional Python extension that lets ras-commander use it.
+Python extension through which ras-commander uses it. It is ras-commander's
+default HDF engine: ras-commander 0.108.0 and later install it automatically
+on Windows x64, Linux x64 and macOS arm64.
 
-With the extension installed, ras-commander reads plan results, geometry,
-terrain and land-cover HDF files through this engine instead of h5py. The
-public results are identical (same values, dtypes, columns, index, CRS,
-attributes and exceptions), and large reads are faster. Without the extension,
-ras-commander works exactly as before.
+ras-commander reads plan results, geometry, terrain and land-cover HDF files
+through this engine. The public results are identical to the h5py reference
+implementation (same values, dtypes, columns, index, CRS, attributes and
+exceptions), and large reads are faster. That makes it practical to extract
+results from many large 2D models for flood science, research and new kinds of
+analysis. h5py remains the fallback: in the default `auto` mode any read the
+engine refuses uses h5py, and on platforms without a wheel ras-commander uses
+h5py for every read.
 
 | Documentation | Covers |
 |---|---|
@@ -24,11 +29,15 @@ ras-commander works exactly as before.
 
 ## Quick start
 
-Install the extension into the same environment as ras-commander:
+Install ras-commander. On Windows x64, Linux x64 and macOS arm64 it installs
+this engine as a dependency:
 
 ```bash
-pip install ras-commander ras-commander-fast-hdf
+pip install ras-commander
 ```
+
+With ras-commander 0.107.0, which does not install the engine automatically,
+use `pip install ras-commander ras-commander-fast-hdf`.
 
 Check that ras-commander has found it:
 
@@ -38,7 +47,7 @@ print(fast_hdf.available())   # True: ras-commander now reads natively where it 
 ```
 
 No code changes are needed. To choose the engine, set
-`RAS_COMMANDER_FAST_HDF`:
+`RAS_COMMANDER_FAST_HDF` (`h5py` turns the native engine off):
 
 | Value | Behavior |
 |---|---|
@@ -51,7 +60,7 @@ No code changes are needed. To choose the engine, set
 | Item | Status |
 |---|---|
 | Version | **0.1.0**, Python extension `API_VERSION` 11. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
-| Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 (`manylinux_2_28`) are qualified. macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. |
+| Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 (`manylinux_2_28`) are qualified. macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. ras-commander 0.108.0 and later install the engine on these three platforms; elsewhere they use h5py. |
 | Equivalence with h5py | Identical results to h5py on 201 public ras-commander method cases across 137 HEC-RAS 5.x–7.x result and geometry files: 3,800 method × file pairs in three modes, plus 1,428 calls replayed from the example notebooks. Methods the corpus has not exercised natively stay on h5py in `auto` mode. |
 | Speed | 2D cell polygons 4–19× faster, depending on mesh size; mesh time series 2–7× faster on large meshes; small single reads a few milliseconds slower. See [Performance](#performance). |
 | Not supported natively | Cross-section tables written before HEC-RAS 5.0.7, and names containing non-ASCII characters. ras-commander uses h5py for these in `auto` mode. |

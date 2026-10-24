@@ -2,7 +2,9 @@
 
 This page describes how the engine, the Python extension and ras-commander
 divide the work, how a read passes between them, and the rules that keep
-native results identical to h5py.
+native results identical to h5py. Together, the engine and the extension are
+ras-commander's default HDF engine; h5py is the reference implementation and
+the fallback.
 
 ## Three layers
 
@@ -34,6 +36,17 @@ hdf5-reader / hdf5-core (vendor/, pure Rust HDF5 decoding)
   ras-commander needs.
 - **ras-commander** decides, for each read, whether to use the extension, and
   builds the same pandas, xarray and GeoPandas results from either source.
+
+## Packaging
+
+ras-commander 0.108.0 and later declare `ras-commander-fast-hdf>=0.1,<0.2` as
+a core dependency with an environment marker that limits it to CPython on
+Windows x64, Linux x64 and macOS arm64, the platforms with published wheels.
+`pip install ras-commander` therefore installs the engine there and never
+tries to build the Rust source distribution elsewhere. Where the extension is
+not installed, ras-commander reads every dataset with h5py. Setting
+`RAS_COMMANDER_FAST_HDF=h5py` turns the native engine off where it is
+installed.
 
 ## How a read flows
 
@@ -91,5 +104,5 @@ in `auto` mode. See [Testing and qualification](testing.md).
 The extension exports `API_VERSION`. ras-commander uses the extension only
 when that number equals the one it was built against; otherwise it logs one
 warning and uses h5py for everything (or raises in `native` mode). This lets
-the two packages be upgraded independently without ever mixing incompatible
-contracts. See [Releasing](releasing.md).
+the two packages be upgraded independently, within the version range
+ras-commander declares, without ever mixing incompatible contracts. See [Releasing](releasing.md).

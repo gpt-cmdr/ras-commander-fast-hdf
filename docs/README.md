@@ -1,9 +1,11 @@
 # Documentation
 
 Developer documentation for `ras-commander-fast-hdf`: the native HEC-RAS HDF
-engine and its Python extension.
+engine and its Python extension, which together are ras-commander's default
+HDF engine. ras-commander 0.108.0 and later install it automatically on
+Windows x64, Linux x64 and macOS arm64; `pip install ras-commander` is enough.
 
-If you only want to *use* the engine from ras-commander (installing it, the
+If you only want to *use* the engine from ras-commander (installation, the
 `auto | h5py | native` modes, which methods run natively, performance and
 limitations), read the user guide on the ras-commander site:
 [Native Rust HDF engine](https://rascommander.info/ras/native-engine/).
