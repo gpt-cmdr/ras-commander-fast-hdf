@@ -65,15 +65,15 @@ pub(crate) fn descriptor<'py>(
 #[pyo3(signature=(path,family,max_bytes=67108864))]
 fn structure_inventory<'py>(
     py: Python<'py>,
-    path: PathBuf,
+    path: crate::session::Source,
     family: &str,
     max_bytes: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     crate::panic_guard::guard(|| {
         let k = self::family(family)?;
-        let inv = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.structure_inventory(k, max_bytes))
-            .map_err(crate::reader::err)?;
+        let inv = path.run(py, |engine_session| {
+            engine_session.structure_inventory(k, max_bytes)
+        })?;
         let structures = inv
             .structures
             .iter()
