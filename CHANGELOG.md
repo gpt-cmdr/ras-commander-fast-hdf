@@ -18,6 +18,13 @@
   closed")`; a path behaves exactly as before. The module flag
   `SESSION_SOURCES = True` lets callers detect support. This is additive:
   `API_VERSION` stays 11.
+- Cross-section geometry reads other than the property table no longer decode
+  the whole HTAB value table (`Property Tables/XSEC Value`, stored by HEC-RAS
+  with one row per compressed chunk) only to count its leading section rows.
+  That count is used by the property-table field alone; it is now computed
+  when that field or the full `xs_geometry_inventory` is requested. Results are
+  unchanged. On the BaldEagle example the first cross-section read in a session
+  drops from about 40-70 ms to under 2 ms.
 - Documentation: this package is ras-commander's default HDF engine, not an
   optional extension. ras-commander 0.107.1 and later list it as a core
   dependency on Windows x64, Linux x64 and macOS arm64 (CPython), so
