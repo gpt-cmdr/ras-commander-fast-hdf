@@ -21,6 +21,7 @@ limitations), read the user guide on the ras-commander site:
 | [Building](building.md) | Build the wheel or the crates from source on Windows, Linux or macOS. |
 | [Testing and qualification](testing.md) | Run the Rust tests, and qualify a wheel against h5py with ras-commander's equivalence suites. |
 | [Releasing](releasing.md) | Version, build, qualify and publish a release. |
+| [Roadmap](roadmap.md) | See planned and in-progress work: reading HDF files directly from AWS S3 next, then read coverage, performance, upstream and packaging items. |
 
 ## Reference
 
