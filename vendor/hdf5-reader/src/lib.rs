@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 pub mod checksum;
 pub mod error;
 pub mod io;
@@ -552,7 +554,7 @@ impl FileContext {
             return Ok(None);
         };
 
-        let table = crate::shared_message_table::SharedMessageTable::parse_at_storage(
+        let table = crate::hdf5_reader::shared_message_table::SharedMessageTable::parse_at_storage(
             self.storage.as_ref(),
             shared_table.table_address,
             shared_table.num_indices,
@@ -824,7 +826,7 @@ mod tests {
 
     #[test]
     fn btree_v2_chunked_fixture_uses_btree_v2_index() {
-        use crate::messages::layout::{ChunkIndexing, DataLayout};
+        use crate::hdf5_reader::messages::layout::{ChunkIndexing, DataLayout};
 
         let path = Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()

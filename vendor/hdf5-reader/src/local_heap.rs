@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Local Heap (HEAP).
 //!
 //! A local heap stores small, variable-length data — most commonly the link
@@ -8,9 +10,9 @@
 //! The heap header stores metadata while the actual string data lives in a
 //! contiguous data segment elsewhere in the file.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::storage::Storage;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::storage::Storage;
 
 /// Signature bytes for a Local Heap: ASCII `HEAP`.
 const HEAP_SIGNATURE: [u8; 4] = *b"HEAP";

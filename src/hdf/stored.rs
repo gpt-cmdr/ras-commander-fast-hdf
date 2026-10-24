@@ -79,9 +79,8 @@ pub(super) fn refused_descriptor(
 ) -> Result<StoredDataset> {
     let ds = s.file.dataset(path).map_err(map_error)?;
     let storage = match ds.dtype() {
-        crate::hdf5_reader::Datatype::FixedPoint { .. } | crate::hdf5_reader::Datatype::FloatingPoint { .. } => {
-            "numeric"
-        }
+        crate::hdf5_reader::Datatype::FixedPoint { .. }
+        | crate::hdf5_reader::Datatype::FloatingPoint { .. } => "numeric",
         crate::hdf5_reader::Datatype::String { .. } => "strings",
         crate::hdf5_reader::Datatype::Compound { .. } => "compound",
         crate::hdf5_reader::Datatype::Bitfield { size: 1, .. } => "bitfield_bytes",

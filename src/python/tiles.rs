@@ -204,12 +204,12 @@ pub fn write_pmtiles(
                                 })
                                 .collect(),
                         );
-                        crate::mesh::validate_ring_geometry(
-                            ring.0.iter().map(|c| [c.x, c.y]),
-                        )
-                        .map_err(|error| {
-                            crate::python::TopologyError::new_err(format!("{name}: feature {id}: {error}"))
-                        })?;
+                        crate::mesh::validate_ring_geometry(ring.0.iter().map(|c| [c.x, c.y]))
+                            .map_err(|error| {
+                                crate::python::TopologyError::new_err(format!(
+                                    "{name}: feature {id}: {error}"
+                                ))
+                            })?;
                         rings.push(ring);
                     }
                     let exterior = rings.remove(0);

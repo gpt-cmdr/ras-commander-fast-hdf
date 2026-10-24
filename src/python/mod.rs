@@ -1,13 +1,17 @@
 mod analysis;
 mod domain;
 mod fim;
+#[allow(dead_code)] // pure-Rust kernels; parts are reached only from tests
 pub mod fluvial;
 mod fluvial_bindings;
+#[allow(dead_code)] // pure-Rust kernels; parts are reached only from tests
 pub mod fluvial_geometry;
+#[allow(dead_code)] // pure-Rust kernels; parts are reached only from tests
 pub mod fluvial_topology;
 mod mesh;
 mod one_d;
 mod panic_guard;
+#[allow(dead_code, unused_imports)] // parser re-exports; parts are reached only from tests
 pub mod ras_text;
 mod reader;
 mod session;

@@ -1,10 +1,10 @@
 //! GIL/NumPy conversion only; engine owns bounded temporal reads and reductions.
 use crate::python::reader::{err, threads as thread_count};
+use crate::{hdf::ReadOnlyHdfSession, results::ReductionRequest};
 use numpy::{IntoPyArray, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use crate::{hdf::ReadOnlyHdfSession, results::ReductionRequest};
 use std::time::Instant;
 /// Reduce a 2-D `(time, element)` dataset in bounded row blocks.
 ///

@@ -167,7 +167,9 @@ impl Dataspace {
     pub fn is_null(&self) -> bool {
         matches!(self, Self::Null)
     }
-    pub(crate) fn from_message(m: &crate::hdf5_reader::messages::dataspace::DataspaceMessage) -> Self {
+    pub(crate) fn from_message(
+        m: &crate::hdf5_reader::messages::dataspace::DataspaceMessage,
+    ) -> Self {
         use crate::hdf5_reader::messages::dataspace::DataspaceType as T;
         match m.dataspace_type {
             T::Null => Self::Null,

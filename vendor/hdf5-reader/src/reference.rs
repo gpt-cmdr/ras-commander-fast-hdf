@@ -1,11 +1,13 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 object reference resolution.
 //!
 //! Object references in HDF5 are `offset_size`-byte addresses pointing to
 //! object headers. This module provides utilities for reading and resolving
 //! these references.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
 
 /// Read a single object reference (an address) from raw bytes.
 ///

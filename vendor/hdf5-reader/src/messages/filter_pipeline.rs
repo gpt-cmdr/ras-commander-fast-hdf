@@ -1,12 +1,14 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Filter Pipeline message (type 0x000B).
 //!
 //! Describes the sequence of filters applied to chunked data (e.g. deflate,
 //! shuffle, fletcher32). Each filter has an ID, optional name, and optional
 //! client data parameters.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-pub use hdf5_core::{
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+pub use crate::hdf5_core::{
     FilterDescription, FilterPipelineMessage, FILTER_DEFLATE, FILTER_FLETCHER32, FILTER_NBIT,
     FILTER_SCALEOFFSET, FILTER_SHUFFLE, FILTER_SZIP,
 };

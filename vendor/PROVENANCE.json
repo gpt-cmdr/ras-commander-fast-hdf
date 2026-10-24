@@ -1,104 +1,309 @@
 {
-  "upstream": "https://github.com/roteiro-gis/netcdf-rust",
-  "upstream_tag": "v0.9.3",
-  "base": "3d708fd40c6809f5d215bd2d9f15e9a05de84bd0",
-  "base_crate_version": "0.9.3",
-  "license": "MIT OR Apache-2.0 (both licence texts retained; copyright Ian Norden)",
-  "description": "Source copy of the hdf5-reader and hdf5-core crates from upstream tag v0.9.3 with the local patch series in patches/ applied in order (git am). No crates.io copy of these crates is used.",
-  "change_notice": "hdf5-reader/PROVENANCE.md",
+  "description": "Third-party source compiled as internal modules of ras-commander-fast-hdf. Rust sources are embedded with the recorded mechanical rules (notice header, module-rooted paths); all other files are byte-for-byte upstream copies. Rebuild and compare with scripts/vendor_sources.py.",
+  "components": {
+    "hdf5": {
+      "upstream": "https://github.com/roteiro-gis/netcdf-rust",
+      "tag": "v0.9.3",
+      "commit": "3d708fd40c6809f5d215bd2d9f15e9a05de84bd0",
+      "crates": {
+        "hdf5-reader": "0.9.3",
+        "hdf5-core": "0.9.3"
+      },
+      "license": "MIT OR Apache-2.0",
+      "copyright": "Copyright (c) 2026 Ian Norden",
+      "licence_files": [
+        "LICENSE-MIT",
+        "LICENSE-APACHE"
+      ],
+      "change_notice": "hdf5-reader/PROVENANCE.md",
+      "patches": [
+        {
+          "patch": "patches/0001-hdf5-reader-read-v2-v3-shared-message-locations-per-.patch",
+          "sha256": "977a980df24f4b9442a8f58b2c04293c5d61cc95a37785f43a828fd73f5f3ba2"
+        },
+        {
+          "patch": "patches/0002-hdf5-reader-keep-exact-datatype-envelopes-and-expose.patch",
+          "sha256": "aca9cd5023944283a87afcb479ff155e4f86480103e603c4374f8c6eff2878b4"
+        },
+        {
+          "patch": "patches/0003-hdf5-reader-check-attribute-element-counts-against-t.patch",
+          "sha256": "843ae3d0c8fa83ddaa245c14e2ec5a8864e69a2db8043ae1d1431b39309a7852"
+        },
+        {
+          "patch": "patches/0004-hdf5-reader-release-in-flight-chunk-loads-when-the-l.patch",
+          "sha256": "d92af90b9ec47c315e8b32c0dd9e5b9349462f2700b96d8dbaf1155378ec22f5"
+        },
+        {
+          "patch": "patches/0005-hdf5-reader-checked-arithmetic-for-file-derived-inde.patch",
+          "sha256": "8e782c5318998ed3e63ec484f6ff05742c4654f30017e3bc88f94a3cbc1ce6e7"
+        },
+        {
+          "patch": "patches/0006-hdf5-reader-configurable-per-chunk-allocation-limit.patch",
+          "sha256": "e83ccd8514c0a547967a558b231d8f5f9eba0015e98d792c0c3b678a956f9c67"
+        },
+        {
+          "patch": "patches/0007-hdf5-reader-bound-each-filter-pipeline-stage-by-its-.patch",
+          "sha256": "ea07c8e45fbc682a97018fe404bfb4128db71ee293b9beba5e068e3c3441c043"
+        },
+        {
+          "patch": "patches/0008-hdf5-reader-CLB-policy-refuse-unbounded-filters-in-b.patch",
+          "sha256": "191886b093ee15cb567738c71c277a718924b6cfc9789be8cbb0af0c6513b73c"
+        },
+        {
+          "patch": "patches/0009-hdf5-reader-ignore-stale-chunks-wholly-outside-a-shr.patch",
+          "sha256": "d7d860f1e6fa61eaa9f86368338afd1f6d6878f6f078e32b1f68dc3e90986902"
+        },
+        {
+          "patch": "patches/0010-hdf5-reader-share-one-link-walk-across-a-soft-extern.patch",
+          "sha256": "4633d10621d894c2c04a701eeb2dcc49aaf02201b53869e7fa6eadd519328668"
+        },
+        {
+          "patch": "patches/0011-hdf5-reader-cache-old-style-group-names-add-Group-me.patch",
+          "sha256": "17961e700b1c818f58f9fb2dd33dab7752e9df2c0bdf6bef35b15bc39dfc9556"
+        },
+        {
+          "patch": "patches/0012-hdf5-reader-follow-soft-links-in-old-style-symbol-ta.patch",
+          "sha256": "4250522c63d8c8a0319b647313993e3b7b3110ee542bff522ec99c6e23d74956"
+        },
+        {
+          "patch": "patches/0013-hdf5-reader-sparse-row-column-gathers-and-uncached-f.patch",
+          "sha256": "1a41427c5e4bc2fe851cab4258d5f60423daf1e7d9ac39aa2f72d74ed3b72077"
+        },
+        {
+          "patch": "patches/0014-hdf5-reader-CLB-policy-refuse-non-inline-extensible-.patch",
+          "sha256": "0442d98f37bdcc134415da3e720d2c73a96b85e18426c965be5c991cfcd32c18"
+        }
+      ],
+      "omitted": [],
+      "embedding": {
+        "modules": {
+          "hdf5-core/src": "crate::hdf5_core",
+          "hdf5-reader/src": "crate::hdf5_reader"
+        },
+        "notice_header": "// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,\n// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.\n",
+        "rules": [
+          {
+            "pattern": "(?<![\\w$:])crate::",
+            "replacement": "crate::hdf5_core::"
+          },
+          {
+            "pattern": "(?<![\\w$:])crate::",
+            "replacement": "crate::hdf5_reader::"
+          },
+          {
+            "pattern": "(?<![\\w:])hdf5_core::",
+            "replacement": "crate::hdf5_core::"
+          },
+          {
+            "pattern": "feature = \"(?:rayon|lz4)\"",
+            "replacement": "feature = \"hdf\""
+          }
+        ]
+      }
+    },
+    "freestiler": {
+      "upstream": "https://github.com/walkerke/freestiler",
+      "tag": null,
+      "commit": "beb64b0d4414da895ec67d02b2f91db6ab6acc37",
+      "crates": {
+        "freestiler-core": "0.1.0"
+      },
+      "license": "MIT AND ISC",
+      "copyright": "Copyright (c) 2026 Kyle Walker (MIT); supercluster/: Supercluster 8.0.1 Copyright (c) 2021 Mapbox and KDBush 4.1.0 Copyright (c) 2026 Vladimir Agafonkin (ISC)",
+      "licence_files": [
+        "freestiler-core/LICENSE.md",
+        "freestiler-core/LICENSE",
+        "freestiler-core/LICENSE.note",
+        "freestiler-core/COPYRIGHTS",
+        "freestiler-core/src/supercluster/UPSTREAM-LICENSES"
+      ],
+      "change_notice": "freestiler-core/PROVENANCE.md",
+      "omitted": [
+        "src/rust/freestiler-core/src/file_input.rs",
+        "src/rust/freestiler-core/src/streaming.rs"
+      ],
+      "embedding": {
+        "modules": {
+          "freestiler-core/src": "crate::freestiler_core"
+        },
+        "notice_header": "// ras-commander-fast-hdf: modified copy of walkerke/freestiler beb64b0 (freestiler-core), MIT;\n// supercluster/ is ISC. Changes are listed in vendor/freestiler-core/PROVENANCE.md.\n",
+        "rules": [
+          {
+            "pattern": "(?<![\\w$:])crate::",
+            "replacement": "crate::freestiler_core::"
+          },
+          {
+            "pattern": "feature = \"(duckdb|fastpfor|fsst|geoparquet)\"",
+            "replacement": "any(/* upstream feature \"\\1\" is not vendored */)"
+          },
+          {
+            "pattern": "(\\n[ \\t]*)#\\[test\\](\\r?\\n[ \\t]*fn test_mlt_core_)",
+            "replacement": "\\1#[cfg(any(/* upstream test needs the dev-dependency mlt-core, not vendored */))]\\1#[test]\\2"
+          }
+        ]
+      }
+    }
+  },
   "local_files": [
     "LOCAL_PATCHES.md",
-    "hdf5-core/Cargo.toml",
-    "hdf5-reader/Cargo.lock",
-    "hdf5-reader/Cargo.toml",
-    "hdf5-reader/PROVENANCE.md"
-  ],
-  "patches": [
-    {
-      "patch": "patches/0001-hdf5-reader-read-v2-v3-shared-message-locations-per-.patch",
-      "sha256": "977a980df24f4b9442a8f58b2c04293c5d61cc95a37785f43a828fd73f5f3ba2"
-    },
-    {
-      "patch": "patches/0002-hdf5-reader-keep-exact-datatype-envelopes-and-expose.patch",
-      "sha256": "aca9cd5023944283a87afcb479ff155e4f86480103e603c4374f8c6eff2878b4"
-    },
-    {
-      "patch": "patches/0003-hdf5-reader-check-attribute-element-counts-against-t.patch",
-      "sha256": "843ae3d0c8fa83ddaa245c14e2ec5a8864e69a2db8043ae1d1431b39309a7852"
-    },
-    {
-      "patch": "patches/0004-hdf5-reader-release-in-flight-chunk-loads-when-the-l.patch",
-      "sha256": "d92af90b9ec47c315e8b32c0dd9e5b9349462f2700b96d8dbaf1155378ec22f5"
-    },
-    {
-      "patch": "patches/0005-hdf5-reader-checked-arithmetic-for-file-derived-inde.patch",
-      "sha256": "8e782c5318998ed3e63ec484f6ff05742c4654f30017e3bc88f94a3cbc1ce6e7"
-    },
-    {
-      "patch": "patches/0006-hdf5-reader-configurable-per-chunk-allocation-limit.patch",
-      "sha256": "e83ccd8514c0a547967a558b231d8f5f9eba0015e98d792c0c3b678a956f9c67"
-    },
-    {
-      "patch": "patches/0007-hdf5-reader-bound-each-filter-pipeline-stage-by-its-.patch",
-      "sha256": "ea07c8e45fbc682a97018fe404bfb4128db71ee293b9beba5e068e3c3441c043"
-    },
-    {
-      "patch": "patches/0008-hdf5-reader-CLB-policy-refuse-unbounded-filters-in-b.patch",
-      "sha256": "191886b093ee15cb567738c71c277a718924b6cfc9789be8cbb0af0c6513b73c"
-    },
-    {
-      "patch": "patches/0009-hdf5-reader-ignore-stale-chunks-wholly-outside-a-shr.patch",
-      "sha256": "d7d860f1e6fa61eaa9f86368338afd1f6d6878f6f078e32b1f68dc3e90986902"
-    },
-    {
-      "patch": "patches/0010-hdf5-reader-share-one-link-walk-across-a-soft-extern.patch",
-      "sha256": "4633d10621d894c2c04a701eeb2dcc49aaf02201b53869e7fa6eadd519328668"
-    },
-    {
-      "patch": "patches/0011-hdf5-reader-cache-old-style-group-names-add-Group-me.patch",
-      "sha256": "17961e700b1c818f58f9fb2dd33dab7752e9df2c0bdf6bef35b15bc39dfc9556"
-    },
-    {
-      "patch": "patches/0012-hdf5-reader-follow-soft-links-in-old-style-symbol-ta.patch",
-      "sha256": "4250522c63d8c8a0319b647313993e3b7b3110ee542bff522ec99c6e23d74956"
-    },
-    {
-      "patch": "patches/0013-hdf5-reader-sparse-row-column-gathers-and-uncached-f.patch",
-      "sha256": "1a41427c5e4bc2fe851cab4258d5f60423daf1e7d9ac39aa2f72d74ed3b72077"
-    },
-    {
-      "patch": "patches/0014-hdf5-reader-CLB-policy-refuse-non-inline-extensible-.patch",
-      "sha256": "0442d98f37bdcc134415da3e720d2c73a96b85e18426c965be5c991cfcd32c18"
-    }
-  ],
-  "upstream_source_diff": [
-    "hdf5-core/src/lib.rs",
-    "hdf5-reader/src/attribute_api.rs",
-    "hdf5-reader/src/cache.rs",
-    "hdf5-reader/src/dataset.rs",
-    "hdf5-reader/src/error.rs",
-    "hdf5-reader/src/extensible_array.rs",
-    "hdf5-reader/src/filters/mod.rs",
-    "hdf5-reader/src/filters/nbit.rs",
-    "hdf5-reader/src/filters/scaleoffset.rs",
-    "hdf5-reader/src/fixed_array.rs",
-    "hdf5-reader/src/global_heap.rs",
-    "hdf5-reader/src/group.rs",
-    "hdf5-reader/src/lib.rs",
-    "hdf5-reader/src/local_heap.rs",
-    "hdf5-reader/src/messages/attribute.rs",
-    "hdf5-reader/src/messages/datatype.rs",
-    "hdf5-reader/src/messages/shared.rs",
-    "hdf5-reader/src/object_header.rs"
+    "hdf5-reader/PROVENANCE.md",
+    "freestiler-core/PROVENANCE.md",
+    "reader-tests/Cargo.toml",
+    "reader-tests/Cargo.lock",
+    "reader-tests/src/lib.rs"
   ],
   "sha256_tree_definition": "SHA256 of sorted UTF-8 relative-path + space + file SHA256 + LF, excluding PROVENANCE.json",
-  "patched_tree_sha256": "401f394e5e25fa74d3329ef52b15c7f6e62306b8a49f8fd364649239811dc9bf",
+  "tree_sha256": "5480fbccf66c63600af3c3bfb8efd325491bbcc0c7aa6ac9b0c537c12434ad1f",
   "files": {
-    "hdf5-core/Cargo.toml": "99fa10ce28bacb77f490b35159b8befed635ccdbb89f935f7a43bd0ddcb83abc",
+    "freestiler-core/COPYRIGHTS": "18cd794fd1c7bc364404e907b074c1cad422d3201e0bdf386a50e70d49403f43",
+    "freestiler-core/LICENSE": "fe9e5aa279ea3a8a1f3d09f3715658af5c86f0440c66bf4b565ff3cf10f893f7",
+    "freestiler-core/LICENSE.md": "e802ab9c2720f6628a4f80dbbc92bb4cf57c84703a0fe7481f7e49dc0a13d22c",
+    "freestiler-core/LICENSE.note": "4e2144ade9bb45dea7623416ffda679bfa81697c9d2a664b48e8f625cc5570a7",
+    "freestiler-core/PROVENANCE.md": "63ee5ffef12fd648835e459f0bf7ca4c6b30bb632257ea048d001980437c62ad",
+    "freestiler-core/src/categorical_cluster.rs": "7151398a01ba49271a204c3ff990ceb579c54600ffa1e01d16a4addc603d2499",
+    "freestiler-core/src/clip.rs": "71dadbb67d47b6f122f88bd09edc3b51dae851d0f5251d49985b054ef2d6fab1",
+    "freestiler-core/src/cluster.rs": "1f0ea3c238d5af90f6009019e9c45eace8ed13c340656a49d5a6041c0083a97f",
+    "freestiler-core/src/cluster_output.rs": "9ae334a8f36966a0faa88aa60645c7545afdd5f5b19c0e17d4b0ab3d41e22f3a",
+    "freestiler-core/src/coalesce.rs": "6d6960b1c2cbd60ba6f91c2eebfea4c7f56cc58dbb64b5f9e3609e1dec00472e",
+    "freestiler-core/src/drop.rs": "483cbde90ad222c51bf59d53088d21404138ab67495f6db04ae31a545f0f7bd0",
+    "freestiler-core/src/engine.rs": "4f390861750b4e25a44f552d5f4c052b984b2ca88d07e0295a849fd7cf93a48e",
+    "freestiler-core/src/lib.rs": "d594819d199a4d4820a72cdb54867b9914d57b11bd158f79981cccaab21e11c6",
+    "freestiler-core/src/mlt.rs": "e5128717bccd2319542da3a44858b0e7ec06832493e4c22ab543fe7ad8af36bf",
+    "freestiler-core/src/mvt.rs": "e6ae9a1ab0ee0070f5bd31dd3743b74b470286759d4088a5e387c0e01c4dcc42",
+    "freestiler-core/src/pmtiles_writer.rs": "00d154a91ca95d688bb3e11f3e238e1dca87418d6732f5d5a221248e2364805c",
+    "freestiler-core/src/quantize.rs": "70e5010a8a264d6548e51dc29409b109700595f0b1faa7c435929185d8e279ae",
+    "freestiler-core/src/simplify.rs": "b6797fe67a7b3475f2f314a3bac040e4dd426314c7a7d793386fdfb153a88cd5",
+    "freestiler-core/src/supercluster/kdbush.rs": "ab3a125bb84c93296325c6fe637a4f1a5c4c002a919299d833abb53a6a628e6b",
+    "freestiler-core/src/supercluster/mod.rs": "ab37db0189780ad133bce1e6bfac6e524574670402909b3482d61973896e9719",
+    "freestiler-core/src/supercluster/tests.rs": "7996436933817ef5e7a7c6ae849b014b927d353f61427b567126808b10940436",
+    "freestiler-core/src/supercluster/UPSTREAM-LICENSES": "18cd794fd1c7bc364404e907b074c1cad422d3201e0bdf386a50e70d49403f43",
+    "freestiler-core/src/tiler.rs": "f432f35e9e88368d9aa62eaefb8af6eb48742b9b4aee19a55e8b73b3fde15db3",
+    "freestiler-core/tests/fixtures/supercluster-8.0.1.json.gz": "34dbc10fa5eae480c63286ffb2d634fd738f4cf19dd5bac39c3de9746c5f158f",
+    "hdf5-core/src/lib.rs": "8384405ef39886079e31b00c006df511859ac765b5f3f56df2bfbd02abcc4452",
+    "hdf5-reader/PROVENANCE.md": "eaa9643b8d2f90788a7f83d7e3219d9341e0c0b504483f833fc3540ba121809a",
+    "hdf5-reader/src/attribute_api.rs": "4ae6c532a187a027ca5bc0b940caea95ce17aee965c3c21dbe4e59cc2bf0240b",
+    "hdf5-reader/src/btree_v1.rs": "0afac3846fde8212525eeffb5cfa065c52b1acf343a096d0f878751fc890112f",
+    "hdf5-reader/src/btree_v2.rs": "f3e5a5b9c1a4f105b2e30f89535a7c3f006b249893ec4663814b7ce5ec1c5ebe",
+    "hdf5-reader/src/cache.rs": "56cab1b8b1989a5c8f946dd9b2376a7b54d4fbf9c307bfe138cc7c82dc6ef100",
+    "hdf5-reader/src/checksum.rs": "8e59bdc8c828e542b27f437444650428b08ac45f9f24c73104212ade48340e1d",
+    "hdf5-reader/src/chunk_index.rs": "bd9a9c32f4f9e01817bff1e06ff8bd02dd309ef1f5d33aa95808db33040c600d",
+    "hdf5-reader/src/dataset.rs": "56e7c4da43a3ab524887bc414edbd3ed055954632dbb72cd0cdd703027896ec2",
+    "hdf5-reader/src/datatype_api.rs": "5c3edb76625e9601366c34b32dc72aaf57719deeeddedf2c72ee553d9c943c2c",
+    "hdf5-reader/src/error.rs": "74b1b0aaaae081b07f73551c81136361153accdde90b8f5c70eae7c8fa39ba1b",
+    "hdf5-reader/src/extensible_array.rs": "1ed016056138f887fcafcdba543b333cd07344c6aaf376dc3b04eb599bd7e193",
+    "hdf5-reader/src/filters/deflate.rs": "64903a85c0cb5960d05027f80616db811a947d7b38b281e4ce60097508731f29",
+    "hdf5-reader/src/filters/fletcher32.rs": "45b6403c35fc20f94a49703001a21c25c1cebd3719cf114cac30fc7ca52c966f",
+    "hdf5-reader/src/filters/lz4.rs": "64790f1a4dca4f45ccb647795b637515acecfbff5bd6d585177872a3f75b7fd6",
+    "hdf5-reader/src/filters/mod.rs": "3cc8cde156bb80fd0658700f8e45dc86b8c1d5fda4c4a0b82a2c30e686c64870",
+    "hdf5-reader/src/filters/nbit.rs": "0653d1ea455d64d42c16e854938e58aa8d2a57136c8989f575342e4bb40f5ea5",
+    "hdf5-reader/src/filters/scaleoffset.rs": "a4561350f1b7547b447bb009bc6d2528bfd3de5cf2b904c3e2dc47fc9d6bb3a5",
+    "hdf5-reader/src/filters/shuffle.rs": "678bb00c90f1a15ad87e5c5cc00bd8fb1421bc0fbf695d8541185f3879601eb9",
+    "hdf5-reader/src/fixed_array.rs": "40b7462f554a76dfae8096ee781d573b8ef254094c070bf3c8891906b9bba12e",
+    "hdf5-reader/src/fractal_heap.rs": "36ed30c40c77a09f112c674409a5e1c627966efa7404d82295bb71f4611fb095",
+    "hdf5-reader/src/global_heap.rs": "7d16d0ddb6ed2caee6158e9c9b51a94c39d15b066a6f6b03ebda19bfc360971d",
+    "hdf5-reader/src/group.rs": "5c4a0f15721af9693e99b97d932377eb7bcdd75f8d11e41ca041b9911fcfa999",
+    "hdf5-reader/src/io.rs": "45217d77c48fdadd4b9ac4d44b76e959b18d39fd8a6e72ae70a439b1c2a236bd",
+    "hdf5-reader/src/lib.rs": "db0129bce8b7448779d71603f2c476dba4fb6aeb4315f6fa66a0e3a1571a3cca",
+    "hdf5-reader/src/local_heap.rs": "3cf0fe6c06d446c03027beb176207f0fd6f0c0f5b15cbc99c9e84eb688a57e3c",
+    "hdf5-reader/src/messages/attribute.rs": "55316fc8a1cfb232ae202ca5254c0f99f42473ecbd3ba8a62b5409ba0e92e8dd",
+    "hdf5-reader/src/messages/attribute_info.rs": "10b18b8d12a588023e6111210e39035a350bf935d59f702259b9f27e2ed3b02b",
+    "hdf5-reader/src/messages/btree_k.rs": "967e0f0dbfb0c49ab8d77e20cd7f16d1bdd8e8320038f0045f4f5f3ea1e084bc",
+    "hdf5-reader/src/messages/continuation.rs": "304794f4842be2a3c0978822866e43e3fca1b52496980fcf21487e76cd22099f",
+    "hdf5-reader/src/messages/dataspace.rs": "a2b41117f0448e52807e0edacb1d68a3148fe5da8f08c29cc5f22e39d94b94c1",
+    "hdf5-reader/src/messages/datatype.rs": "e561b21950a244bc195293efbebacf4691f57c27950027d781f77253b8b5deff",
+    "hdf5-reader/src/messages/external_files.rs": "10acf2fabf72aab8f1f0dbc49fd2e86c7ee01fd758ab39f80da71b0d42c42900",
+    "hdf5-reader/src/messages/fill_value.rs": "5a0974ad0fa4ec814369aa6266c7638449a6beaa5736bdb7de4051fb6ebaf141",
+    "hdf5-reader/src/messages/filter_pipeline.rs": "e4e3fc822880f831673ac3af434da85a616cb3e09f28734dcb1a2ba720427c75",
+    "hdf5-reader/src/messages/group_info.rs": "fa7af1ad85efda3e1e7243b931dbff4e384ec3d240dbad3122cc211de468b05e",
+    "hdf5-reader/src/messages/layout.rs": "1fe7c158556f9091198e2cd41da0f9d86f15c0ee9cf1c074984227d1b65d3811",
+    "hdf5-reader/src/messages/link.rs": "d482dfd3d9c6e8386eb09cf92c3b09fa8088d41adc9a3a4328bf3d51d83f9796",
+    "hdf5-reader/src/messages/link_info.rs": "7f6ebc23d7853161bba36d1960d4646ad74d51f6e5bc888fb815a4a446e347de",
+    "hdf5-reader/src/messages/mod.rs": "7addd55acc05753bfbe4d77671e1e28e60da1bb2b5ba2e45f3d09be50f8f1fd1",
+    "hdf5-reader/src/messages/modification_time.rs": "ebced9306114c03508d05cd5a7834c01741f58341b7cf725335088e907631890",
+    "hdf5-reader/src/messages/shared.rs": "ab49a5fa8599b97661e81de0125b2c539b20f59080b0212b58ddc1a6cf9be78a",
+    "hdf5-reader/src/messages/shared_table.rs": "1341659f7b073e0f97fbe4da4670b93209643df0744cedc904bc0ff06ecc9a34",
+    "hdf5-reader/src/messages/symbol_table_msg.rs": "28a921846780521dec64a6dc00fd23175eed668c27af0d47ebdb459b7428959e",
+    "hdf5-reader/src/object_header.rs": "91a7601718cdd3da21c0b39ee530cc8e31f3903f9ec4409dc2d3fa6f1ab1caa8",
+    "hdf5-reader/src/reference.rs": "88ca7d22b86b7f044b863ca21e450a04a7ea97114eeafb7dac65bcdf97dcf0fb",
+    "hdf5-reader/src/shared_message_table.rs": "cc7a391150ee2f2f79ed91142986fdd0d7d1bcc1ab15e7ab05fef759a3101079",
+    "hdf5-reader/src/storage.rs": "32d334560b47bb8790839228650aa71bd687dc4dc1a88d436d90ee2acb0637e9",
+    "hdf5-reader/src/superblock.rs": "1f14f78878c70af626d16ff56482cb7ad7b1a0627e030602a42b8b21b05f4690",
+    "hdf5-reader/src/symbol_table.rs": "a7ca564df427ae4445d837a9497162f0a92970865ec87a7bda3fc83cff4d2426",
+    "hdf5-reader/testdata/empty_heap_past_eof.h5": "16eaac53a6bf38d259a483dc9d6e86f97c5a337314243d89e4b724bf86cac3d3",
+    "hdf5-reader/tests/corruption.rs": "01710117360a929ed5c2f050f3aaaa1780dd139c862ec3e48ecb81c819acdaf5",
+    "hdf5-reader/tests/fixtures/perf2/ea_latest.h5": "7df4183e8eb0894bd550b683e9220874fbad7a796fe0a0fdd36a6b4019ff5683",
+    "hdf5-reader/tests/fixtures/perf2/gather.h5": "8c2c9cecf6b3e06bc3b5756628d1798602dd56390f46b0a4c6c565e79a751921",
+    "hdf5-reader/tests/fixtures/scaleoffset_deflate.h5": "7c50e05c8be3f0af472b290ba2c7d930cfb2d05a6093cd646d1fcef43346ecaf",
+    "hdf5-reader/tests/fixtures/scaleoffset_deflate.json": "4c72282058ee17f7df1fc634982e70e130868d6fbbdd8be9bf78bad30090e5b6",
+    "hdf5-reader/tests/integration.rs": "fcfd3114dfa147ea16618978cea49919f0ff3323b5e992f713dbd9b237245fd1",
+    "hdf5-reader/tests/property_tests.rs": "5a002a71f7a08fc36fd77ab31a5a678bff5b6f7ca6aae20ef1e23109d0bb62fe",
+    "LICENSE-APACHE": "7e1c4927d7c8765c73e234c2da19c423dfafc9c662e6d028277f9e77476445bb",
+    "LICENSE-MIT": "24a4eeee33afc227bd3e796f772741250b2c93eae1cdba65e775ef8005dfb4b1",
+    "LOCAL_PATCHES.md": "389355b1dd0014f181213cf61be751bc9856a02b6b947a3eb3893a4892b7bdc3",
+    "patches/0001-hdf5-reader-read-v2-v3-shared-message-locations-per-.patch": "977a980df24f4b9442a8f58b2c04293c5d61cc95a37785f43a828fd73f5f3ba2",
+    "patches/0002-hdf5-reader-keep-exact-datatype-envelopes-and-expose.patch": "aca9cd5023944283a87afcb479ff155e4f86480103e603c4374f8c6eff2878b4",
+    "patches/0003-hdf5-reader-check-attribute-element-counts-against-t.patch": "843ae3d0c8fa83ddaa245c14e2ec5a8864e69a2db8043ae1d1431b39309a7852",
+    "patches/0004-hdf5-reader-release-in-flight-chunk-loads-when-the-l.patch": "d92af90b9ec47c315e8b32c0dd9e5b9349462f2700b96d8dbaf1155378ec22f5",
+    "patches/0005-hdf5-reader-checked-arithmetic-for-file-derived-inde.patch": "8e782c5318998ed3e63ec484f6ff05742c4654f30017e3bc88f94a3cbc1ce6e7",
+    "patches/0006-hdf5-reader-configurable-per-chunk-allocation-limit.patch": "e83ccd8514c0a547967a558b231d8f5f9eba0015e98d792c0c3b678a956f9c67",
+    "patches/0007-hdf5-reader-bound-each-filter-pipeline-stage-by-its-.patch": "ea07c8e45fbc682a97018fe404bfb4128db71ee293b9beba5e068e3c3441c043",
+    "patches/0008-hdf5-reader-CLB-policy-refuse-unbounded-filters-in-b.patch": "191886b093ee15cb567738c71c277a718924b6cfc9789be8cbb0af0c6513b73c",
+    "patches/0009-hdf5-reader-ignore-stale-chunks-wholly-outside-a-shr.patch": "d7d860f1e6fa61eaa9f86368338afd1f6d6878f6f078e32b1f68dc3e90986902",
+    "patches/0010-hdf5-reader-share-one-link-walk-across-a-soft-extern.patch": "4633d10621d894c2c04a701eeb2dcc49aaf02201b53869e7fa6eadd519328668",
+    "patches/0011-hdf5-reader-cache-old-style-group-names-add-Group-me.patch": "17961e700b1c818f58f9fb2dd33dab7752e9df2c0bdf6bef35b15bc39dfc9556",
+    "patches/0012-hdf5-reader-follow-soft-links-in-old-style-symbol-ta.patch": "4250522c63d8c8a0319b647313993e3b7b3110ee542bff522ec99c6e23d74956",
+    "patches/0013-hdf5-reader-sparse-row-column-gathers-and-uncached-f.patch": "1a41427c5e4bc2fe851cab4258d5f60423daf1e7d9ac39aa2f72d74ed3b72077",
+    "patches/0014-hdf5-reader-CLB-policy-refuse-non-inline-extensible-.patch": "0442d98f37bdcc134415da3e720d2c73a96b85e18426c965be5c991cfcd32c18",
+    "reader-tests/Cargo.lock": "6b022977fcfcf9b534199e7e92a1a45f57133506137a139dd5bcb9b45c820eff",
+    "reader-tests/Cargo.toml": "22368c3e812c59642df934130b5da4ff0d11b429c4faef09f76025e2d7ec7550",
+    "reader-tests/src/lib.rs": "64ff01b13a5af88a21b0bc93abff4c0d8d943bca2608c85a44ed0625e950433d",
+    "README.md": "fe4b38a268a3ca02d2789b94bca3656a488553b4281b4e682f33201664faedf5",
+    "testdata/hdf5/btree_v2_chunked.h5": "fd246efc280b435e293b987195300c556a7f38c8695bc240df8c04b4f820c6a8",
+    "testdata/hdf5/chunked_lz4.h5": "6fcd2fb828912eef09d4cab836d7b078b8aa19d86df7c22f1cb2f3530911716b",
+    "testdata/hdf5/chunked_lz4_zeros.h5": "d1e319bc4fb2aad8fc3eb42ad01908de65e3c009c60940599c659416a617f2ea",
+    "testdata/hdf5/chunked_shuffle_deflate.h5": "2d99b09ba60b5db0ab1c0a8f20b929637bdc98785b85ab96f1e40fdbb5aa77f6",
+    "testdata/hdf5/committed_dtype.h5": "531e6b26e38e88c5f0e03afbf726833d53778cf463e68baa13533d2285d0e7d6",
+    "testdata/hdf5/compound_type.h5": "87b384cd0c2a8969ad239f617d60ccd15091e25f54f92375aab800191811c73c",
+    "testdata/hdf5/compound_v1_floats.h5": "ee5b4108a2de55736815aed260804787d30e0170d65560d458dccfae325dd642",
+    "testdata/hdf5/dense_groups.h5": "d611b891ded0014c0266f5b6accbcdbffdf9e030cee24df402a6493951d16752",
+    "testdata/hdf5/dense_huge_attribute.h5": "ccd6bdb0d33ad437e6b7e2261b942d6fc5f1dde7941d2e5a7451c2c4cb834362",
+    "testdata/hdf5/extensible_array_chunked.h5": "80f3e30352f0ddb468d4b57daae97fa06bc1de8550eb66aac5a0da5f9552902e",
+    "testdata/hdf5/fill_value.h5": "4d747c0a3fe63867f51f707e28cae0dc51196c79e51d1d542bb3ca889e2af148",
+    "testdata/hdf5/fill_value_old_message.h5": "33b74d35da8d6ce96fba4116ed83cb6160f8ff3056f35dbd12dcc16ac539c86a",
+    "testdata/hdf5/filtered_chunk_size_widths.h5": "534e35a7ec3d91a543ee5aae2e96115c66c4a643e58ed4553df97e9a1d0715d3",
+    "testdata/hdf5/fixed_array_chunked.h5": "9fe3a66f1657dacd5b78742da15fb5768c7413fa93691aeeabc5914642b514f4",
+    "testdata/hdf5/fletcher32.h5": "4c531300c2a10b29d0887938a2ecc83c1251104d7ca2bd4a20eba099c81eeeed",
+    "testdata/hdf5/large_chunked.h5": "264caeebf6daa0d7e0c69bcb480d27de7b5e197731b0caccbdebd0fdf8be6a5c",
+    "testdata/hdf5/multi_dim_4d.h5": "50ec754c2e8a446440317ec1814e351985991adfdbd299c24203c310c9dccf98",
+    "testdata/hdf5/nested_groups.h5": "5ba33980d8ebb98e98064a419dfe28ac901259cf441ff416dcc382de2f971eec",
+    "testdata/hdf5/old_format_v1.h5": "8e8363a48712dad8aca298c87ad6fb2022510f7c7c99f38135013151b5c13710",
+    "testdata/hdf5/scalar_dataset.h5": "abd87ebd391b13540ba1ae63b57d433abfab5f53860d1f38da2745ec3618fbc9",
+    "testdata/hdf5/simple_chunked_deflate.h5": "8a4691f32b8dbd113ae4996d98e5bd7a7d41a0f6971e95a80b550c2c76ca23f3",
+    "testdata/hdf5/simple_contiguous.h5": "e58697c7bae2ef54fa2b96ebf996facb2be3a576ada42ab4ba4eed73f0a390a7",
+    "testdata/hdf5/single_chunk.h5": "26ca151c0eddfa7401de85b9820df521083d04e5a28a0b9e3f5edd19e3e264c0",
+    "testdata/hdf5/string_attrs.h5": "4bd5c972a1a727c8c36a14668b0f9675311a5cd25eb0541a7cac89aa983002ce",
+    "testdata/hdf5/v4_layout.h5": "38d35a8319a6399f93635beed73a1a907da45afbc8cc6684fb419acdb1cd10c0",
+    "testdata/hdf5/vlen_strings.h5": "61ac9158195eab0b7fd576fcf1df22e303bb8d80097d406e8658de82e5785851"
+  },
+  "upstream_sha256": {
+    "freestiler-core/src/categorical_cluster.rs": "ec68d5a31ca3e6639aa0424f3b85cfbef311dd649544937481727d14af0be93b",
+    "freestiler-core/src/clip.rs": "032a83ac0777e9caaa20cb7f9a46ea3bd268909266b0fd3cb54c960242e9893d",
+    "freestiler-core/src/cluster.rs": "3c1230fc69470c5ea46faa11e9842096187599590e2d8a3f07e82b9fee6924e3",
+    "freestiler-core/src/cluster_output.rs": "2ba3118093c595a3371e29c29f537baf9d1c80044aa9aabef55dd59d060e260c",
+    "freestiler-core/src/coalesce.rs": "70e0fe7d6431c714fba2faf01bcc1379da56f8967fe3426be1c2539473211e2f",
+    "freestiler-core/src/drop.rs": "ea2bfb4f17159d89c599e9f76c103d4af9f92110b2fe96549406303ed4b8b55f",
+    "freestiler-core/src/engine.rs": "6ee860c1e63b35c1208ab15fbf2965780c1894f761c3fcace9b8ab88807a96f5",
+    "freestiler-core/src/lib.rs": "cc8784af793ec5da0d299abaab8b1291884653482ae51f30eeb6d01f57ab8115",
+    "freestiler-core/src/mlt.rs": "9d6ff4b2cb37063f4578250ed150e335375dab2753ba2c573ff0321b308006b1",
+    "freestiler-core/src/mvt.rs": "67e6670b51254896f9e19c6d11b8a119b015b013b4bd0f2b9ec1130943104720",
+    "freestiler-core/src/pmtiles_writer.rs": "0eedd3e9ad52fb17b80f5b82ffb3e8b34d45b83f2d0a88a7d938293c11597d16",
+    "freestiler-core/src/quantize.rs": "7564a64594e7e6a43d7b55ed81e92858be616a02489ab74b7c1d48e188782201",
+    "freestiler-core/src/simplify.rs": "51cd979f94aa88660e5b4f1c522fd23949e449ee837050539bfbd6b4e8769f29",
+    "freestiler-core/src/supercluster/kdbush.rs": "9d5349526f21826a4373f5940aab4884b161a63fd006624e55e423ec08ec929d",
+    "freestiler-core/src/supercluster/mod.rs": "74ecfc1ef6b65d64c6f21d1e04bca4a5bc34d5388814dca8b791db9cc335d441",
+    "freestiler-core/src/supercluster/tests.rs": "a4e2db0c629d3207703516b5a084da41eb6db0efcee5ab30201ed9da697656cf",
+    "freestiler-core/src/tiler.rs": "d8d385a25b472186126b3add85a42aaef56f9a6314abf00ad49a148fceca8273",
     "hdf5-core/src/lib.rs": "07a450e5828f162f3df50010f0a7255b69010d3e28f132bfaff40d5201956d27",
-    "hdf5-reader/Cargo.lock": "8a27cab03cba9880bce622b9f36923783e083b730a034eeace974fd851f882ee",
-    "hdf5-reader/Cargo.toml": "888d440b3d29ad557019a5c47fd038f8fb272f587fa2150ee8cdf924e7395af7",
-    "hdf5-reader/PROVENANCE.md": "891618538f650d7c860b29745b5cd4206bc01d09024394108b0e9cd36cefc381",
     "hdf5-reader/src/attribute_api.rs": "f56d1cba39f82722a0ab4e4e1c050237c924e6faef35694b7881fb9c1dd02ebf",
     "hdf5-reader/src/btree_v1.rs": "6aac11fdb8911480fc638348659eeaed246cbbff5dd127cad957ada9f78a3d9c",
     "hdf5-reader/src/btree_v2.rs": "36897aef9439121921dfbd573edbd446a6f13d9393c9dd4f8e70221e5c91e60a",
@@ -146,58 +351,6 @@
     "hdf5-reader/src/shared_message_table.rs": "50128adef484709e57a4b953ff5dbe93790efbbf2b49fb26177fd684cfc2d8cf",
     "hdf5-reader/src/storage.rs": "2f43fe73dec3cd89367378dcf67e4d517813e7c6b5f5533f84261e4c62f45058",
     "hdf5-reader/src/superblock.rs": "64c28f4b45ab80fc434b0f5f1dac83ff6fafb63577db6c15f405136440ff0fed",
-    "hdf5-reader/src/symbol_table.rs": "b553ba1f5859b187bc22aa146cbec1b1b6e38c611d4ffa92b183f8e327985753",
-    "hdf5-reader/testdata/empty_heap_past_eof.h5": "16eaac53a6bf38d259a483dc9d6e86f97c5a337314243d89e4b724bf86cac3d3",
-    "hdf5-reader/tests/corruption.rs": "01710117360a929ed5c2f050f3aaaa1780dd139c862ec3e48ecb81c819acdaf5",
-    "hdf5-reader/tests/fixtures/perf2/ea_latest.h5": "7df4183e8eb0894bd550b683e9220874fbad7a796fe0a0fdd36a6b4019ff5683",
-    "hdf5-reader/tests/fixtures/perf2/gather.h5": "8c2c9cecf6b3e06bc3b5756628d1798602dd56390f46b0a4c6c565e79a751921",
-    "hdf5-reader/tests/fixtures/scaleoffset_deflate.h5": "7c50e05c8be3f0af472b290ba2c7d930cfb2d05a6093cd646d1fcef43346ecaf",
-    "hdf5-reader/tests/fixtures/scaleoffset_deflate.json": "4c72282058ee17f7df1fc634982e70e130868d6fbbdd8be9bf78bad30090e5b6",
-    "hdf5-reader/tests/integration.rs": "fcfd3114dfa147ea16618978cea49919f0ff3323b5e992f713dbd9b237245fd1",
-    "hdf5-reader/tests/property_tests.rs": "5a002a71f7a08fc36fd77ab31a5a678bff5b6f7ca6aae20ef1e23109d0bb62fe",
-    "LICENSE-APACHE": "7e1c4927d7c8765c73e234c2da19c423dfafc9c662e6d028277f9e77476445bb",
-    "LICENSE-MIT": "24a4eeee33afc227bd3e796f772741250b2c93eae1cdba65e775ef8005dfb4b1",
-    "LOCAL_PATCHES.md": "e030d793c1fb7c76401a537a0d0a43d670286ebcae293fb6ae2623f7e44c77c4",
-    "patches/0001-hdf5-reader-read-v2-v3-shared-message-locations-per-.patch": "977a980df24f4b9442a8f58b2c04293c5d61cc95a37785f43a828fd73f5f3ba2",
-    "patches/0002-hdf5-reader-keep-exact-datatype-envelopes-and-expose.patch": "aca9cd5023944283a87afcb479ff155e4f86480103e603c4374f8c6eff2878b4",
-    "patches/0003-hdf5-reader-check-attribute-element-counts-against-t.patch": "843ae3d0c8fa83ddaa245c14e2ec5a8864e69a2db8043ae1d1431b39309a7852",
-    "patches/0004-hdf5-reader-release-in-flight-chunk-loads-when-the-l.patch": "d92af90b9ec47c315e8b32c0dd9e5b9349462f2700b96d8dbaf1155378ec22f5",
-    "patches/0005-hdf5-reader-checked-arithmetic-for-file-derived-inde.patch": "8e782c5318998ed3e63ec484f6ff05742c4654f30017e3bc88f94a3cbc1ce6e7",
-    "patches/0006-hdf5-reader-configurable-per-chunk-allocation-limit.patch": "e83ccd8514c0a547967a558b231d8f5f9eba0015e98d792c0c3b678a956f9c67",
-    "patches/0007-hdf5-reader-bound-each-filter-pipeline-stage-by-its-.patch": "ea07c8e45fbc682a97018fe404bfb4128db71ee293b9beba5e068e3c3441c043",
-    "patches/0008-hdf5-reader-CLB-policy-refuse-unbounded-filters-in-b.patch": "191886b093ee15cb567738c71c277a718924b6cfc9789be8cbb0af0c6513b73c",
-    "patches/0009-hdf5-reader-ignore-stale-chunks-wholly-outside-a-shr.patch": "d7d860f1e6fa61eaa9f86368338afd1f6d6878f6f078e32b1f68dc3e90986902",
-    "patches/0010-hdf5-reader-share-one-link-walk-across-a-soft-extern.patch": "4633d10621d894c2c04a701eeb2dcc49aaf02201b53869e7fa6eadd519328668",
-    "patches/0011-hdf5-reader-cache-old-style-group-names-add-Group-me.patch": "17961e700b1c818f58f9fb2dd33dab7752e9df2c0bdf6bef35b15bc39dfc9556",
-    "patches/0012-hdf5-reader-follow-soft-links-in-old-style-symbol-ta.patch": "4250522c63d8c8a0319b647313993e3b7b3110ee542bff522ec99c6e23d74956",
-    "patches/0013-hdf5-reader-sparse-row-column-gathers-and-uncached-f.patch": "1a41427c5e4bc2fe851cab4258d5f60423daf1e7d9ac39aa2f72d74ed3b72077",
-    "patches/0014-hdf5-reader-CLB-policy-refuse-non-inline-extensible-.patch": "0442d98f37bdcc134415da3e720d2c73a96b85e18426c965be5c991cfcd32c18",
-    "README.md": "fe4b38a268a3ca02d2789b94bca3656a488553b4281b4e682f33201664faedf5",
-    "testdata/hdf5/btree_v2_chunked.h5": "fd246efc280b435e293b987195300c556a7f38c8695bc240df8c04b4f820c6a8",
-    "testdata/hdf5/chunked_lz4.h5": "6fcd2fb828912eef09d4cab836d7b078b8aa19d86df7c22f1cb2f3530911716b",
-    "testdata/hdf5/chunked_lz4_zeros.h5": "d1e319bc4fb2aad8fc3eb42ad01908de65e3c009c60940599c659416a617f2ea",
-    "testdata/hdf5/chunked_shuffle_deflate.h5": "2d99b09ba60b5db0ab1c0a8f20b929637bdc98785b85ab96f1e40fdbb5aa77f6",
-    "testdata/hdf5/committed_dtype.h5": "531e6b26e38e88c5f0e03afbf726833d53778cf463e68baa13533d2285d0e7d6",
-    "testdata/hdf5/compound_type.h5": "87b384cd0c2a8969ad239f617d60ccd15091e25f54f92375aab800191811c73c",
-    "testdata/hdf5/compound_v1_floats.h5": "ee5b4108a2de55736815aed260804787d30e0170d65560d458dccfae325dd642",
-    "testdata/hdf5/dense_groups.h5": "d611b891ded0014c0266f5b6accbcdbffdf9e030cee24df402a6493951d16752",
-    "testdata/hdf5/dense_huge_attribute.h5": "ccd6bdb0d33ad437e6b7e2261b942d6fc5f1dde7941d2e5a7451c2c4cb834362",
-    "testdata/hdf5/extensible_array_chunked.h5": "80f3e30352f0ddb468d4b57daae97fa06bc1de8550eb66aac5a0da5f9552902e",
-    "testdata/hdf5/fill_value.h5": "4d747c0a3fe63867f51f707e28cae0dc51196c79e51d1d542bb3ca889e2af148",
-    "testdata/hdf5/fill_value_old_message.h5": "33b74d35da8d6ce96fba4116ed83cb6160f8ff3056f35dbd12dcc16ac539c86a",
-    "testdata/hdf5/filtered_chunk_size_widths.h5": "534e35a7ec3d91a543ee5aae2e96115c66c4a643e58ed4553df97e9a1d0715d3",
-    "testdata/hdf5/fixed_array_chunked.h5": "9fe3a66f1657dacd5b78742da15fb5768c7413fa93691aeeabc5914642b514f4",
-    "testdata/hdf5/fletcher32.h5": "4c531300c2a10b29d0887938a2ecc83c1251104d7ca2bd4a20eba099c81eeeed",
-    "testdata/hdf5/large_chunked.h5": "264caeebf6daa0d7e0c69bcb480d27de7b5e197731b0caccbdebd0fdf8be6a5c",
-    "testdata/hdf5/multi_dim_4d.h5": "50ec754c2e8a446440317ec1814e351985991adfdbd299c24203c310c9dccf98",
-    "testdata/hdf5/nested_groups.h5": "5ba33980d8ebb98e98064a419dfe28ac901259cf441ff416dcc382de2f971eec",
-    "testdata/hdf5/old_format_v1.h5": "8e8363a48712dad8aca298c87ad6fb2022510f7c7c99f38135013151b5c13710",
-    "testdata/hdf5/scalar_dataset.h5": "abd87ebd391b13540ba1ae63b57d433abfab5f53860d1f38da2745ec3618fbc9",
-    "testdata/hdf5/simple_chunked_deflate.h5": "8a4691f32b8dbd113ae4996d98e5bd7a7d41a0f6971e95a80b550c2c76ca23f3",
-    "testdata/hdf5/simple_contiguous.h5": "e58697c7bae2ef54fa2b96ebf996facb2be3a576ada42ab4ba4eed73f0a390a7",
-    "testdata/hdf5/single_chunk.h5": "26ca151c0eddfa7401de85b9820df521083d04e5a28a0b9e3f5edd19e3e264c0",
-    "testdata/hdf5/string_attrs.h5": "4bd5c972a1a727c8c36a14668b0f9675311a5cd25eb0541a7cac89aa983002ce",
-    "testdata/hdf5/v4_layout.h5": "38d35a8319a6399f93635beed73a1a907da45afbc8cc6684fb419acdb1cd10c0",
-    "testdata/hdf5/vlen_strings.h5": "61ac9158195eab0b7fd576fcf1df22e303bb8d80097d406e8658de82e5785851"
+    "hdf5-reader/src/symbol_table.rs": "b553ba1f5859b187bc22aa146cbec1b1b6e38c611d4ffa92b183f8e327985753"
   }
 }

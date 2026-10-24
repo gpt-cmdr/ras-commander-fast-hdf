@@ -1,10 +1,10 @@
 // Ignored measurement harness only; no production registration or altered binding path.
+use crate::mesh::{GeometryPolicy, OmissionKind, Topology};
 use numpy::{IntoPyArray, PyReadonlyArray2};
 use pyo3::{
     prelude::*,
     types::{PyAny, PyTuple},
 };
-use crate::mesh::{GeometryPolicy, OmissionKind, Topology};
 use std::{
     path::{Path, PathBuf},
     time::Instant,

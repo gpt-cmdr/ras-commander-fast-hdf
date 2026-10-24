@@ -1,8 +1,10 @@
-use crate::checksum::jenkins_lookup3;
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::storage::Storage;
-use crate::symbol_table::SymbolTableEntry;
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::storage::Storage;
+use crate::hdf5_reader::symbol_table::SymbolTableEntry;
 
 /// HDF5 magic bytes: `\x89HDF\r\n\x1a\n`
 pub const HDF5_MAGIC: [u8; 8] = [0x89, 0x48, 0x44, 0x46, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -256,7 +258,7 @@ fn find_magic_in_storage(storage: &dyn Storage) -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::RangeRequestStorage;
+    use crate::hdf5_reader::storage::RangeRequestStorage;
 
     #[test]
     fn magic_detection() {

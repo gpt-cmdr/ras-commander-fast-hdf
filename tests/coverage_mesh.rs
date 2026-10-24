@@ -2,7 +2,9 @@
 //! tests/fixtures/coverage/coverage_mesh*.h5 (see make_coverage_fixtures.py).
 #![cfg(feature = "mesh")]
 use ras_commander_fast_hdf::hdf::ReadOnlyHdfSession;
-use ras_commander_fast_hdf::mesh::{validate_ring_geometry, GeometryPolicy, OmissionKind, PackedMesh};
+use ras_commander_fast_hdf::mesh::{
+    validate_ring_geometry, GeometryPolicy, OmissionKind, PackedMesh,
+};
 use ras_commander_fast_hdf::ErrorKind;
 use std::path::PathBuf;
 

@@ -1,16 +1,18 @@
-use crate::error::{Error, Result};
-use crate::filters::FilterRegistry;
-use crate::fractal_heap::FractalHeap;
-use crate::global_heap::GlobalHeapCollection;
-use crate::io::Cursor;
-use crate::messages::attribute::AttributeMessage;
-use crate::messages::attribute_info::AttributeInfoMessage;
-use crate::messages::dataspace::DataspaceType;
-use crate::messages::datatype::{Datatype, StringEncoding, StringPadding, StringSize, VarLenKind};
-use crate::messages::HdfMessage;
-use crate::object_header::ObjectHeader;
-use crate::storage::Storage;
-use crate::{btree_v2, messages};
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::filters::FilterRegistry;
+use crate::hdf5_reader::fractal_heap::FractalHeap;
+use crate::hdf5_reader::global_heap::GlobalHeapCollection;
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::messages::attribute::AttributeMessage;
+use crate::hdf5_reader::messages::attribute_info::AttributeInfoMessage;
+use crate::hdf5_reader::messages::dataspace::DataspaceType;
+use crate::hdf5_reader::messages::datatype::{Datatype, StringEncoding, StringPadding, StringSize, VarLenKind};
+use crate::hdf5_reader::messages::HdfMessage;
+use crate::hdf5_reader::object_header::ObjectHeader;
+use crate::hdf5_reader::storage::Storage;
+use crate::hdf5_reader::{btree_v2, messages};
 
 fn checked_usize(value: u64, context: &str) -> Result<usize> {
     usize::try_from(value).map_err(|_| {
@@ -92,7 +94,7 @@ impl Attribute {
     }
 
     /// Read the attribute value as a scalar of the given type.
-    pub fn read_scalar<T: crate::datatype_api::H5Type>(&self) -> Result<T> {
+    pub fn read_scalar<T: crate::hdf5_reader::datatype_api::H5Type>(&self) -> Result<T> {
         T::from_bytes(&self.raw_data, &self.datatype)
     }
 
@@ -110,7 +112,7 @@ impl Attribute {
     }
 
     /// Read the attribute as a 1-D vector of the given type.
-    pub fn read_1d<T: crate::datatype_api::H5Type>(&self) -> Result<Vec<T>> {
+    pub fn read_1d<T: crate::hdf5_reader::datatype_api::H5Type>(&self) -> Result<Vec<T>> {
         let elem_size = T::element_size(&self.datatype);
         let n = checked_usize(self.num_elements()?, "attribute element count")?;
         // The dataspace and datatype come from the file: a zero-size datatype
@@ -755,8 +757,8 @@ pub(crate) fn resolve_vlen_bytes_storage(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ByteOrder;
-    use crate::storage::BytesStorage;
+    use crate::hdf5_reader::error::ByteOrder;
+    use crate::hdf5_reader::storage::BytesStorage;
     use std::f64::consts::PI;
 
     #[test]

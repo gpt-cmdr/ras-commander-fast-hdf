@@ -1,12 +1,14 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Data Layout message (type 0x0008).
 //!
 //! Describes how raw data for a dataset is stored: compact (inline in the
 //! object header), contiguous (a single block in the file), or chunked
 //! (split into fixed-size chunks, indexed by a B-tree).
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-pub use hdf5_core::{ChunkIndexing, DataLayout, DataLayoutMessage};
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+pub use crate::hdf5_core::{ChunkIndexing, DataLayout, DataLayoutMessage};
 
 /// Parse a data layout message.
 pub fn parse(

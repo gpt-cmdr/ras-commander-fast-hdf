@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Global Heap Collection (GCOL).
 //!
 //! Global heaps store variable-length data such as variable-length strings
@@ -8,9 +10,9 @@
 //! An object with index 0 marks the free space sentinel and terminates
 //! parsing of the collection.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::storage::Storage;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::storage::Storage;
 
 /// Signature bytes for a Global Heap Collection: ASCII `GCOL`.
 const GCOL_SIGNATURE: [u8; 4] = *b"GCOL";

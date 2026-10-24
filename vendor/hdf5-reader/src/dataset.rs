@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 use std::mem::MaybeUninit;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, OnceLock};
@@ -5,36 +7,36 @@ use std::sync::{Arc, OnceLock};
 use lru::LruCache;
 use ndarray::{ArrayD, IxDyn};
 use parking_lot::Mutex;
-#[cfg(feature = "rayon")]
+#[cfg(feature = "hdf")]
 use rayon::prelude::*;
 use smallvec::SmallVec;
 
-use crate::attribute_api::{
+use crate::hdf5_reader::attribute_api::{
     collect_attribute_messages_storage, decode_string, decoded_vlen_strings_storage,
     read_one_vlen_string_storage, resolve_vlen_bytes_storage, Attribute,
 };
-use crate::cache::{ChunkCache, ChunkCacheStats, ChunkKey};
-use crate::chunk_index;
-use crate::datatype_api::H5Type;
-use crate::error::{ByteOrder, Error, Result};
-use crate::filters::{self, FilterRegistry};
-use crate::io::Cursor;
-use crate::local_heap::LocalHeap;
-use crate::messages::attribute::AttributeMessage;
-use crate::messages::dataspace::{DataspaceMessage, DataspaceType};
-use crate::messages::datatype::{Datatype, StringSize, VarLenKind};
-use crate::messages::external_files::ExternalFilesMessage;
-use crate::messages::fill_value::{FillTime, FillValueMessage};
-use crate::messages::filter_pipeline::FilterPipelineMessage;
-use crate::messages::layout::{ChunkIndexing, DataLayout};
-use crate::messages::HdfMessage;
-use crate::object_header::ObjectHeader;
-use crate::storage::DynStorage;
-use crate::FileContext;
+use crate::hdf5_reader::cache::{ChunkCache, ChunkCacheStats, ChunkKey};
+use crate::hdf5_reader::chunk_index;
+use crate::hdf5_reader::datatype_api::H5Type;
+use crate::hdf5_reader::error::{ByteOrder, Error, Result};
+use crate::hdf5_reader::filters::{self, FilterRegistry};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::local_heap::LocalHeap;
+use crate::hdf5_reader::messages::attribute::AttributeMessage;
+use crate::hdf5_reader::messages::dataspace::{DataspaceMessage, DataspaceType};
+use crate::hdf5_reader::messages::datatype::{Datatype, StringSize, VarLenKind};
+use crate::hdf5_reader::messages::external_files::ExternalFilesMessage;
+use crate::hdf5_reader::messages::fill_value::{FillTime, FillValueMessage};
+use crate::hdf5_reader::messages::filter_pipeline::FilterPipelineMessage;
+use crate::hdf5_reader::messages::layout::{ChunkIndexing, DataLayout};
+use crate::hdf5_reader::messages::HdfMessage;
+use crate::hdf5_reader::object_header::ObjectHeader;
+use crate::hdf5_reader::storage::DynStorage;
+use crate::hdf5_reader::FileContext;
 
-#[cfg(feature = "rayon")]
+#[cfg(feature = "hdf")]
 type GatherPool<'a> = Option<&'a rayon::ThreadPool>;
-#[cfg(not(feature = "rayon"))]
+#[cfg(not(feature = "hdf"))]
 type GatherPool<'a> = Option<&'a ()>;
 
 const HOT_FULL_DATASET_CACHE_MAX_BYTES: usize = 32 * 1024 * 1024;
@@ -103,7 +105,7 @@ unsafe impl Send for FlatBufferPtr {}
 unsafe impl Sync for FlatBufferPtr {}
 
 impl FlatBufferPtr {
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[inline(always)]
     unsafe fn copy_chunk(self, chunk_data: &[u8], layout: ChunkCopyLayout<'_>) -> Result<()> {
         // SAFETY: the caller upholds this method's allocation-lifetime and
@@ -111,7 +113,7 @@ impl FlatBufferPtr {
         unsafe { copy_chunk_to_flat_with_strides_ptr(chunk_data, self, layout) }
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[inline(always)]
     unsafe fn copy_selected(
         self,
@@ -138,7 +140,7 @@ impl FlatBufferPtr {
         }
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[inline(always)]
     unsafe fn copy_unit_stride_chunk_overlap(
         self,
@@ -1223,7 +1225,7 @@ impl Dataset {
     /// Read the entire dataset using internal chunk-level parallelism when possible.
     ///
     /// Non-chunked datasets fall back to `read_array`.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_array_parallel<T: H5Type>(&self) -> Result<ArrayD<T>> {
         match &self.layout {
             DataLayout::Chunked {
@@ -1244,7 +1246,7 @@ impl Dataset {
     /// Read the entire dataset using the provided Rayon thread pool.
     ///
     /// Non-chunked datasets fall back to `read_array`.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_array_in_pool<T: H5Type>(&self, pool: &rayon::ThreadPool) -> Result<ArrayD<T>> {
         match &self.layout {
             DataLayout::Chunked {
@@ -1268,7 +1270,7 @@ impl Dataset {
     ///
     /// Chunked datasets decompress overlapping chunks in parallel via Rayon.
     /// Non-chunked layouts fall back to `read_slice`.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_slice_parallel<T: H5Type>(&self, selection: &SliceInfo) -> Result<ArrayD<T>> {
         let resolved = normalize_selection(selection, &self.dataspace.dims)?;
 
@@ -1456,7 +1458,7 @@ impl Dataset {
 
         let expected_bytes =
             checked_mul_usize(seq_len, base_element_size, "vlen sequence byte size")?;
-        let collection = crate::global_heap::GlobalHeapCollection::parse_at_storage(
+        let collection = crate::hdf5_reader::global_heap::GlobalHeapCollection::parse_at_storage(
             self.context.storage.as_ref(),
             heap_addr,
             self.offset_size(),
@@ -1911,7 +1913,7 @@ impl Dataset {
         Ok(())
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     fn read_chunked_parallel<T: H5Type>(
         &self,
         index_address: u64,
@@ -2177,7 +2179,7 @@ impl Dataset {
                 self.context.storage.len(),
             ),
             Some(ChunkIndexing::FixedArray { .. }) => {
-                crate::fixed_array::collect_fixed_array_chunk_entries_storage(
+                crate::hdf5_reader::fixed_array::collect_fixed_array_chunk_entries_storage(
                     self.context.storage.as_ref(),
                     index_address,
                     self.offset_size(),
@@ -2188,7 +2190,7 @@ impl Dataset {
                 )
             }
             Some(ChunkIndexing::ExtensibleArray { .. }) => {
-                crate::extensible_array::collect_extensible_array_chunk_entries_storage(
+                crate::hdf5_reader::extensible_array::collect_extensible_array_chunk_entries_storage(
                     self.context.storage.as_ref(),
                     index_address,
                     self.offset_size(),
@@ -2220,7 +2222,7 @@ impl Dataset {
         chunk_dims: &[u32],
         chunk_bounds: Option<(&[u64], &[u64])>,
     ) -> Result<Vec<chunk_index::ChunkEntry>> {
-        let leaves = crate::btree_v1::collect_btree_v1_leaves_storage(
+        let leaves = crate::hdf5_reader::btree_v1::collect_btree_v1_leaves_storage(
             self.context.storage.as_ref(),
             btree_address,
             self.offset_size(),
@@ -2233,7 +2235,7 @@ impl Dataset {
         let mut entries = Vec::with_capacity(leaves.len());
         for (key, chunk_addr) in &leaves {
             match key {
-                crate::btree_v1::BTreeV1Key::RawData {
+                crate::hdf5_reader::btree_v1::BTreeV1Key::RawData {
                     chunk_size,
                     filter_mask,
                     offsets,
@@ -2265,7 +2267,7 @@ impl Dataset {
         self.read_rows_columns_impl(rows, columns, false, None)
     }
     /// Parallel chunk decode with compact per-chunk gathers, using the current pool.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_rows_columns_chunked_parallel<T: H5Type>(
         &self,
         rows: (u64, u64, u64),
@@ -2274,7 +2276,7 @@ impl Dataset {
         self.read_rows_columns_impl(rows, columns, true, None)
     }
     /// Check residency on the calling thread; enter the supplied pool only for cold decode.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_rows_columns_chunked_in_pool<T: H5Type>(
         &self,
         rows: (u64, u64, u64),
@@ -2290,7 +2292,7 @@ impl Dataset {
         parallel: bool,
         pool: GatherPool<'_>,
     ) -> Result<Option<ArrayD<T>>> {
-        #[cfg(not(feature = "rayon"))]
+        #[cfg(not(feature = "hdf"))]
         let _ = (parallel, pool);
         let DataLayout::Chunked {
             address,
@@ -2428,7 +2430,7 @@ impl Dataset {
                 }
                 Ok(pieces)
             };
-            #[cfg(feature = "rayon")]
+            #[cfg(feature = "hdf")]
             let mut scatter = |pieces: Vec<(usize, Vec<u8>)>| {
                 for (row, data) in pieces {
                     for (i, &(col, _)) in selected.iter().enumerate() {
@@ -2438,7 +2440,7 @@ impl Dataset {
                     }
                 }
             };
-            #[cfg(feature = "rayon")]
+            #[cfg(feature = "hdf")]
             let use_parallel = parallel
                 && entries.len() > 1
                 && entries.first().is_some_and(|e| {
@@ -2447,7 +2449,7 @@ impl Dataset {
                         chunk_offsets: SmallVec::from_slice(&e.offsets),
                     })
                 });
-            #[cfg(feature = "rayon")]
+            #[cfg(feature = "hdf")]
             if use_parallel {
                 let decode = || {
                     entries
@@ -2480,7 +2482,7 @@ impl Dataset {
         dataset.full_dataset_bytes = Arc::new(OnceLock::new());
         dataset.read_array::<T>()
     }
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub fn read_array_uncached_parallel<T: H5Type>(&self) -> Result<ArrayD<T>> {
         let mut dataset = Self::from_template(self.context.clone(), self.template());
         dataset.chunk_cache = Arc::new(ChunkCache::new(0, 1));
@@ -2956,7 +2958,7 @@ impl Dataset {
     ///
     /// Each chunk writes to a disjoint region of the result buffer (chunks don't
     /// overlap in output space), so this is safe to parallelize.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     fn read_chunked_slice_parallel<T: H5Type>(
         &self,
         index_address: u64,
@@ -4234,7 +4236,7 @@ fn copy_selected_elements(
 ///
 /// The caller must guarantee that no two concurrent calls write to the same
 /// byte range within `[result_ptr .. result_ptr + result_len)`.
-#[cfg(feature = "rayon")]
+#[cfg(feature = "hdf")]
 #[allow(clippy::too_many_arguments)]
 #[inline(always)]
 unsafe fn copy_selected_elements_ptr(
@@ -4416,7 +4418,7 @@ fn slice_array<T: H5Type + Clone>(
 mod tests {
     #[test]
     fn perf2_gather_and_uncached_reads() {
-        let file = crate::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
+        let file = crate::hdf5_reader::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
             .unwrap();
         macro_rules! check {
             ($ty:ty,$name:expr) => {{
@@ -4432,13 +4434,13 @@ mod tests {
                         assert_eq!(got[[out, col]], full[[row, id as usize]]);
                     }
                 }
-                #[cfg(feature = "rayon")]
+                #[cfg(feature = "hdf")]
                 {
                     let pool = rayon::ThreadPoolBuilder::new()
                         .num_threads(4)
                         .build()
                         .unwrap();
-                    let cold = crate::Hdf5File::from_bytes(include_bytes!(
+                    let cold = crate::hdf5_reader::Hdf5File::from_bytes(include_bytes!(
                         "../tests/fixtures/perf2/gather.h5"
                     ))
                     .unwrap()
@@ -4453,7 +4455,7 @@ mod tests {
                     assert_eq!(parallel, got);
                 }
                 assert_eq!(d.read_array_uncached::<$ty>().unwrap(), full);
-                #[cfg(feature = "rayon")]
+                #[cfg(feature = "hdf")]
                 assert_eq!(d.read_array_uncached_parallel::<$ty>().unwrap(), full);
                 assert!(d
                     .read_rows_columns_chunked::<$ty>((0, 18, 1), &cols)
@@ -4473,7 +4475,7 @@ mod tests {
         check!(i32, "fill");
     }
     use super::*;
-    use crate::storage::BytesStorage;
+    use crate::hdf5_reader::storage::BytesStorage;
 
     /// Buffers sized from a corrupt dataspace fail the read instead of aborting.
     #[test]
@@ -4483,7 +4485,7 @@ mod tests {
         assert_eq!(try_uninit_vec::<u64>(3).unwrap().len(), 3);
         assert_eq!(try_zeroed_bytes(5).unwrap(), vec![0u8; 5]);
     }
-    use crate::superblock::Superblock;
+    use crate::hdf5_reader::superblock::Superblock;
     use std::collections::HashMap;
 
     fn test_context_with_offset_size(bytes: Vec<u8>, offset_size: u8) -> Arc<FileContext> {
@@ -4514,7 +4516,7 @@ mod tests {
             external_file_resolver: None,
             external_link_resolver: None,
             external_file_cache: Mutex::new(HashMap::new()),
-            max_chunk_bytes: crate::DEFAULT_MAX_CHUNK_BYTES,
+            max_chunk_bytes: crate::hdf5_reader::DEFAULT_MAX_CHUNK_BYTES,
             sohm_table: OnceLock::new(),
             full_file_cache: OnceLock::new(),
         })
@@ -4574,8 +4576,8 @@ mod tests {
             },
             datatype: Datatype::String {
                 size: StringSize::Variable,
-                encoding: crate::messages::datatype::StringEncoding::Ascii,
-                padding: crate::messages::datatype::StringPadding::NullTerminate,
+                encoding: crate::hdf5_reader::messages::datatype::StringEncoding::Ascii,
+                padding: crate::hdf5_reader::messages::datatype::StringPadding::NullTerminate,
             },
             layout,
             fill_value,
@@ -4607,7 +4609,7 @@ mod tests {
         }
 
         fn element_size(dtype: &Datatype) -> usize {
-            crate::datatype_api::dtype_element_size(dtype).unwrap_or(0)
+            crate::hdf5_reader::datatype_api::dtype_element_size(dtype).unwrap_or(0)
         }
     }
 
@@ -4623,11 +4625,11 @@ mod tests {
             base: Box::new(Datatype::FixedPoint {
                 size: 1,
                 signed: false,
-                byte_order: crate::error::ByteOrder::LittleEndian,
+                byte_order: crate::hdf5_reader::error::ByteOrder::LittleEndian,
             }),
             kind: VarLenKind::Sequence,
-            encoding: crate::messages::datatype::StringEncoding::Ascii,
-            padding: crate::messages::datatype::StringPadding::NullTerminate,
+            encoding: crate::hdf5_reader::messages::datatype::StringEncoding::Ascii,
+            padding: crate::hdf5_reader::messages::datatype::StringPadding::NullTerminate,
         };
 
         assert_eq!(raw_element_size_for_datatype(&dtype, 12).unwrap(), 12);
@@ -4675,7 +4677,7 @@ mod tests {
         }
     }
 
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     #[test]
     fn parallel_chunked_vlen_slice_uses_file_reference_width() {
         for (offset_size, ref_size) in [(2u8, 10usize), (4u8, 12usize)] {
@@ -4752,7 +4754,7 @@ mod tests {
             base: Box::new(Datatype::FixedPoint {
                 size: 8,
                 signed: false,
-                byte_order: crate::error::ByteOrder::LittleEndian,
+                byte_order: crate::hdf5_reader::error::ByteOrder::LittleEndian,
             }),
             dims: vec![u64::MAX, 2],
         };

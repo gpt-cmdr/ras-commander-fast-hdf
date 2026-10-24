@@ -1,18 +1,178 @@
-[workspace]
-members = ["crates/ras-commander-rust"]
-exclude = ["vendor/hdf5-reader", "vendor/hdf5-core", "python"]
-resolver = "2"
-
-[workspace.package]
-version = "0.1.0"
+[package]
+name = "ras-commander-fast-hdf"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.88"
-license = "MIT"
+authors = ["CLB Engineering Corporation"]
+description = "Native, read-only HEC-RAS project, plan and HDF5 results engine in pure Rust; also the Python extension behind ras-commander"
+# Our code is MIT. The package also carries the hdf5-reader/hdf5-core source
+# (MIT OR Apache-2.0, vendor/hdf5-*) and the freestiler-core source (MIT AND ISC,
+# vendor/freestiler-core) as internal modules; their licence texts are in vendor/.
+license = "MIT AND (MIT OR Apache-2.0) AND ISC"
 repository = "https://github.com/gpt-cmdr/ras-commander-fast-hdf"
+homepage = "https://rascommander.info/fasthdf/"
+documentation = "https://docs.rs/ras-commander-fast-hdf"
+readme = "README.md"
+keywords = ["hec-ras", "hdf5", "hydraulics", "flood", "hydrology"]
+categories = ["science", "science::geo", "parser-implementations"]
+build = "build.rs"
+# Only what is needed to build and the licence and provenance notices; test
+# fixtures, upstream test suites and Python packaging stay in the repository.
+include = [
+    "/build.rs",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/README.md",
+    "/THIRD-PARTY-NOTICES.md",
+    "/src/**/*.rs",
+    "/src/exports/README.md",
+    "/python/licenses/ras-commander-LICENSE.txt",
+    "/vendor/LICENSE-APACHE",
+    "/vendor/LICENSE-MIT",
+    "/vendor/LOCAL_PATCHES.md",
+    "/vendor/PROVENANCE.json",
+    "/vendor/patches/*.patch",
+    "/vendor/hdf5-core/src/**/*.rs",
+    "/vendor/hdf5-reader/PROVENANCE.md",
+    "/vendor/hdf5-reader/src/**/*.rs",
+    "/vendor/freestiler-core/COPYRIGHTS",
+    "/vendor/freestiler-core/LICENSE",
+    "/vendor/freestiler-core/LICENSE.md",
+    "/vendor/freestiler-core/LICENSE.note",
+    "/vendor/freestiler-core/PROVENANCE.md",
+    "/vendor/freestiler-core/src/**/*.rs",
+    "/vendor/freestiler-core/src/supercluster/UPSTREAM-LICENSES",
+]
+
+[lib]
+name = "ras_commander_fast_hdf"
+# maturin builds the Python extension as a cdylib from this same library
+# (`cargo rustc --crate-type cdylib`); Rust users get an ordinary rlib.
+
+[features]
+default = ["catalog"]
+# Project and plan text catalogue; standard library only.
+catalog = []
+# HDF5 reads (pure Rust; the embedded hdf5-reader). Upstream's reader features
+# "rayon" and "lz4" are both part of this feature.
+hdf = [
+    "dep:ndarray",
+    "dep:rayon",
+    "dep:flate2",
+    "dep:thiserror",
+    "dep:memmap2",
+    "dep:libc",
+    "dep:lru",
+    "dep:parking_lot",
+    "dep:smallvec",
+    "dep:lz4_flex",
+]
+# 2D mesh geometry and topology.
+mesh = ["hdf", "dep:geo"]
+# 1D/2D results, summaries, time series.
+results = ["hdf"]
+# Python bindings (PyO3), the native kernels only ras-commander uses, and the
+# embedded freestiler-core vector-tile pipeline. Requires the whole engine.
+python = [
+    "catalog",
+    "hdf",
+    "mesh",
+    "results",
+    "geo/default",
+    "dep:pyo3",
+    "dep:numpy",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:prost",
+    "dep:i_overlay",
+    "dep:i_float",
+    "dep:geo-types",
+    "dep:pmtiles2",
+    "dep:integer-encoding",
+]
+# Build a Python extension module (maturin enables this).
+extension-module = ["python", "pyo3/extension-module"]
+# Arrow IPC -> vector file writers, exposed through the Python bindings.
+exports-arrow = [
+    "python",
+    "dep:arrow-array",
+    "dep:arrow-schema",
+    "dep:arrow-ipc",
+    "dep:tempfile",
+]
+exports-pmtiles = ["exports-arrow", "dep:geozero", "geozero/with-geo"]
+exports-geojson = ["exports-arrow", "dep:geozero"]
+exports-flatgeobuf = ["exports-arrow", "dep:flatgeobuf", "dep:geozero"]
+exports-geoparquet = ["exports-arrow", "dep:geoparquet", "dep:parquet"]
+exports-geopackage = ["exports-arrow", "dep:geopackage"]
+exports-all = [
+    "exports-geojson",
+    "exports-flatgeobuf",
+    "exports-geoparquet",
+    "exports-geopackage",
+]
+
+[dependencies]
+# Engine and embedded HDF5 reader (feature "hdf").
+ndarray = { version = "0.17", optional = true }
+rayon = { version = "1.10", optional = true }
+# zlib-rs for the engine; rust_backend as requested by the embedded reader.
+flate2 = { version = "1", optional = true, default-features = false, features = ["zlib-rs", "rust_backend"] }
+thiserror = { version = "2", optional = true }
+memmap2 = { version = "0.9", optional = true }
+libc = { version = "0.2", optional = true }
+lru = { version = "0.16.3", optional = true }
+parking_lot = { version = "0.12", optional = true }
+smallvec = { version = "1", optional = true }
+lz4_flex = { version = "0.11", optional = true }
+geo = { version = "0.29", optional = true, default-features = false }
+
+# Python bindings and embedded freestiler-core (feature "python").
+pyo3 = { version = "0.30", optional = true, features = ["abi3-py310"] }
+numpy = { version = "0.30", optional = true }
+serde = { version = "1", optional = true, features = ["derive"] }
+serde_json = { version = "1", optional = true }
+prost = { version = "0.13", optional = true }
+i_overlay = { version = "=1.9.4", optional = true }
+i_float = { version = "=1.6.0", optional = true }
+geo-types = { version = "0.7", optional = true }
+pmtiles2 = { version = "=0.3.1", optional = true }
+integer-encoding = { version = "=4.0.2", optional = true }
+
+# Export writers (features "exports-*").
+arrow-array = { version = "=59.0.0", optional = true }
+arrow-schema = { version = "=59.0.0", optional = true }
+arrow-ipc = { version = "=59.0.0", optional = true }
+tempfile = { version = "3", optional = true }
+geozero = { version = "=0.15.1", optional = true, default-features = false, features = ["with-wkb", "with-geojson"] }
+flatgeobuf = { version = "=6.0.1", optional = true, default-features = false }
+geoparquet = { version = "=0.9.0", optional = true }
+parquet = { version = "=59.0.0", optional = true, default-features = false, features = ["arrow", "snap"] }
+geopackage = { version = "=0.10.0", optional = true, default-features = false, features = ["arrow", "bundled"] }
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+# float_roundtrip: the embedded freestiler supercluster tests compare golden
+# coordinates bit for bit (as upstream's dev-dependency does).
+serde_json = { version = "1", features = ["float_roundtrip"] }
+sha2 = "0.10"
+tempfile = "3"
+
+[[example]]
+name = "perf_probe"
+required-features = ["hdf"]
+
+[[example]]
+name = "perf_metadata_probe"
+required-features = ["hdf"]
+
+[package.metadata.docs.rs]
+features = ["catalog", "hdf", "mesh", "results"]
 
 [profile.release]
 lto = "thin"
 codegen-units = 1
-# File-derived sizes use checked arithmetic; a missed site panics (catchable
-# at an FFI boundary) instead of wrapping into a short read or a huge allocation.
+# File-derived sizes use checked arithmetic; a missed site panics (contained by
+# the Python bridge's panic guard) instead of wrapping into a short read or a
+# huge allocation.
 overflow-checks = true
