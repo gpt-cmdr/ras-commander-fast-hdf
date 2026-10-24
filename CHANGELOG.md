@@ -1,11 +1,6 @@
 # Changelog
 
-## 0.1.1 (2026-10-24)
-
-- Linux wheels for older and musl-based distributions: `manylinux2014`
-  (glibc 2.17 or later) replaces `manylinux_2_28`, and a new `musllinux_1_2`
-  wheel covers Alpine. `pip install ras-commander` no longer tries to compile
-  the engine on those systems. Engine and extension code are unchanged.
+## Unreleased
 
 - Path-based typed reads can share an open session. Every module-level
   function that takes an HDF path for a typed read (typed attributes, fixed
@@ -25,6 +20,14 @@
   when that field or the full `xs_geometry_inventory` is requested. Results are
   unchanged. On the BaldEagle example the first cross-section read in a session
   drops from about 40-70 ms to under 2 ms.
+
+## 0.1.1 (2026-10-24)
+
+- Linux wheels for older and musl-based distributions: `manylinux2014`
+  (glibc 2.17 or later) replaces `manylinux_2_28`, and a new `musllinux_1_2`
+  wheel covers Alpine. `pip install ras-commander` no longer tries to compile
+  the engine on those systems. Engine and extension code are unchanged.
+
 - Documentation: this package is ras-commander's default HDF engine, not an
   optional extension. ras-commander 0.107.1 and later list it as a core
   dependency on Windows x64, Linux x64 and macOS arm64 (CPython), so
