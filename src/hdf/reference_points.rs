@@ -1,4 +1,5 @@
-//! Stored reference-point geometry and qualified 7.0.1 Base/DSS series.
+//! Stored reference-point geometry and qualified 7.0.1 Base/DSS series, and the exact
+//! geometry identities of reference-line result columns.
 use super::{
     encoding::map_error,
     families::FamilyDataset,
@@ -276,6 +277,7 @@ impl ReadOnlyHdfSession {
             .map(|row| Identity::new(self.path(), &table, row as u64))
             .collect();
         d.geometry_locations = linked;
+        d.geometry_link = crate::Capability::Supported;
         d.identity_table = Some(table);
         if var == "Name" {
             d.role = "name_axis".into();
@@ -365,5 +367,190 @@ impl ReadOnlyHdfSession {
         }
         d.time_group = Some(group);
         Ok(())
+    }
+    /// The column-to-geometry link of one reference-line result dataset, as
+    /// (`geometry_locations`, `geometry_link`): Unavailable when the plan stores no
+    /// reference-line geometry, Unsupported/Corrupt when the identities do not prove a link.
+    /// Host errors propagate.
+    pub(super) fn reference_line_link(
+        &self,
+        name_path: &str,
+        names: &[String],
+        attributes: &[super::metadata::TypedAttribute],
+        max: usize,
+    ) -> Result<(Vec<Identity>, crate::Capability)> {
+        if !self.has_group("Geometry/Reference Lines")? {
+            return Ok((
+                Vec::new(),
+                crate::Capability::unavailable("reference-line geometry absent"),
+            ));
+        }
+        match self.reference_line_geometry_locations(name_path, names, attributes, max) {
+            Ok(v) => Ok((v, crate::Capability::Supported)),
+            Err(e) => Ok((Vec::new(), crate::capability::error_to_capability(e)?)),
+        }
+    }
+    /// Geometry `Reference Lines/Attributes` identities of reference-line result columns.
+    ///
+    /// Each stored result `Name` entry must equal `<Name>|<SA-2D>` of exactly one geometry row
+    /// with a valid name; any other layout (absent geometry, no fixed-text `SA-2D` column,
+    /// duplicate or unmatched names) is `Unsupported(identity_layout)`. Two stored identities
+    /// are cross-checked, and a disagreement is `Corrupt`: the `<name>|Faces` attribute of the
+    /// `Name` axis must equal, in order, the geometry `Internal Faces` of the linked row (both
+    /// required), and `2D Areas` ordinals, when the series stores them, must name the same
+    /// areas through `2D Flow Areas/Attributes`. Column order is linked by name, never assumed.
+    fn reference_line_geometry_locations(
+        &self,
+        name_path: &str,
+        names: &[String],
+        attributes: &[super::metadata::TypedAttribute],
+        max: usize,
+    ) -> Result<Vec<Identity>> {
+        use super::lines::GeometryFamily;
+        let geometry = self.geometry_family(GeometryFamily::ReferenceLines, max)?;
+        let g = geometry
+            .value()
+            .filter(|_| geometry.is_supported())
+            .ok_or_else(|| identity("line results require qualified reference-line geometry"))?;
+        let Some(MetadataValue::Strings(areas)) = g
+            .attributes
+            .table
+            .columns
+            .iter()
+            .find(|c| c.name == "SA-2D")
+            .map(|c| &c.value)
+        else {
+            return Err(identity("reference-line SA-2D fixed-text column required"));
+        };
+        if areas.len() != g.features.len() {
+            return Err(corrupt(
+                "reference-line Attributes rows and features disagree",
+            ));
+        }
+        let mut keys = std::collections::BTreeSet::new();
+        for (f, area) in g.features.iter().zip(areas) {
+            if !f.name_capability.is_supported() || f.name.is_empty() || area.is_empty() {
+                return Err(identity("only named 2D reference lines are qualified"));
+            }
+            if !keys.insert(format!("{}|{}", f.name, area)) {
+                return Err(identity("ambiguous reference-line Name/SA-2D identity"));
+            }
+        }
+        stored::budget(
+            names
+                .len()
+                .checked_mul(std::mem::size_of::<Identity>())
+                .ok_or_else(|| {
+                    Error::new(
+                        ErrorKind::InvalidRequest,
+                        "line identity allocation overflow",
+                    )
+                    .with_code(UnsupportedCode::ResourceLimit)
+                })?,
+            max,
+        )?;
+        let mut seen = std::collections::BTreeSet::new();
+        let mut linked = Vec::with_capacity(names.len());
+        let mut linked_areas = Vec::with_capacity(names.len());
+        let mut linked_rows = Vec::with_capacity(names.len());
+        for name in names {
+            if !seen.insert(name) {
+                return Err(identity("duplicate line Name axis identity"));
+            }
+            let matches: Vec<usize> = g
+                .features
+                .iter()
+                .zip(areas)
+                .enumerate()
+                .filter(|(_, (f, area))| format!("{}|{}", f.name, area) == *name)
+                .map(|(i, _)| i)
+                .collect();
+            let [i] = matches[..] else {
+                return Err(identity(
+                    "line Name axis has no unique exact geometry match",
+                ));
+            };
+            linked.push(g.features[i].id.clone());
+            linked_areas.push(areas[i].as_str());
+            linked_rows.push(i);
+        }
+        let name_attributes = stored::attributes(self, name_path, false, max)?;
+        let internal = exact_compound(self, "Geometry/Reference Lines/Internal Faces", max)
+            .map_err(|e| match e.kind {
+                ErrorKind::NotFound => identity("reference-line Internal Faces required"),
+                _ => e,
+            })?;
+        let signed = |name: &str| -> Result<&Vec<i64>> {
+            match internal
+                .table
+                .columns
+                .iter()
+                .find(|c| c.name == name)
+                .map(|c| &c.value)
+            {
+                Some(MetadataValue::Signed(v)) => Ok(v),
+                _ => Err(identity(
+                    "reference-line Internal Faces integer columns required",
+                )),
+            }
+        };
+        let (line_ids, face_ids) = (signed("Reference Line ID")?, signed("Face Index")?);
+        if line_ids.len() != face_ids.len() {
+            return Err(corrupt("reference-line Internal Faces columns disagree"));
+        }
+        for (row, id) in linked.iter().enumerate() {
+            let key = format!("{}|Faces", g.features[linked_rows[row]].name);
+            let stored = name_attributes
+                .iter()
+                .find(|a| a.name == key)
+                .ok_or_else(|| identity("line Name axis Faces attribute absent"))?;
+            let MetadataValue::Signed(faces) = &stored.value else {
+                return Err(identity("line Name axis Faces require signed integers"));
+            };
+            let row = i64::try_from(id.row).map_err(|_| corrupt("line row overflow"))?;
+            let geometry: Vec<i64> = line_ids
+                .iter()
+                .zip(face_ids)
+                .filter(|(l, _)| **l == row)
+                .map(|(_, f)| *f)
+                .collect();
+            if *faces != geometry {
+                return Err(corrupt(
+                    "line result Faces differ from geometry Internal Faces",
+                ));
+            }
+        }
+        if let Some(attr) = attributes.iter().find(|a| a.name == "2D Areas") {
+            let table = exact_compound(self, "Geometry/2D Flow Areas/Attributes", max)?;
+            let Some(MetadataValue::Strings(area_names)) = table
+                .table
+                .columns
+                .iter()
+                .find(|c| c.name == "Name")
+                .map(|c| &c.value)
+            else {
+                return Err(identity("area Attributes Name axis unqualified"));
+            };
+            let MetadataValue::Signed(indices) = &attr.value else {
+                return Err(identity("line area ordinals require signed integers"));
+            };
+            if attr.shape != [linked_areas.len() as u64] || indices.len() != linked_areas.len() {
+                return Err(corrupt("line area identity shape"));
+            }
+            for (&index, area) in indices.iter().zip(&linked_areas) {
+                if index < 0
+                    || usize::try_from(index)
+                        .ok()
+                        .and_then(|i| area_names.get(i))
+                        .map(String::as_str)
+                        != Some(*area)
+                {
+                    return Err(corrupt(
+                        "line area ordinal differs from named geometry area",
+                    ));
+                }
+            }
+        }
+        Ok(linked)
     }
 }
