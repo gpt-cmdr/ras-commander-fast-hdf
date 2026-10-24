@@ -152,14 +152,15 @@ jobs:
             artifact: wheel-Linux-musl
             python: python3
     runs-on: ubuntu-latest
-    container: ${{ matrix.image }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: dist
-      - name: Smoke test
+      # Only the smoke test runs in the container: the actions themselves need a
+      # newer glibc than manylinux2014's CentOS 7 base.
+      - name: Smoke test in ${{ matrix.image }}
         run: |
-          ${{ matrix.python }} -m pip install dist/*.whl
-          ${{ matrix.python }} -I .github/scripts/smoke_wheel.py dist "${{ github.sha }}"
+          docker run --rm -v "$PWD":/w -w /w ${{ matrix.image }} sh -c \
+            '${{ matrix.python }} -m pip install dist/*.whl && ${{ matrix.python }} -I .github/scripts/smoke_wheel.py dist ${{ github.sha }}'
