@@ -21,7 +21,7 @@ impl HdfSession {
     fn slot(&self) -> MutexGuard<'_, Option<ReadOnlyHdfSession>> {
         self.inner.lock().unwrap_or_else(PoisonError::into_inner)
     }
-    fn with<T: Send>(
+    pub(crate) fn with<T: Send>(
         &self,
         py: Python<'_>,
         f: impl FnOnce(&ReadOnlyHdfSession) -> ras_commander_rust::Result<T> + Send,
@@ -357,6 +357,42 @@ impl HdfSession {
                 dict!(py,"identity"=>identity(py,&r.id)?,"elements"=>r.elements.into_pyarray(py),"values"=>crate::reader::array(py,r.values)?,"time_indices"=>r.time_indices.into_pyarray(py)),
             )
         })
+    }
+}
+
+/// The source of a path-based typed entry point: a file path (opened and closed by
+/// the call, as before) or an open [`HdfSession`], whose mapping, chunk cache and
+/// session-local metadata memo are then shared with the caller's other reads.
+/// The engine computes the same values either way; only the fixed per-call cost
+/// (mapping, superblock and object-header parsing, layout and encoding proofs)
+/// is saved. A closed session raises `ValueError("HDF session is closed")`.
+pub(crate) enum Source {
+    Path(PathBuf),
+    Session(Py<HdfSession>),
+}
+impl<'a, 'py> FromPyObject<'a, 'py> for Source {
+    type Error = PyErr;
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        if let Ok(session) = obj.cast::<HdfSession>() {
+            return Ok(Self::Session(session.to_owned().unbind()));
+        }
+        // Anything else keeps the path conversion and its exact TypeError.
+        obj.extract::<PathBuf>().map(Self::Path)
+    }
+}
+impl Source {
+    /// Run one engine call on this source with the GIL released.
+    pub(crate) fn run<T: Send>(
+        &self,
+        py: Python<'_>,
+        f: impl FnOnce(&ReadOnlyHdfSession) -> ras_commander_rust::Result<T> + Send,
+    ) -> PyResult<T> {
+        match self {
+            Self::Path(path) => py
+                .detach(|| f(&ReadOnlyHdfSession::open(path)?))
+                .map_err(crate::reader::err),
+            Self::Session(session) => session.borrow(py).with(py, f),
+        }
     }
 }
 

@@ -69,7 +69,12 @@ call for these typed reads).
 
 ## Module-level reads
 
-Each opens the file for one call. The groups below list every function; the
+Each opens the file for one call. The path-based typed reads (typed
+attributes, `raw_fixed_strings`, the 1D, 2D geometry, stored-family and
+output-block readers) also accept an open `HdfSession` in place of the path:
+the call then uses that session's mapping and metadata caches, which saves the
+fixed open and proof cost of many small reads of one file. The values are the
+same. `SESSION_SOURCES` is `True` on extensions that support this. The groups below list every function; the
 reference gives arguments and return shapes.
 
 | Group | Functions |

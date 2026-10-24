@@ -22,6 +22,30 @@ element and index outputs are NumPy arrays too.
 
 Numeric reads above 2 GiB of decoded values are refused by the engine (engine API 10).
 
+## Sessions as the source of typed reads
+
+The module-level typed reads that take a path (`typed_group_attributes`,
+`typed_dataset_attributes`, `raw_fixed_strings`, the 1D line, geometry, result,
+summary and structure readers, `geometry_family`, `mesh_geometry_tables`,
+`read_mesh_geometry`, `stored_family_index`, `read_family_dataset`,
+`read_output_block` and the other path readers) accept an open `HdfSession` as
+their first argument instead of the path:
+
+```python
+with native.HdfSession(path) as s:
+    times = native.raw_fixed_strings(s, "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Time Date Stamp")
+    xs = native.read_xs_result(s, "unsteady", "Water Surface", (0, rows, 1))
+```
+
+A path opens the file, maps it, parses the superblock and proves the layout and encoding
+of every dataset it touches, then closes it again. With a session these steps happen once
+per session: the session-local memo (keyed by every argument that affects a verdict,
+including `max_bytes`) and the decoded-chunk cache are shared by all reads. The engine
+computes the same values either way. A closed session raises `ValueError("HDF session is
+closed")` and is never reopened; any argument that is neither a session nor a path keeps
+the path conversion's `TypeError`. The module attribute `SESSION_SOURCES` is `True` when
+the extension supports this (additive; `API_VERSION` 11).
+
 ## Session cache in ras-commander
 
 `fast_hdf.read_dataset()` and `read_datasets()` reuse at most four sessions in an LRU
