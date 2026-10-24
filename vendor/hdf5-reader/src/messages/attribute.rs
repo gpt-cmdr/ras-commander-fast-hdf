@@ -1,10 +1,12 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Attribute message (type 0x000C).
 //!
 //! Attributes are small named data items attached to any HDF5 object.
 //! Each attribute has a name, datatype, dataspace, and raw data.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
 
 use super::dataspace::{self, DataspaceMessage};
 use super::datatype::{self, Datatype};
@@ -186,8 +188,8 @@ fn attribute_raw_data_size(ds_msg: &dataspace::DataspaceMessage, dtype_size: u32
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::ByteOrder;
-    use crate::messages::dataspace::DataspaceType;
+    use crate::hdf5_reader::error::ByteOrder;
+    use crate::hdf5_reader::messages::dataspace::DataspaceType;
 
     /// Build a minimal u32-LE datatype description (8 bytes total: 4 class/ver/flags + 4 size).
     fn u32_le_datatype() -> Vec<u8> {

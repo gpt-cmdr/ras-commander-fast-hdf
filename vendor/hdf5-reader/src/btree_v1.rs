@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 B-link Tree Version 1.
 //!
 //! V1 B-trees are used by old-style (v0/v1) groups for link name lookup
@@ -11,9 +13,9 @@
 
 use std::collections::HashSet;
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::storage::Storage;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::storage::Storage;
 
 /// Signature bytes for a v1 B-tree node: ASCII `TREE`.
 const BTREE_V1_SIGNATURE: [u8; 4] = *b"TREE";
@@ -711,7 +713,7 @@ mod tests {
         let err = collect_btree_v1_leaves(&root, 0, 8, 8, None, &[], None).unwrap_err();
         assert!(matches!(err, Error::InvalidData(message) if message.contains("revisits node")));
 
-        let storage = crate::storage::BytesStorage::new(root);
+        let storage = crate::hdf5_reader::storage::BytesStorage::new(root);
         let err = collect_btree_v1_leaves_storage(&storage, 0, 8, 8, None, &[], None).unwrap_err();
         assert!(matches!(err, Error::InvalidData(message) if message.contains("revisits node")));
     }

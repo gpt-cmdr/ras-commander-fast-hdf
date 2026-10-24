@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
@@ -6,7 +8,7 @@ use lru::LruCache;
 use parking_lot::{Condvar, Mutex};
 use smallvec::SmallVec;
 
-use crate::error::Result;
+use crate::hdf5_reader::error::Result;
 
 /// Key for the chunk cache: (dataset object header address, chunk offset tuple).
 ///
@@ -105,7 +107,7 @@ impl ChunkCache {
     }
 
     /// Inspect residency without changing statistics or LRU order.
-    #[cfg(feature = "rayon")]
+    #[cfg(feature = "hdf")]
     pub(crate) fn contains(&self, key: &ChunkKey) -> bool {
         self.inner.lock().cache.contains(key)
     }
@@ -216,8 +218,8 @@ impl ChunkCache {
 impl Default for ChunkCache {
     fn default() -> Self {
         Self::new(
-            crate::DEFAULT_CHUNK_CACHE_BYTES,
-            crate::DEFAULT_CHUNK_CACHE_SLOTS,
+            crate::hdf5_reader::DEFAULT_CHUNK_CACHE_BYTES,
+            crate::hdf5_reader::DEFAULT_CHUNK_CACHE_SLOTS,
         )
     }
 }

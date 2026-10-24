@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 /// Unshuffle bytes — reverses the HDF5 shuffle filter.
 ///
 /// The shuffle filter rearranges bytes so that byte 0 of all elements comes first,

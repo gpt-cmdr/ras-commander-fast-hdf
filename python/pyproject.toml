@@ -4,9 +4,9 @@ build-backend = "maturin"
 
 [project]
 name = "ras-commander-fast-hdf"
-version = "0.1.1"
+version = "0.2.0"
 description = "Native (Rust) HEC-RAS HDF engine for ras-commander"
-readme = "README.md"
+readme = "PYPI_README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 license = "MIT"
@@ -28,11 +28,13 @@ classifiers = [
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
-# licenses/: this repository's LICENSE (ras-commander-rust-LICENSE.txt, a copy of ../LICENSE),
-# the ras-commander code the bridge was extracted from, plus earlier per-crate notices;
+# licenses/: this repository's LICENSE (ras-commander-fast-hdf-LICENSE.txt, a copy of ../LICENSE),
+# the ras-commander code the bridge was extracted from, earlier per-crate notices, and
 # THIRD-PARTY-NOTICES.md: every crate linked into the wheel with full licence texts.
 # Regenerate with scripts/generate_third_party_notices.py (see docs/reference/extension-contract.md, "Licences").
-license-files = ["licenses/*", "THIRD-PARTY-NOTICES.md"]
+# The wheel's notices live in licenses/ because the sdist root already holds the crate's
+# own ../THIRD-PARTY-NOTICES.md (all features).
+license-files = ["licenses/*"]
 
 [project.urls]
 Homepage = "https://github.com/gpt-cmdr/ras-commander-fast-hdf"
@@ -45,5 +47,9 @@ Changelog = "https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/CHANGE
 exports = ["pyarrow>=14", "pyproj>=3.6", "shapely>=2.1"]
 
 [tool.maturin]
+# The extension is the `python` feature of the ras-commander-fast-hdf crate at the
+# repository root (one crate for the Rust engine and the Python extension).
+# Release wheels add exports-all,exports-pmtiles on the command line.
+manifest-path = "../Cargo.toml"
 module-name = "ras_commander_fast_hdf"
-features = ["extension-module"]
+features = ["python", "extension-module"]

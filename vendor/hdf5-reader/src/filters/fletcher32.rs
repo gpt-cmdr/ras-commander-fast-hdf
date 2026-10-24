@@ -1,4 +1,6 @@
-use crate::error::{Error, Result};
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
+use crate::hdf5_reader::error::{Error, Result};
 
 /// Verify Fletcher-32 checksum and strip it from the data.
 ///
@@ -18,7 +20,7 @@ pub fn verify_and_strip(data: &[u8]) -> Result<Vec<u8>> {
         data[data.len() - 1],
     ]);
 
-    let computed = crate::checksum::fletcher32(payload);
+    let computed = crate::hdf5_reader::checksum::fletcher32(payload);
     if computed != stored {
         return Err(Error::ChecksumMismatch {
             expected: stored,
@@ -36,7 +38,7 @@ mod tests {
     #[test]
     fn verify_valid() {
         let payload = vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
-        let checksum = crate::checksum::fletcher32(&payload);
+        let checksum = crate::hdf5_reader::checksum::fletcher32(&payload);
         let mut data = payload.clone();
         data.extend_from_slice(&checksum.to_le_bytes());
         let result = verify_and_strip(&data).unwrap();

@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Fractal Heap (FRHP).
 //!
 //! Fractal heaps are the storage mechanism for link messages and attribute
@@ -11,12 +13,12 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use crate::checksum::jenkins_lookup3;
-use crate::error::{Error, Result};
-use crate::filters::{self, FilterRegistry};
-use crate::io::Cursor;
-use crate::messages::filter_pipeline::FilterPipelineMessage;
-use crate::storage::Storage;
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::filters::{self, FilterRegistry};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::messages::filter_pipeline::FilterPipelineMessage;
+use crate::hdf5_reader::storage::Storage;
 
 /// Signature bytes for a fractal heap header: ASCII `FRHP`.
 const FRHP_SIGNATURE: [u8; 4] = *b"FRHP";
@@ -717,7 +719,7 @@ impl FractalHeap {
             ));
         }
         let mut cursor = Cursor::new(&self.io_filter_info);
-        crate::messages::filter_pipeline::parse(&mut cursor, 0, 0, self.io_filter_info.len())
+        crate::hdf5_reader::messages::filter_pipeline::parse(&mut cursor, 0, 0, self.io_filter_info.len())
     }
 
     fn resolve_huge_object_location(
@@ -757,7 +759,10 @@ impl FractalHeap {
             });
         }
 
-        if heap_id.len() < 1 + usize::from(length_size) {
+        // HDF5 (H5HFhuge.c) keys an indirect huge object by
+        // min(id_len - 1, sizeof(hsize_t)) bytes.
+        let key_len = (heap_id.len().saturating_sub(1)).min(8);
+        if key_len == 0 {
             return Err(Error::InvalidData(
                 "huge fractal heap ID is too short".into(),
             ));
@@ -767,10 +772,10 @@ impl FractalHeap {
         }
 
         let mut key_cursor = Cursor::new(&heap_id[1..]);
-        let object_id = key_cursor.read_length(length_size)?;
+        let object_id = key_cursor.read_uvar(key_len)?;
 
         let header = if let Some(storage) = storage {
-            crate::btree_v2::BTreeV2Header::parse_at_storage(
+            crate::hdf5_reader::btree_v2::BTreeV2Header::parse_at_storage(
                 storage,
                 self.btree_huge_objects_address,
                 offset_size,
@@ -780,11 +785,11 @@ impl FractalHeap {
             let data = file_data.expect("file_data must exist when storage is None");
             let mut cursor = Cursor::new(data);
             cursor.set_position(self.btree_huge_objects_address);
-            crate::btree_v2::BTreeV2Header::parse(&mut cursor, offset_size, length_size)?
+            crate::hdf5_reader::btree_v2::BTreeV2Header::parse(&mut cursor, offset_size, length_size)?
         };
 
         let records = if let Some(storage) = storage {
-            crate::btree_v2::collect_btree_v2_records_storage(
+            crate::hdf5_reader::btree_v2::collect_btree_v2_records_storage(
                 storage,
                 &header,
                 offset_size,
@@ -794,7 +799,7 @@ impl FractalHeap {
                 None,
             )?
         } else {
-            crate::btree_v2::collect_btree_v2_records(
+            crate::hdf5_reader::btree_v2::collect_btree_v2_records(
                 file_data.expect("file_data must exist when storage is None"),
                 &header,
                 offset_size,
@@ -807,7 +812,7 @@ impl FractalHeap {
 
         for record in records {
             match record {
-                crate::btree_v2::BTreeV2Record::HugeIndirectNonFiltered {
+                crate::hdf5_reader::btree_v2::BTreeV2Record::HugeIndirectNonFiltered {
                     address,
                     length,
                     object_id: record_id,
@@ -819,7 +824,7 @@ impl FractalHeap {
                         memory_length: None,
                     })
                 }
-                crate::btree_v2::BTreeV2Record::HugeIndirectFiltered {
+                crate::hdf5_reader::btree_v2::BTreeV2Record::HugeIndirectFiltered {
                     object_id: record_id,
                     address,
                     filtered_length,
@@ -1514,7 +1519,7 @@ fn bytes_needed_to_encode(value: u64) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::{Storage, StorageBuffer};
+    use crate::hdf5_reader::storage::{Storage, StorageBuffer};
     use flate2::write::ZlibEncoder;
     use flate2::Compression;
     use std::io::Write;
@@ -1663,7 +1668,7 @@ mod tests {
             "{err:?}"
         );
 
-        let storage = crate::storage::BytesStorage::new(Vec::new());
+        let storage = crate::hdf5_reader::storage::BytesStorage::new(Vec::new());
         let err = heap
             .find_direct_block_storage(0, &storage, 8, 8)
             .unwrap_err();
@@ -1713,7 +1718,7 @@ mod tests {
             "{err:?}"
         );
 
-        let storage = crate::storage::BytesStorage::new(file_data);
+        let storage = crate::hdf5_reader::storage::BytesStorage::new(file_data);
         let err = heap
             .find_direct_block_storage(600, &storage, offset_size, length_size)
             .unwrap_err();
@@ -1819,7 +1824,7 @@ mod tests {
         file_data[indirect_address as usize..indirect_address as usize + indirect.len()]
             .copy_from_slice(&indirect);
         file_data[block_address as usize..].copy_from_slice(&compressed);
-        let storage = crate::storage::BytesStorage::new(file_data);
+        let storage = crate::hdf5_reader::storage::BytesStorage::new(file_data);
 
         let obj_offset = heap.direct_block_header_size(8) as u16;
         let mut heap_id = vec![0x00];

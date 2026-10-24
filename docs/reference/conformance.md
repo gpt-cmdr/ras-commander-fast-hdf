@@ -9,7 +9,8 @@ and [one-d.md](one-d.md).
 
 ## Portable checks
 
-The portable suite runs in the default `cargo test --all-features` gate. When this
+The portable suite runs in the default engine test gate
+(`cargo test --locked --no-default-features --features catalog,hdf,mesh,results`). When this
 baseline was qualified it comprised 18 unit tests plus 6 catalogue and 6 HDF portable
 integration tests; the suite has grown since. Real-file tests are marked `#[ignore]` and
 run only when requested.
@@ -50,7 +51,7 @@ reference decoding, and not native CRS resolution (both are covered by later fam
 Run with a local fixture directory containing the named files:
 
 ```text
-RAS_NATIVE_FIXTURES=/local/fixtures cargo test --locked --all-features --test hdf_conformance --test mesh_conformance -- --include-ignored --test-threads=1
+RAS_NATIVE_FIXTURES=/local/fixtures cargo test --locked --no-default-features --features catalog,hdf,mesh,results --test hdf_conformance --test mesh_conformance -- --include-ignored --test-threads=1
 ```
 
 In PowerShell, set `$env:RAS_NATIVE_FIXTURES` before the Cargo command. Missing requested
@@ -120,7 +121,7 @@ Run with `RAS_1D_FIXTURES` pointing to the extracted sources and `RAS_1D_EVIDENC
 frozen oracles and supplemental files:
 
 ```text
-cargo test --locked --all-features --test one_d_conformance -- --include-ignored
+cargo test --locked --no-default-features --features catalog,hdf,mesh,results --test one_d_conformance -- --include-ignored
 ```
 
 Default test runs ignore external-input tests; missing requested inputs fail. This

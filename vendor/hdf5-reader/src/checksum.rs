@@ -1,4 +1,6 @@
-pub use hdf5_core::{fletcher32, jenkins_lookup3};
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
+pub use crate::hdf5_core::{fletcher32, jenkins_lookup3};
 
 #[cfg(test)]
 mod tests {
@@ -50,7 +52,7 @@ mod tests {
         let mut data = payload.clone();
         data.extend_from_slice(&ck.to_le_bytes());
         // The filter stores checksum in little-endian.
-        let stripped = crate::filters::fletcher32::verify_and_strip(&data).unwrap();
+        let stripped = crate::hdf5_reader::filters::fletcher32::verify_and_strip(&data).unwrap();
         assert_eq!(stripped, payload);
     }
 }

@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! Shared object-header message table (SOHM).
 //!
 //! The superblock extension can point at a file-level `SMTB` table containing
@@ -6,14 +8,14 @@
 
 use std::sync::Arc;
 
-use crate::btree_v2::{self, BTreeV2Record};
-use crate::checksum::jenkins_lookup3;
-use crate::error::{Error, Result};
-use crate::filters::FilterRegistry;
-use crate::fractal_heap::FractalHeap;
-use crate::io::Cursor;
-use crate::messages::{parse_message, HdfMessage};
-use crate::storage::Storage;
+use crate::hdf5_reader::btree_v2::{self, BTreeV2Record};
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::filters::FilterRegistry;
+use crate::hdf5_reader::fractal_heap::FractalHeap;
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::messages::{parse_message, HdfMessage};
+use crate::hdf5_reader::storage::Storage;
 
 const SMTB_SIGNATURE: [u8; 4] = *b"SMTB";
 const SMLI_SIGNATURE: [u8; 4] = *b"SMLI";
@@ -351,11 +353,11 @@ fn record_from_btree(record: BTreeV2Record) -> Option<Result<SharedMessageRecord
 
 fn shared_message_type_bit(message_type: u16) -> Option<u8> {
     match message_type {
-        crate::messages::MSG_DATASPACE => Some(0),
-        crate::messages::MSG_DATATYPE => Some(1),
-        crate::messages::MSG_FILL_VALUE | crate::messages::MSG_FILL_VALUE_OLD => Some(2),
-        crate::messages::MSG_FILTER_PIPELINE => Some(3),
-        crate::messages::MSG_ATTRIBUTE => Some(4),
+        crate::hdf5_reader::messages::MSG_DATASPACE => Some(0),
+        crate::hdf5_reader::messages::MSG_DATATYPE => Some(1),
+        crate::hdf5_reader::messages::MSG_FILL_VALUE | crate::hdf5_reader::messages::MSG_FILL_VALUE_OLD => Some(2),
+        crate::hdf5_reader::messages::MSG_FILTER_PIPELINE => Some(3),
+        crate::hdf5_reader::messages::MSG_ATTRIBUTE => Some(4),
         _ => None,
     }
 }
@@ -365,7 +367,7 @@ pub(crate) type SharedMessageTableRef = Arc<SharedMessageTable>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::storage::BytesStorage;
+    use crate::hdf5_reader::storage::BytesStorage;
 
     #[test]
     fn parses_master_table() {
@@ -387,7 +389,7 @@ mod tests {
         let storage = BytesStorage::new(table);
         let parsed = SharedMessageTable::parse_at_storage(&storage, 0, 1, 8).unwrap();
         assert_eq!(parsed.indexes.len(), 1);
-        assert!(parsed.indexes[0].tracks_message_type(crate::messages::MSG_DATATYPE));
+        assert!(parsed.indexes[0].tracks_message_type(crate::hdf5_reader::messages::MSG_DATATYPE));
         assert_eq!(parsed.indexes[0].num_messages, 1);
         assert_eq!(parsed.indexes[0].index_address, 64);
         assert_eq!(parsed.indexes[0].fractal_heap_address, 128);

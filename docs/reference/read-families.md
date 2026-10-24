@@ -38,8 +38,8 @@ Explicit unqualified capabilities: canonical reference summaries and the Pipe Ne
 Conformance generation for the `wave3` test (h5py/NumPy are development-only):
 
 ```sh
-python crates/ras-commander-rust/tests/generate_wave3_oracle.py --fixture-dir /path/to/fixtures --output /path/to/oracle.json
-RAS_WAVE3_FIXTURE_DIR=/path/to/fixtures RAS_WAVE3_ORACLE=/path/to/oracle.json cargo test --all-features --test wave3 -- --include-ignored --nocapture
+python tests/generate_wave3_oracle.py --fixture-dir /path/to/fixtures --output /path/to/oracle.json
+RAS_WAVE3_FIXTURE_DIR=/path/to/fixtures RAS_WAVE3_ORACLE=/path/to/oracle.json cargo test --no-default-features --features catalog,hdf,mesh,results --test wave3 -- --include-ignored --nocapture
 ```
 
 The manifest records fixture basenames and SHA256 only, so it relocates without edits. The opt-in test fails explicitly if either variable or its data is missing. It independently compares exact dataset sets, expected refusal sets, full numeric payload hashes through 64 MiB, or three separated boxes of up to 1 MiB each for larger arrays, full text, declared compound-member bytes/column names (excluding undefined HDF padding), qualified attribute values, explicit pipe domains/identity tables/row ordinals, block-specific time groups/counts, names, roles and time-row flags. Trivially absent families are labelled per fixture and are not evidence that a present layout is qualified. Small committed excerpts derive from real Austin/Davis data; generators/provenance record the deliberate time-shape and packed-range mutations.
@@ -159,8 +159,8 @@ Conveyance. Per-area sets also differ. The literal negative RL_Mid Flow is prese
 AustinOyster.p01 has no Face Flow dataset; its observed flows are Reference Lines/Flow.
 
 ```sh
-python crates/ras-commander-rust/tests/generate_reference_points_oracle.py --fixture-dir /path/to/refpoint-fixtures --output oracle.json
-RAS_REFERENCE_POINTS_ORACLE=oracle.json RAS_REFERENCE_POINTS_FIXTURES=/path/to/refpoint-fixtures cargo test --all-features --test reference_points -- --include-ignored --nocapture
+python tests/generate_reference_points_oracle.py --fixture-dir /path/to/refpoint-fixtures --output oracle.json
+RAS_REFERENCE_POINTS_ORACLE=oracle.json RAS_REFERENCE_POINTS_FIXTURES=/path/to/refpoint-fixtures cargo test --no-default-features --features catalog,hdf,mesh,results --test reference_points -- --include-ignored --nocapture
 ```
 
 ## Environmental and sediment qualification rules

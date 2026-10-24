@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Fixed Array (FA) chunk index.
 //!
 //! This is the default chunk index for fixed-size chunked datasets created with
@@ -8,11 +10,11 @@
 //! - `FAHD` — Fixed Array Header
 //! - `FADB` — Fixed Array Data Block
 
-use crate::checksum::jenkins_lookup3;
-use crate::chunk_index::ChunkEntry;
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::storage::Storage;
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::chunk_index::ChunkEntry;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::storage::Storage;
 
 const FAHD_SIGNATURE: [u8; 4] = *b"FAHD";
 const FADB_SIGNATURE: [u8; 4] = *b"FADB";
@@ -334,7 +336,8 @@ fn read_entries(
                 .checked_sub(offset_size)
                 .and_then(|remaining| remaining.checked_sub(4))
                 .ok_or_else(|| Error::InvalidData("invalid fixed array entry size".into()))?;
-            let cs = cursor.read_uvar(usize::from(chunk_size_len))?;
+            // 1–8 bytes wide (sized to the chunk), not a "length" of the superblock size.
+            let cs = cursor.read_uvar(chunk_size_len as usize)?;
             let fm = cursor.read_u32_le()?;
             (cs, fm)
         } else {
