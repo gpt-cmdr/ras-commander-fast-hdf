@@ -50,12 +50,19 @@ jobs:
           "$py" -m pip install --upgrade pip "maturin>=1.9,<2"
           args=(--release --locked --manifest-path python/Cargo.toml --features "$WHEEL_FEATURES" --out dist)
           if [ "$RUNNER_OS" = Linux ]; then
+            # manylinux2014 (glibc 2.17 and later); musllinux_1_2 (Alpine) below.
             "$py" -m pip install ziglang
-            args+=(--zig --compatibility manylinux_2_28)
+            args+=(--zig --compatibility manylinux2014)
           fi
           "$py" -m maturin build "${args[@]}"
           "$py" -m pip install --force-reinstall dist/*.whl
           "$py" -I .github/scripts/smoke_wheel.py dist "$(git rev-parse HEAD)"
+          if [ "$RUNNER_OS" = Linux ]; then
+            rustup target add x86_64-unknown-linux-musl
+            "$py" -m maturin build --release --locked --manifest-path python/Cargo.toml \
+              --features "$WHEEL_FEATURES" --out dist \
+              --zig --target x86_64-unknown-linux-musl --compatibility musllinux_1_2
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}

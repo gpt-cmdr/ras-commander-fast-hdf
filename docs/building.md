@@ -42,15 +42,24 @@ hash; otherwise it is `"unknown"`.
 
 ### Linux wheels
 
-Build a `manylinux_2_28` wheel, which runs on older distributions, with zig as
-the linker (no Docker needed):
+Release wheels use zig as the linker (no Docker needed): a `manylinux2014`
+wheel, which runs on any distribution with glibc 2.17 or later, and a
+`musllinux_1_2` wheel for Alpine and other musl distributions.
 
 ```bash
 pip install ziglang
 maturin build --release --locked --manifest-path python/Cargo.toml \
     --features extension-module,exports-all,exports-pmtiles \
-    --zig --compatibility manylinux_2_28
+    --zig --compatibility manylinux2014
+
+rustup target add x86_64-unknown-linux-musl
+maturin build --release --locked --manifest-path python/Cargo.toml \
+    --features extension-module,exports-all,exports-pmtiles \
+    --zig --target x86_64-unknown-linux-musl --compatibility musllinux_1_2
 ```
+
+CI installs both in containers (an old-glibc manylinux2014 image and Alpine)
+and smoke-tests them.
 
 ## Continuous integration
 

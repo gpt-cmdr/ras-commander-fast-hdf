@@ -29,7 +29,8 @@ from ras_commander import fast_hdf
 fast_hdf.available()   # True
 ```
 
-Wheels: Windows x64, Linux x64 (`manylinux_2_28`) and macOS arm64, CPython
+Wheels: Windows x64, Linux x64 (`manylinux2014`, glibc 2.17 or later; and
+`musllinux_1_2` for Alpine) and macOS arm64, CPython
 3.10 or later. No HDF5 C library or Rust toolchain is needed to install.
 Windows and Linux are qualified against HEC-RAS result files; macOS builds
 and passes the smoke tests but has not been qualified. On other platforms
