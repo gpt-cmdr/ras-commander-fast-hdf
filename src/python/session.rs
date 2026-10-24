@@ -385,12 +385,12 @@ impl Source {
     pub(crate) fn run<T: Send>(
         &self,
         py: Python<'_>,
-        f: impl FnOnce(&ReadOnlyHdfSession) -> ras_commander_rust::Result<T> + Send,
+        f: impl FnOnce(&ReadOnlyHdfSession) -> crate::Result<T> + Send,
     ) -> PyResult<T> {
         match self {
             Self::Path(path) => py
                 .detach(|| f(&ReadOnlyHdfSession::open(path)?))
-                .map_err(crate::reader::err),
+                .map_err(crate::python::reader::err),
             Self::Session(session) => session.borrow(py).with(py, f),
         }
     }

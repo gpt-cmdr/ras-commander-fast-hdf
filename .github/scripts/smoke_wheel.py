@@ -18,6 +18,6 @@ for name in ("read_numeric", "HdfSession", "assemble_cells", "write_pmtiles",
 
 wheel = zipfile.ZipFile(glob.glob(f"{dist}/*.whl")[0])
 licences = {n.rsplit("/", 1)[-1] for n in wheel.namelist() if ".dist-info/licenses/" in n}
-missing = {"THIRD-PARTY-NOTICES.md", "ras-commander-LICENSE.txt", "ras-commander-rust-LICENSE.txt"} - licences
+missing = {"THIRD-PARTY-NOTICES.md", "ras-commander-LICENSE.txt", "ras-commander-fast-hdf-LICENSE.txt"} - licences
 assert not missing, f"wheel licence files missing: {missing}"
 print(sys.version.split()[0], native.__version__, native.API_VERSION, native.ENGINE_COMMIT)

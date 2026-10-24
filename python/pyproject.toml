@@ -28,7 +28,7 @@ classifiers = [
     "Programming Language :: Rust",
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
-# licenses/: this repository's LICENSE (ras-commander-rust-LICENSE.txt, a copy of ../LICENSE),
+# licenses/: this repository's LICENSE (ras-commander-fast-hdf-LICENSE.txt, a copy of ../LICENSE),
 # the ras-commander code the bridge was extracted from, earlier per-crate notices, and
 # THIRD-PARTY-NOTICES.md: every crate linked into the wheel with full licence texts.
 # Regenerate with scripts/generate_third_party_notices.py (see docs/reference/extension-contract.md, "Licences").

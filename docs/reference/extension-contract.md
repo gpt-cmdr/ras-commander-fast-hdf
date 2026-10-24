@@ -443,14 +443,14 @@ when distributing wheels. Source provenance of the extension and engine is in
 The wheel ships these files under `.dist-info/licenses/`, through maturin
 `license-files` in `pyproject.toml`:
 
-- `licenses/ras-commander-rust-LICENSE.txt`: a copy of this repository's MIT `LICENSE`
+- `licenses/ras-commander-fast-hdf-LICENSE.txt`: a copy of this repository's MIT `LICENSE`
   (CLB Engineering Corporation). Keep it identical to `../LICENSE`.
 - `licenses/ras-commander-LICENSE.txt`: the original ras-commander MIT notice (William M.
   Katzenmeyer), for the code extracted from ras-commander.
 - the other `licenses/*.txt` per-crate notices.
 - `THIRD-PARTY-NOTICES.md`: generated from the locked release-wheel graph
-  (`python,extension-module,exports-all,exports-pmtiles`). It lists the engine (under its
-  former crate name `ras-commander-rust`, which ras-commander's wheel gate looks for), the
+  (`python,extension-module,exports-all,exports-pmtiles`). It lists the engine (as
+  `ras-commander-fast-hdf`, the name ras-commander's wheel gate looks for), the
   embedded vendor sources and every crate linked for any target platform, with the full
   licence texts each crate ships. It includes the bundled zstd C library (BSD-3-Clause,
   elected from BSD-3-Clause OR GPL-2.0) and the Apache-2.0-only `approx` and `prost`.

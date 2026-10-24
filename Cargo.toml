@@ -69,7 +69,7 @@ hdf = [
     "dep:lz4_flex",
 ]
 # 2D mesh geometry and topology.
-mesh = ["hdf", "dep:geo"]
+mesh = ["hdf", "dep:robust"]
 # 1D/2D results, summaries, time series.
 results = ["hdf"]
 # Python bindings (PyO3), the native kernels only ras-commander uses, and the
@@ -79,6 +79,7 @@ python = [
     "hdf",
     "mesh",
     "results",
+    "dep:geo",
     "geo/default",
     "dep:pyo3",
     "dep:numpy",
@@ -126,9 +127,13 @@ lru = { version = "0.16.3", optional = true }
 parking_lot = { version = "0.12", optional = true }
 smallvec = { version = "1", optional = true }
 lz4_flex = { version = "0.11", optional = true }
-geo = { version = "0.29", optional = true, default-features = false }
+# Shewchuk's adaptive-precision orient2d (the predicate geo uses), for ring
+# validation (feature "mesh").
+robust = { version = "1.1", optional = true }
 
-# Python bindings and embedded freestiler-core (feature "python").
+# Python bindings and embedded freestiler-core (feature "python"). The engine
+# itself does not use geo; the embedded freestiler-core does.
+geo = { version = "0.29", optional = true, default-features = false }
 pyo3 = { version = "0.30", optional = true, features = ["abi3-py310"] }
 numpy = { version = "0.30", optional = true }
 serde = { version = "1", optional = true, features = ["derive"] }
@@ -152,6 +157,9 @@ parquet = { version = "=59.0.0", optional = true, default-features = false, feat
 geopackage = { version = "=0.10.0", optional = true, default-features = false, features = ["arrow", "bundled"] }
 
 [dev-dependencies]
+# Reference for the predicate port in src/predicates.rs (tests only; not a
+# dependency of consumers).
+geo = { version = "0.29", default-features = false }
 serde = { version = "1", features = ["derive"] }
 # float_roundtrip: the embedded freestiler supercluster tests compare golden
 # coordinates bit for bit (as upstream's dev-dependency does).

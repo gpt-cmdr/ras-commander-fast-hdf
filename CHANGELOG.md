@@ -29,11 +29,14 @@
   `tests/fixtures`, `build.rs` at the root, notice scripts in `scripts/`.
 - Licence notices: `THIRD-PARTY-NOTICES.md` (crate, all features) and
   `python/licenses/THIRD-PARTY-NOTICES.md` (wheel) come from one script,
-  `scripts/generate_third_party_notices.py`. The engine is still listed there
-  under its former name `ras-commander-rust`, which ras-commander's wheel
-  check looks for. Inside the wheel the notices file is now under
-  `.dist-info/licenses/licenses/` (same file name), because the sdist root
-  already holds the crate's own notices.
+  `scripts/generate_third_party_notices.py`. Inside the wheel the notices file
+  is now under `.dist-info/licenses/licenses/` (same file name), because the
+  sdist root already holds the crate's own notices.
+- One name everywhere: the notices list the engine as
+  `ras-commander-fast-hdf`, and the wheel's copy of this repository's licence
+  is now `ras-commander-fast-hdf-LICENSE.txt` (was
+  `ras-commander-rust-LICENSE.txt`). ras-commander 0.108.0 and later check
+  these names.
 - Path-based typed reads can share an open session. Every module-level
   function that takes an HDF path for a typed read (typed attributes, fixed
   strings, 1D line, geometry, result, summary and structure readers, 2D

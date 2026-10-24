@@ -2,9 +2,9 @@
 //! HEC-RAS 5.0 summaries labelled by `Row 0:  WSEL` / `Row 1:  Time` attributes, on excerpts of
 //! HEC's public BaldEagleDamBrk.p07.hdf (HEC-RAS 5.0.3; `fixtures/legacy_row_labels`,
 //! `generate_legacy_row_labels.py`).
-use ras_commander_rust::hdf::mesh_results::{DomainRule, ElementDomain, MeshResultVariable};
-use ras_commander_rust::hdf::{NumericValues, ReadOnlyHdfSession};
-use ras_commander_rust::{Capability, UnsupportedCode};
+use ras_commander_fast_hdf::hdf::mesh_results::{DomainRule, ElementDomain, MeshResultVariable};
+use ras_commander_fast_hdf::hdf::{NumericValues, ReadOnlyHdfSession};
+use ras_commander_fast_hdf::{Capability, UnsupportedCode};
 
 const AREA: &str = "BaldEagleCr";
 
@@ -131,7 +131,7 @@ fn real_5_0_summaries_are_literal_and_physically_cell_aligned() {
             .read_topology(AREA)
             .unwrap()
             .topology
-            .assemble(ras_commander_rust::mesh::GeometryPolicy::Strict, 1)
+            .assemble(ras_commander_fast_hdf::mesh::GeometryPolicy::Strict, 1)
             .unwrap()
             .cell_ids;
         let (mut dry, mut wet) = (0, 0);

@@ -3,7 +3,8 @@
 Planned and in-progress work recorded after the 0.1.x release. Items here
 have no committed schedule. Each item states its status: *planned* (not
 started), *in progress* (a branch or draft PR exists), *blocked* (waiting on
-the named dependency) or *deferred* (considered and set aside for now).
+the named dependency), *deferred* (considered and set aside for now) or
+*done* (released; kept here for reference).
 
 Every read-coverage item keeps the engine's refusal rule: a layout is added
 only when it has been observed in real HEC-RAS files and proven identical to
@@ -113,16 +114,16 @@ reads identical to h5py natively; ras-commander then removes the marker.
 
 ### HEC-RAS 5.0 row-label water-surface summaries
 
-**Status:** in progress (draft PR #9).
+**Status:** done in 0.2.0 (PR #9).
 
 HEC-RAS 5.0 files label summary rows (`Row 0: ...`) instead of storing a
-`Location`. PR #9 qualifies the water-surface summaries in that layout, proven
+`Location`. 0.2.0 qualifies the water-surface summaries in that layout, proven
 on BaldEagleDamBrk p07. Face summaries in 5.0 files (for example face
 velocity) stay refused unless the same kind of proof is found for them.
 
 ### Mesh face lines and stored perimeters
 
-**Status:** in progress (draft PR #8, stacked on #7).
+**Status:** done in 0.2.0 (PR #8).
 
 `Topology::face_lines` and `read_mesh_perimeter` give Rust consumers such as
 terrio mesh face polylines and stored 2D area perimeters, bit-identical to
@@ -141,7 +142,8 @@ path uses, is also refused in the engine.
 
 ### Share an open session across typed reads
 
-**Status:** in progress (draft PR #6, with ras-commander PR #638).
+**Status:** done in 0.2.0 (PR #6, with ras-commander PR #638 in ras-commander
+0.108.0).
 
 Path-based typed reads accept an open `HdfSession`, so a public ras-commander
 call opens each HDF once instead of 3 to 23 times. Cross-section reads also
@@ -191,17 +193,15 @@ unusual files.
 
 ### Publish the engine on crates.io as one crate
 
-**Status:** in progress.
+**Status:** done in 0.2.0 (PR #11).
 
-The engine is being restructured into a single crate,
-`ras-commander-fast-hdf` (library `ras_commander_fast_hdf`), for release as
-0.2.0. It replaces the engine crate name `ras-commander-rust`, so the same
+The engine is one crate, `ras-commander-fast-hdf` (library
+`ras_commander_fast_hdf`), published on crates.io from 0.2.0. It replaces the engine crate name `ras-commander-rust`, so the same
 name is used on crates.io and PyPI. Because crates.io does not accept path or
 Git dependencies, the patched HDF5 reader is carried inside the crate,
 rebased on upstream 0.9.3 plus 14 patches. The Python bindings and the export
-writers become optional features. Nothing is published until the maintainer
-has reviewed a dry run and the re-qualification results. Rust consumers
-(terrio, RustGIS) can then depend on a version instead of a Git revision.
+writers are optional features. Rust consumers (terrio, RustGIS) can depend on
+a version instead of a Git revision.
 
 ### Upstream the hdf5-reader patches
 
@@ -256,23 +256,24 @@ no overall read budget. A zero-width datatype refusal and a reader
 
 ### Drop the geo dependency
 
-**Status:** in progress (draft PR #7).
+**Status:** done in 0.2.0 (PR #7).
 
-The engine uses `geo` 0.29, which cannot share a dependency graph with the
-`geo` 0.33 used by terrio 0.5 and RustGIS. PR #7 replaces it with robust
+The engine used `geo` 0.29, which cannot share a dependency graph with the
+`geo` 0.33 used by terrio 0.5 and RustGIS. PR #7 replaced it with robust
 predicates that give the same verdicts (bit-identical polygons on 31 public
-files).
+files). The engine features (`catalog`, `hdf`, `mesh`, `results`) no longer
+depend on `geo`; only the Python extension's embedded vector-tile code does.
 
 ### HEC-RAS driver for terrio
 
 **Status:** planned; the `terrio-hecras` crate exists in the gpt-cmdr/terrio
 fork, upstream PR not opened.
 
-Upstreaming the driver to opengeos/terrio needs these engine items first: the
-crates.io release, no Git dependencies, PRs #7 and #8, a minimum Rust version
-compatible with terrio's (1.90), and an engine call that identifies HEC-RAS
-files from the stored root `File Type` attribute, so the driver does not
-claim other HDF5 files.
+Upstreaming the driver to opengeos/terrio needed the crates.io release, no
+Git dependencies, PRs #7 and #8 and a minimum Rust version compatible with
+terrio's (1.90; the engine features need 1.88); 0.2.0 provides these. Still
+needed: an engine call that identifies HEC-RAS files from the stored root
+`File Type` attribute, so the driver does not claim other HDF5 files.
 
 The driver's output field names stay as implemented.
 

@@ -34,7 +34,7 @@ SOFTWARE.
 
 | Component | Version | Licence (SPDX, as declared) | Source | Licence texts |
 |---|---|---|---|---|
-| ras-commander-rust | 0.2.0 | MIT | https://github.com/gpt-cmdr/ras-commander-fast-hdf (the engine modules of this crate) | [c6f7836d26fe](#licence-c6f7836d26fe) |
+| ras-commander-fast-hdf | 0.2.0 | MIT | https://github.com/gpt-cmdr/ras-commander-fast-hdf (the engine modules of this crate) | [c6f7836d26fe](#licence-c6f7836d26fe) |
 | hdf5-reader (embedded source, modified; vendor/hdf5-reader/PROVENANCE.md) | 0.9.3 (v0.9.3) | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [24a4eeee33af](#licence-24a4eeee33af), [ccc3098cda80](#licence-ccc3098cda80) |
 | hdf5-core (embedded source, modified; vendor/hdf5-reader/PROVENANCE.md) | 0.9.3 (v0.9.3) | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [24a4eeee33af](#licence-24a4eeee33af), [ccc3098cda80](#licence-ccc3098cda80) |
 | freestiler-core (embedded source, modified; vendor/freestiler-core/PROVENANCE.md) | 0.1.0 (beb64b0) | MIT AND ISC | https://github.com/walkerke/freestiler | [303ebf345f07](#licence-303ebf345f07), [fd0d2efcf9f0](#licence-fd0d2efcf9f0), [f6ca04af604c](#licence-f6ca04af604c), [ccf343d85399](#licence-ccf343d85399), [ccf343d85399](#licence-ccf343d85399) |
@@ -1994,7 +1994,7 @@ THE SOFTWARE.
 
 ### licence-c6f7836d26fe
 
-File(s): LICENSE. Used by: ras-commander-rust 0.2.0.
+File(s): LICENSE. Used by: ras-commander-fast-hdf 0.2.0.
 
 ```text
 MIT License

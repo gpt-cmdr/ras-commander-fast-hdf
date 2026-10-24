@@ -134,7 +134,10 @@ fn capabilities(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     })
 }
 #[pyfunction]
-fn raw_crs_evidence(py: Python<'_>, path: crate::python::session::Source) -> PyResult<Bound<'_, PyDict>> {
+fn raw_crs_evidence(
+    py: Python<'_>,
+    path: crate::python::session::Source,
+) -> PyResult<Bound<'_, PyDict>> {
     crate::python::panic_guard::guard(|| {
         let r = path.run(py, |engine_session| engine_session.raw_crs_evidence())?;
         let ev = r
@@ -284,7 +287,10 @@ fn mesh_inventory(
     })
 }
 #[pyfunction]
-fn plan_result_mode(py: Python<'_>, path: crate::python::session::Source) -> PyResult<&'static str> {
+fn plan_result_mode(
+    py: Python<'_>,
+    path: crate::python::session::Source,
+) -> PyResult<&'static str> {
     crate::python::panic_guard::guard(|| {
         path.run(py, |engine_session| engine_session.plan_result_mode())
             .map(mode)
@@ -603,7 +609,7 @@ mod source_tests {
 
     fn fixture() -> PathBuf {
         PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../crates/ras-commander-rust/tests/fixtures/hdf_numeric/numeric_types_v1.h5")
+            .join("tests/fixtures/hdf_numeric/numeric_types_v1.h5")
     }
 
     #[test]

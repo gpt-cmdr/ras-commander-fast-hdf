@@ -123,7 +123,7 @@ python scripts/generate_third_party_notices.py \
 ```
 
 Run them from the repository root after any `Cargo.lock` change. Both list the
-engine under its former crate name, `ras-commander-rust`, because
-ras-commander's installed-wheel check looks for that name. A crate whose package ships no license
+engine as `ras-commander-fast-hdf`, the name ras-commander's installed-wheel
+check looks for. A crate whose package ships no license
 file needs its upstream texts under `scripts/licence-fallbacks/<crate>-<version>/`
 with a `SOURCE.txt`.

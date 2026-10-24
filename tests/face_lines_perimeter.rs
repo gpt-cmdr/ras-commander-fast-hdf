@@ -2,8 +2,8 @@
 //! `ReadOnlyHdfSession::read_mesh_perimeter`). Synthetic cases use the frozen coverage
 //! fixtures; the opt-in real-file test compares with ras-commander's Python readers.
 #![cfg(feature = "mesh")]
-use ras_commander_rust::hdf::{ReadOnlyHdfSession, DEFAULT_READ_MAX_BYTES};
-use ras_commander_rust::ErrorKind;
+use ras_commander_fast_hdf::hdf::{ReadOnlyHdfSession, DEFAULT_READ_MAX_BYTES};
+use ras_commander_fast_hdf::ErrorKind;
 use std::path::PathBuf;
 
 fn fixture(name: &str) -> PathBuf {

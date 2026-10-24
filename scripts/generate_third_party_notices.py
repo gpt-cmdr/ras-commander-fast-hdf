@@ -8,8 +8,8 @@ COPYING*, NOTICE*, COPYRIGHT*, UNLICENSE, plus the manifest's `license-file`). I
 texts are printed once, with every crate that uses them. Bundled C sources (zstd in
 zstd-sys) are reported with their own licence files.
 
-Source compiled into the crate itself is listed as well: the engine (under its former
-crate name `ras-commander-rust`, which ras-commander's wheel gate looks for) and the
+Source compiled into the crate itself is listed as well: the engine (as
+`ras-commander-fast-hdf`, the name ras-commander's wheel gate looks for) and the
 third-party code embedded from `vendor/` (hdf5-reader/hdf5-core with the `hdf` feature,
 freestiler-core with the `python` feature), with the licence texts recorded in
 `vendor/PROVENANCE.json`.
@@ -143,7 +143,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 def embedded_components(features: set[str], version: str) -> list[tuple[str, str, str, str, list[tuple[str, str]]]]:
     """Source compiled into the crate: (name, version, licence, source, [(file, text)])."""
-    rows = [("ras-commander-rust", version, "MIT",
+    rows = [("ras-commander-fast-hdf", version, "MIT",
              "https://github.com/gpt-cmdr/ras-commander-fast-hdf (the engine modules of this crate)",
              [("LICENSE", read_text(ROOT / "LICENSE"))])]
     manifest = json.loads((ROOT / "vendor" / "PROVENANCE.json").read_text(encoding="utf-8"))

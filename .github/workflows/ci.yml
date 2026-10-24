@@ -72,7 +72,9 @@ jobs:
         if: runner.os == 'Linux'
         run: cargo fmt --all -- --check
       # The engine features are pure Rust: PyO3, NumPy and the export writers
-      # come only with "python" and "exports-*".
+      # come only with "python" and "exports-*". They also leave out geo (and
+      # its pinned i_overlay/i_float), so consumers on other geo versions
+      # (terrio, RustGIS) can link the engine.
       - name: Pure-Rust dependency profiles
         shell: bash
         run: |
@@ -80,6 +82,9 @@ jobs:
             tree=$(cargo tree --locked --no-default-features --features "$features" --edges normal --prefix none)
             if grep -Eq '^(pyo3|numpy|arrow)' <<< "$tree"; then
               echo "features [$features] pull in a Python or export dependency:"; echo "$tree"; exit 1
+            fi
+            if grep -Eq '^(geo|i_overlay|i_float) v' <<< "$tree"; then
+              echo "features [$features] pull in geo:"; echo "$tree"; exit 1
             fi
           done
       - name: Catalog-only tests (std only)
