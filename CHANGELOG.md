@@ -7,6 +7,17 @@
   wheel covers Alpine. `pip install ras-commander` no longer tries to compile
   the engine on those systems. Engine and extension code are unchanged.
 
+- Path-based typed reads can share an open session. Every module-level
+  function that takes an HDF path for a typed read (typed attributes, fixed
+  strings, 1D line, geometry, result, summary and structure readers, 2D
+  geometry families, stored-family and output-block readers) now also accepts
+  an open `HdfSession` in place of the path. The call then reuses that
+  session's file mapping, chunk cache and metadata memo instead of opening the
+  file and repeating the layout and encoding proofs for each small read. The
+  values are the same. A closed session raises `ValueError("HDF session is
+  closed")`; a path behaves exactly as before. The module flag
+  `SESSION_SOURCES = True` lets callers detect support. This is additive:
+  `API_VERSION` stays 11.
 - Documentation: this package is ras-commander's default HDF engine, not an
   optional extension. ras-commander 0.107.1 and later list it as a core
   dependency on Windows x64, Linux x64 and macOS arm64 (CPython), so
