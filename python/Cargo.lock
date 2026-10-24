@@ -955,14 +955,14 @@ dependencies = [
 
 [[package]]
 name = "hdf5-core"
-version = "0.9.1"
+version = "0.9.3"
 dependencies = [
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "hdf5-reader"
-version = "0.9.1"
+version = "0.9.3"
 dependencies = [
  "flate2",
  "hdf5-core",

@@ -54,8 +54,8 @@ SOFTWARE.
 | geographiclib-rs | 0.2.7 | MIT | https://github.com/georust/geographiclib-rs | [feb87a2e0c30](#licence-feb87a2e0c30) |
 | hash32 | 0.3.1 | MIT OR Apache-2.0 | https://github.com/japaric/hash32 | [143368af9701](#licence-143368af9701), [c986bcdb8310](#licence-c986bcdb8310) |
 | hashbrown | 0.16.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown | [143368af9701](#licence-143368af9701), [ff8f68cb076c](#licence-ff8f68cb076c) |
-| hdf5-core | 0.9.1 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
-| hdf5-reader | 0.9.1 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
+| hdf5-core | 0.9.3 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
+| hdf5-reader | 0.9.3 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
 | heapless | 0.8.0 | MIT OR Apache-2.0 | https://github.com/rust-embedded/heapless | [143368af9701](#licence-143368af9701), [035e70219855](#licence-035e70219855) |
 | i_float | 1.6.0 | MIT | https://github.com/iShape-Rust/iFloat | [260cc580f53a](#licence-260cc580f53a) |
 | i_key_sort | 0.2.0 | MIT | https://github.com/iShape-Rust/iKeySort | [47e00f18b265](#licence-47e00f18b265) |
@@ -1823,7 +1823,7 @@ Apache License
 
 ### licence-ccc3098cda80
 
-File(s): LICENSE-APACHE. Used by: hdf5-core 0.9.1, hdf5-reader 0.9.1.
+File(s): LICENSE-APACHE. Used by: hdf5-core 0.9.3, hdf5-reader 0.9.3.
 
 ```text
 Apache License
@@ -2279,7 +2279,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### licence-24a4eeee33af
 
-File(s): LICENSE-MIT. Used by: hdf5-core 0.9.1, hdf5-reader 0.9.1.
+File(s): LICENSE-MIT. Used by: hdf5-core 0.9.3, hdf5-reader 0.9.3.
 
 ```text
 MIT License

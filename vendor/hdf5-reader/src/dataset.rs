@@ -32,15 +32,6 @@ use crate::object_header::ObjectHeader;
 use crate::storage::DynStorage;
 use crate::FileContext;
 
-#[cfg(all(test, feature = "rayon"))]
-static PERF_WORKERS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-#[cfg(test)]
-static PERF_INDEX_WALKS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-#[cfg(test)]
-static PERF_DECODES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-#[cfg(test)]
-static PERF_INFLATED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
 #[cfg(feature = "rayon")]
 type GatherPool<'a> = Option<&'a rayon::ThreadPool>;
 #[cfg(not(feature = "rayon"))]
@@ -500,6 +491,34 @@ unsafe fn assume_init_u8_vec(mut buffer: Vec<MaybeUninit<u8>>) -> Vec<u8> {
     // SAFETY: guaranteed by the caller; `u8` and `MaybeUninit<u8>` have the
     // same layout, and ownership of the allocation was transferred by forget.
     unsafe { Vec::from_raw_parts(ptr, len, capacity) }
+}
+
+/// `len` uninitialised slots, or an error when the allocation cannot be satisfied: a corrupt
+/// dataspace (one dimension of 2.8e14) asked for petabytes and aborted the process instead of
+/// failing the read (ModernViewer MV-110 fuzzing).
+fn try_uninit_vec<T>(len: usize) -> Result<Vec<MaybeUninit<T>>> {
+    let mut buffer: Vec<MaybeUninit<T>> = Vec::new();
+    buffer.try_reserve_exact(len).map_err(|_| {
+        Error::InvalidData(format!(
+            "cannot allocate {len} elements of {} bytes for the selection; the dataspace may be corrupt",
+            std::mem::size_of::<T>()
+        ))
+    })?;
+    // SAFETY: the capacity is reserved and `MaybeUninit` needs no initialisation.
+    unsafe { buffer.set_len(len) };
+    Ok(buffer)
+}
+
+/// `len` zero bytes, failing like [`try_uninit_vec`] instead of aborting.
+fn try_zeroed_bytes(len: usize) -> Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    buffer.try_reserve_exact(len).map_err(|_| {
+        Error::InvalidData(format!(
+            "cannot allocate {len} bytes for the selection; the dataspace may be corrupt"
+        ))
+    })?;
+    buffer.resize(len, 0);
+    Ok(buffer)
 }
 
 /// Convert an allocation of maybe-uninitialized values without copying it.
@@ -1102,7 +1121,7 @@ impl Dataset {
                 encoding,
                 padding,
             } => {
-                if !matches!(base.as_ref(), Datatype::FixedPoint { size: 1, .. }) {
+                if !base.is_vlen_string_base() {
                     return Err(Error::TypeMismatch {
                         expected: "String dataset".into(),
                         actual: format!("{:?}", self.datatype),
@@ -1309,7 +1328,7 @@ impl Dataset {
     pub fn read_raw_bytes(&self) -> Result<Vec<u8>> {
         let result: Result<Vec<u8>> = (|| {
             let total_bytes = self.raw_byte_len()?;
-            let mut output = vec![0u8; total_bytes];
+            let mut output = try_zeroed_bytes(total_bytes)?;
             self.read_raw_bytes_into_inner(&mut output)?;
             Ok(output)
         })();
@@ -1348,7 +1367,7 @@ impl Dataset {
     pub fn read_native_bytes(&self) -> Result<Vec<u8>> {
         let result: Result<Vec<u8>> = (|| {
             let total_bytes = self.raw_byte_len()?;
-            let mut output = vec![0u8; total_bytes];
+            let mut output = try_zeroed_bytes(total_bytes)?;
             self.read_raw_bytes_into_inner(&mut output)?;
             self.convert_to_native_endian(&mut output)?;
             Ok(output)
@@ -1687,10 +1706,7 @@ impl Dataset {
         };
         if full_chunk_coverage {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
-                let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(total_elements)
-                        .collect();
+                let mut result_values: Vec<MaybeUninit<T>> = try_uninit_vec::<T>(total_elements)?;
                 let result_ptr = result_values.as_mut_ptr() as *mut u8;
                 let result_len = checked_mul_usize(
                     result_values.len(),
@@ -1726,7 +1742,7 @@ impl Dataset {
                 if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
                     && self.chunk_cache.capacity_bytes() != 0
                 {
-                    let mut cached_bytes = vec![0u8; total_bytes];
+                    let mut cached_bytes = try_zeroed_bytes(total_bytes)?;
                     // SAFETY: full chunk coverage initialized all
                     // `total_bytes` at `result_ptr`, and both allocations are
                     // live and distinct.
@@ -1751,7 +1767,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut flat_data = vec![MaybeUninit::<u8>::uninit(); total_bytes];
+            let mut flat_data = try_uninit_vec::<u8>(total_bytes)?;
             let flat_ptr = flat_data.as_mut_ptr() as *mut u8;
             let flat_len = flat_data.len();
 
@@ -1791,7 +1807,7 @@ impl Dataset {
             return self.decode_raw_data::<T>(&flat_data);
         }
 
-        let mut flat_data = self.make_output_buffer(total_bytes);
+        let mut flat_data = self.make_output_buffer(total_bytes)?;
         for entry in &entries {
             let chunk_data =
                 self.load_exact_chunk_data(entry, index_address, &chunk_shape, elem_size)?;
@@ -1954,10 +1970,7 @@ impl Dataset {
         };
         if full_chunk_coverage {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
-                let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(total_elements)
-                        .collect();
+                let mut result_values: Vec<MaybeUninit<T>> = try_uninit_vec::<T>(total_elements)?;
                 let flat = FlatBufferPtr {
                     ptr: result_values.as_mut_ptr() as *mut u8,
                     len: checked_mul_usize(
@@ -1999,7 +2012,7 @@ impl Dataset {
                 if total_bytes <= HOT_FULL_DATASET_CACHE_MAX_BYTES
                     && self.chunk_cache.capacity_bytes() != 0
                 {
-                    let mut cached_bytes = vec![0u8; total_bytes];
+                    let mut cached_bytes = try_zeroed_bytes(total_bytes)?;
                     // SAFETY: full chunk coverage initialized all
                     // `total_bytes` at `flat.ptr`, and both allocations are
                     // live and distinct.
@@ -2019,7 +2032,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut flat_data = vec![MaybeUninit::<u8>::uninit(); total_bytes];
+            let mut flat_data = try_uninit_vec::<u8>(total_bytes)?;
             let flat = FlatBufferPtr {
                 ptr: flat_data.as_mut_ptr() as *mut u8,
                 len: flat_data.len(),
@@ -2061,7 +2074,7 @@ impl Dataset {
             return self.decode_raw_data::<T>(&flat_data);
         }
 
-        let mut flat_data = self.make_output_buffer(total_bytes);
+        let mut flat_data = self.make_output_buffer(total_bytes)?;
         let flat = FlatBufferPtr {
             ptr: flat_data.as_mut_ptr(),
             len: flat_data.len(),
@@ -2127,8 +2140,6 @@ impl Dataset {
             }
         }
 
-        #[cfg(test)]
-        PERF_INDEX_WALKS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut entries = match chunk_indexing {
             None => {
                 // V1-V3: B-tree v1 chunk indexing
@@ -2307,7 +2318,7 @@ impl Dataset {
         let count = checked_mul_usize(nr, columns.len(), "gather elements")?;
         let elem_size = self.raw_element_size()?;
         let len = checked_mul_usize(count, elem_size, "gather bytes")?;
-        let mut output = self.make_output_buffer(len);
+        let mut output = self.make_output_buffer(len)?;
         if nr == 0
             || columns.is_empty()
             || Cursor::is_undefined_offset(*address, self.offset_size())
@@ -2376,7 +2387,7 @@ impl Dataset {
                 if first_selected >= chunk_end {
                     return Ok(pieces);
                 }
-                let data = self.load_exact_chunk_data(&entry, *address, &chunk_shape, elem_size)?;
+                let data = self.load_exact_chunk_data(entry, *address, &chunk_shape, elem_size)?;
                 let mut row = first_selected;
                 while row < chunk_end {
                     let out_row = checked_usize((row - rows.0) / rows.2, "output row")?;
@@ -2417,6 +2428,7 @@ impl Dataset {
                 }
                 Ok(pieces)
             };
+            #[cfg(feature = "rayon")]
             let mut scatter = |pieces: Vec<(usize, Vec<u8>)>| {
                 for (row, data) in pieces {
                     for (i, &(col, _)) in selected.iter().enumerate() {
@@ -2501,15 +2513,6 @@ impl Dataset {
             checked_add_usize(expected_len, 1, "decoded chunk filter output limit")?;
 
         self.chunk_cache.get_or_insert_with(cache_key, || {
-            #[cfg(test)]
-            {
-                #[cfg(feature = "rayon")]
-                if let Some(i) = rayon::current_thread_index() {
-                    PERF_WORKERS.fetch_or(1u64 << (i % 64), std::sync::atomic::Ordering::Relaxed);
-                }
-                PERF_DECODES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-                PERF_INFLATED.fetch_add(expected_len as u64, std::sync::atomic::Ordering::Relaxed);
-            }
             let size = if entry.size > 0 {
                 checked_usize(entry.size, "encoded chunk size")?
             } else {
@@ -2639,9 +2642,7 @@ impl Dataset {
         if fully_covered_unit_stride {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
                 let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(resolved.result_elements)
-                        .collect();
+                    try_uninit_vec::<T>(resolved.result_elements)?;
                 let result_ptr = result_values.as_mut_ptr() as *mut u8;
                 let result_len = checked_mul_usize(
                     result_values.len(),
@@ -2683,7 +2684,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut result_buf = vec![MaybeUninit::<u8>::uninit(); result_total_bytes];
+            let mut result_buf = try_uninit_vec::<u8>(result_total_bytes)?;
             let result_ptr = result_buf.as_mut_ptr() as *mut u8;
             let result_len = result_buf.len();
 
@@ -2724,7 +2725,7 @@ impl Dataset {
             );
         }
 
-        let mut result_buf = self.make_output_buffer(result_total_bytes);
+        let mut result_buf = self.make_output_buffer(result_total_bytes)?;
 
         // For each overlapping chunk: decompress and copy matching elements.
         for entry in &overlapping {
@@ -2887,10 +2888,7 @@ impl Dataset {
         let chunk_cols = checked_usize(chunk_shape[1], "single chunk column extent")?;
         let row_bytes = checked_mul_usize(col_count, elem_size, "single chunk slice row bytes")?;
 
-        let mut result_values: Vec<MaybeUninit<T>> =
-            std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                .take(resolved.result_elements)
-                .collect();
+        let mut result_values: Vec<MaybeUninit<T>> = try_uninit_vec::<T>(resolved.result_elements)?;
         let result_ptr = result_values.as_mut_ptr() as *mut u8;
         let result_len = checked_mul_usize(
             result_values.len(),
@@ -3039,9 +3037,7 @@ impl Dataset {
         if fully_covered_unit_stride {
             if T::native_copy_compatible(&self.datatype) && std::mem::size_of::<T>() == elem_size {
                 let mut result_values: Vec<MaybeUninit<T>> =
-                    std::iter::repeat_with(MaybeUninit::<T>::uninit)
-                        .take(resolved.result_elements)
-                        .collect();
+                    try_uninit_vec::<T>(resolved.result_elements)?;
                 let flat = FlatBufferPtr {
                     ptr: result_values.as_mut_ptr() as *mut u8,
                     len: checked_mul_usize(
@@ -3090,7 +3086,7 @@ impl Dataset {
                     .map_err(|e| Error::InvalidData(format!("array shape error: {e}")));
             }
 
-            let mut result_buf = vec![MaybeUninit::<u8>::uninit(); result_total_bytes];
+            let mut result_buf = try_uninit_vec::<u8>(result_total_bytes)?;
             let flat = FlatBufferPtr {
                 ptr: result_buf.as_mut_ptr() as *mut u8,
                 len: result_buf.len(),
@@ -3134,7 +3130,7 @@ impl Dataset {
             );
         }
 
-        let mut result_buf = self.make_output_buffer(result_total_bytes);
+        let mut result_buf = self.make_output_buffer(result_total_bytes)?;
 
         let flat = FlatBufferPtr {
             ptr: result_buf.as_mut_ptr(),
@@ -3315,7 +3311,7 @@ impl Dataset {
             layout.elem_size,
             "contiguous slice block size in bytes",
         )?;
-        let mut result_buf = self.make_output_buffer(layout.result_total_bytes);
+        let mut result_buf = self.make_output_buffer(layout.result_total_bytes)?;
 
         let prefix_blocks =
             resolved.dims[..tail_start]
@@ -3499,14 +3495,14 @@ impl Dataset {
     ) -> Result<ArrayD<T>> {
         let elem_size = self.raw_element_size()?;
         let total_bytes = checked_mul_usize(element_count, elem_size, "fill result size in bytes")?;
-        let fill = self.make_output_buffer(total_bytes);
+        let fill = self.make_output_buffer(total_bytes)?;
         self.decode_buffer_with_shape::<T>(&fill, element_count, shape)
     }
 
-    fn make_output_buffer(&self, total_bytes: usize) -> Vec<u8> {
-        let mut buf = vec![0u8; total_bytes];
+    fn make_output_buffer(&self, total_bytes: usize) -> Result<Vec<u8>> {
+        let mut buf = try_zeroed_bytes(total_bytes)?;
         self.fill_output_buffer(&mut buf);
-        buf
+        Ok(buf)
     }
 
     fn fill_output_buffer(&self, buf: &mut [u8]) {
@@ -3666,9 +3662,7 @@ fn attribute_from_message_storage(message: &AttributeMessage, context: &FileCont
             base,
             kind: VarLenKind::String,
             ..
-        } if matches!(base.as_ref(), Datatype::FixedPoint { size: 1, .. })
-            && matches!(message.dataspace.num_elements(), Ok(1)) =>
-        {
+        } if base.is_vlen_string_base() && matches!(message.dataspace.num_elements(), Ok(1)) => {
             resolve_vlen_bytes_storage(
                 &message.raw_data,
                 context.storage.as_ref(),
@@ -4421,87 +4415,6 @@ fn slice_array<T: H5Type + Clone>(
 #[cfg(test)]
 mod tests {
     #[test]
-    #[cfg(feature = "rayon")]
-    #[ignore = "RAS_PERF2B_FIXTURES real immutable fixtures, counters only; run alone"]
-    fn perf2b_work_counters() {
-        use super::*;
-        use std::sync::atomic::Ordering::Relaxed;
-        let pool = rayon::ThreadPoolBuilder::new()
-            .num_threads(8)
-            .build()
-            .unwrap();
-        let root = std::env::var("RAS_PERF2B_FIXTURES").expect("RAS_PERF2B_FIXTURES required");
-        for (name, area) in [
-            ("JUL2020_D100RAS.p04.hdf", "D601"),
-            ("1101001306.p01.hdf", "default geometry"),
-        ] {
-            for mode in ["fresh", "reused"] {
-                let mut file = None;
-                let mut expected = None;
-                for run in 0..3 {
-                    if mode == "fresh" || file.is_none() {
-                        file = Some(
-                            crate::Hdf5File::open(std::path::Path::new(&root).join(name)).unwrap(),
-                        );
-                    }
-                    let path = format!("/Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/{}/Water Surface", area);
-                    let d = file.as_ref().unwrap().dataset(&path).unwrap();
-                    let n = d.shape()[1];
-                    let rows = d.shape()[0].min(24);
-                    let ids = (0..500).map(|i| i * (n - 1) / 499).collect::<Vec<_>>();
-                    PERF_WORKERS.store(0, Relaxed);
-                    PERF_INDEX_WALKS.store(0, Relaxed);
-                    PERF_DECODES.store(0, Relaxed);
-                    PERF_INFLATED.store(0, Relaxed);
-                    let a = d
-                        .read_rows_columns_chunked_in_pool::<f32>((0, rows, 1), &ids, &pool)
-                        .unwrap()
-                        .unwrap();
-                    let bits = a.iter().map(|v| v.to_bits()).collect::<Vec<_>>();
-                    if let Some(ref e) = expected {
-                        assert_eq!(&bits, e);
-                    } else {
-                        expected = Some(bits);
-                    }
-                    assert_eq!(
-                        PERF_INDEX_WALKS.load(Relaxed),
-                        u64::from(mode == "fresh" || run == 0)
-                    );
-                    assert_eq!(
-                        PERF_DECODES.load(Relaxed),
-                        if mode == "fresh" || run == 0 { rows } else { 0 }
-                    );
-                    println!(
-                        "WORKERS fixture={name} mode={mode} run={run} used={}",
-                        PERF_WORKERS.load(Relaxed).count_ones()
-                    );
-                    println!("COUNTERS fixture={name} mode={mode} run={run} index_walks={} chunk_decodes={} bytes_inflated={} output_bytes={}",PERF_INDEX_WALKS.load(Relaxed),PERF_DECODES.load(Relaxed),PERF_INFLATED.load(Relaxed),rows*500*4);
-                }
-            }
-        }
-        // Multi-column layout: exactly one traversal and one decode per touched chunk.
-        let file = crate::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
-            .unwrap();
-        let d = file.dataset("lef4filtered").unwrap();
-        let DataLayout::Chunked { dims, .. } = &d.layout else {
-            panic!("chunked fixture required")
-        };
-        let cols = [18, 0, 7, 7, 13];
-        let needed = (2..17)
-            .step_by(3)
-            .flat_map(|row| cols.map(|col| (row / dims[0] as u64, col / dims[1] as u64)))
-            .collect::<std::collections::BTreeSet<_>>()
-            .len();
-        PERF_INDEX_WALKS.store(0, Relaxed);
-        PERF_DECODES.store(0, Relaxed);
-        d.read_rows_columns_chunked_parallel::<f32>((2, 17, 3), &cols)
-            .unwrap()
-            .unwrap();
-        assert_eq!(PERF_INDEX_WALKS.load(Relaxed), 1);
-        assert_eq!(PERF_DECODES.load(Relaxed), needed as u64);
-        println!("MULTI_COLUMN index_walks=1 chunk_decodes={needed} unique_needed_chunks={needed}");
-    }
-    #[test]
     fn perf2_gather_and_uncached_reads() {
         let file = crate::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/gather.h5"))
             .unwrap();
@@ -4561,6 +4474,15 @@ mod tests {
     }
     use super::*;
     use crate::storage::BytesStorage;
+
+    /// Buffers sized from a corrupt dataspace fail the read instead of aborting.
+    #[test]
+    fn impossible_selection_buffers_are_errors() {
+        assert!(try_uninit_vec::<u64>(usize::MAX / 4).is_err());
+        assert!(try_zeroed_bytes(usize::MAX / 2).is_err());
+        assert_eq!(try_uninit_vec::<u64>(3).unwrap().len(), 3);
+        assert_eq!(try_zeroed_bytes(5).unwrap(), vec![0u8; 5]);
+    }
     use crate::superblock::Superblock;
     use std::collections::HashMap;
 

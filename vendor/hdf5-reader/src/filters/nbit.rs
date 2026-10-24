@@ -191,7 +191,7 @@ fn decompress_inner(
         .checked_mul(size)
         .ok_or_else(|| filter_error("nbit output size overflowed"))?;
     validate_output_limit(total_size, max_output_len)?;
-    let mut out = vec![0u8; total_size];
+    let mut out = super::zeroed_output(total_size, "nbit")?;
     let mut bits = BitReader::new(data);
 
     for i in 0..element_count {

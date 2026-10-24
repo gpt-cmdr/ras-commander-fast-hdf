@@ -1,3 +1,21 @@
+From 2e1307e6ab23f0ac4b489f26d67f4bb2a79d3139 Mon Sep 17 00:00:00 2001
+From: "William Mark Katzenmeyer, P.E., C.F.M." <heccommander@gmail.com>
+Date: Sat, 24 Oct 2026 06:10:16 -0400
+Subject: [PATCH 01/14] hdf5-reader: read v2/v3 shared message locations per
+ the spec
+
+[L01] Status vs upstream v0.9.3: NOT UPSTREAM (v0.9.3 still skips 2 bytes; rejects type 2).
+Kind: bug fix. Proposed upstream grouping: PR-A spec conformance.
+Applies on roteiro-gis/netcdf-rust v0.9.3 (3d708fd) after the earlier patches of this series.
+
+Shared message versions 2 and 3 store the location immediately after the
+type byte; the reader skipped two non-existent reserved bytes and so read
+a wrong address. Also accept type 2 (committed, written by HDF5 1.8+) for
+version 2 messages, like the historical type 0.
+---
+ hdf5-reader/src/messages/shared.rs | 69 ++++++++++++++++++------------
+ 1 file changed, 41 insertions(+), 28 deletions(-)
+
 diff --git a/hdf5-reader/src/messages/shared.rs b/hdf5-reader/src/messages/shared.rs
 index 0e5b908..433a770 100644
 --- a/hdf5-reader/src/messages/shared.rs
