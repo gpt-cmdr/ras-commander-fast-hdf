@@ -359,6 +359,33 @@ BaldEagleDamBrk with reference points (HEC-RAS 7.0.1), with 0 mismatches.
 NumPy, requires `shapely.is_ccw` to be False for every ring, and checks equal cell sets,
 omissions and diagnostics.
 
+## Face lines and perimeters (additive within API 10)
+
+`Topology::face_lines()` returns every face as a polyline in a `PackedLines`
+(`coordinates`, `offsets`, `face_ids`; line `i` is `coordinates[offsets[i]..offsets[i + 1]]`),
+in stored face order. Each line is the face's start point (`FacePoints Coordinate` row
+`Faces FacePoint Indexes[f, 0]`), then its `Faces Perimeter Values[start..start + count]` rows in
+stored order, then its end point: exactly ras-commander's Python `HdfMesh.get_mesh_cell_faces`.
+No vertex is dropped, merged or reordered, and no face is skipped. The topology is validated
+first with the same structural checks as `assemble` (StructuralTopology on failure).
+
+`read_mesh_perimeter(mesh, max_bytes)` reads `Geometry/2D Flow Areas/<mesh>/Perimeter` as
+ras-commander's `HdfMesh.get_mesh_areas` does for an area that stores it (`Polygon(rows)`): the
+stored rows in stored order (`f32` widened exactly), closed by repeating the first point when
+the last differs. An absent dataset is NotFound; the Python collection-level
+`Polygon Info/Parts/Points` fallback is not implemented. A dataset that is not `(rows, 2)`
+floats, holds a nonfinite value, or gives fewer than four ring coordinates after closing is
+Corrupt. Nothing is reoriented, simplified or validated as a simple polygon.
+
+Evidence: the opt-in `real_face_lines_and_perimeters_match_ras_commander` test
+(`RAS_NATIVE_FIXTURES`, `RAS_FACE_PERIMETER_ORACLE` from
+`tests/fixtures/face_perimeter_oracle.py`, which calls ras-commander with
+`RAS_COMMANDER_FAST_HDF=h5py`) matched every face line and perimeter ring bit for bit on 20
+public HEC example files (BaldEagleDamBrk g01–g13 with Attributes tables, Chippewa_2D g01/p02,
+DavisStormSystem g02/p02, Muncie g02–g05 and p02/p04/p05; about 470,000 faces). HEC-RAS 5.0 files
+without `Geometry/2D Flow Areas/Attributes` (BaldEagleDamBrk p07/p08/p19, g12) have no Python
+reference, because ras-commander's h5py path reads no areas there; the engine reads them by group.
+
 ## Exact mesh geometry
 
 `mesh_geometry(area, metadata_max_bytes)` returns the mesh identity and physical, stored and
@@ -752,4 +779,4 @@ inference are not implemented. Other gaps are listed per family on the linked pa
 | 7 | Additive: 1D cross-section geometry, line families and topology, XS result variables, 1D Summary Output, 1D structure series and structure/pump/storage-area geometry groups, and their layer-catalogue entries ([one-d.md](one-d.md)). `layer_inventory` returns additional layers. |
 | 8 | Additive: `output_block_inventory`, `read_output_block`, `read_family_inventory`, `read_family_dataset`, `classification_catalogue` and `reference_point_geometry` ([read-families.md](read-families.md)): stored family and byte-bitfield envelopes, environmental classifications, explicit per-object capabilities and source identities. Plan/run metadata remain raw attribute/text/table envelopes. Pipe and mesh domains require stored `Location` plus matching geometry cardinality, so missing `Location` may refuse previously inferred typed results. |
 | 9 | Additive: `typed_dataset_attributes`, `raw_fixed_strings`, `AttributeType::Bitfield`/`MetadataValue::Bitfield`, `hdf::Dataspace`, `mesh_results::DomainRule` and `MeshResultVariable.domain_rule`. Behaviour: the absent-Location legacy exact-name rule for six Base Output 2D series names, with the physical `Cell Count` bound applied to both domain paths (mirroring ras-commander PR #565); mesh series require the Base Output `Time` dataset; text decoding matches h5py; soft links are followed in old-style groups; NULL dataspaces are distinguished. |
-| 10 | Behaviour: mesh ring order is a contract (clockwise, first listed face, duplicates dropped, fewer than three faces omitted). Additive within API 10: whole-read budgets (`DEFAULT_READ_MAX_BYTES`, `read_numeric_bounded`, `read_numeric_batch_bounded`, `read_topology_bounded`) and the `terrain_modifications` read family. |
+| 10 | Behaviour: mesh ring order is a contract (clockwise, first listed face, duplicates dropped, fewer than three faces omitted). Additive within API 10: whole-read budgets (`DEFAULT_READ_MAX_BYTES`, `read_numeric_bounded`, `read_numeric_batch_bounded`, `read_topology_bounded`), the `terrain_modifications` read family, and `Topology::face_lines` / `read_mesh_perimeter`. |
