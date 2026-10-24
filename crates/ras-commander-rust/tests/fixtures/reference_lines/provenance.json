@@ -1,0 +1,16 @@
+{
+  "source_name": "Chippewa_2D.p02.hdf",
+  "source_sha256": "36199c18cf2d1c3b8278a65152b591ad45a59be07c9b52e8702539df167b63cf",
+  "source": "HEC public example 2D Sediment Transport/Chippewa_2D, plan p02 computed with HEC-RAS 7.0",
+  "mutations": "see the module docstring of generate_reference_line_excerpts.py",
+  "files": {
+    "bad_areas.h5": "a61881b1eb211acb7f50d64438c0bd0630e4dc5ee2f37611a1a17283f9cd135e",
+    "bad_faces.h5": "1c002a2e8ff8076e2e1733518e5bd65cbad32449d513cb3ab8ee63553d20bba6",
+    "bad_name.h5": "21c04f76913674805b0e65621e116ce698e68e62de346c99f3cb1f140c82f4a6",
+    "duplicate_geometry.h5": "f92634737ec6661e6ab366fada281201f59e5e667b0dfb5986e294e3ec519fb3",
+    "no_geometry.h5": "d04fa5092bfe3036532a0a6f5e5d655a0bf9444da3bcd5060fe7c37c0764648b",
+    "no_internal_faces.h5": "8b72000f8b6cf247c237bfc818ffcd1e6b32e70a2b323d0a1ba2775371977e69",
+    "reordered.h5": "bf4816abf752abb004d4e48177651aca09f0724d5655d134702a13d8f340f76d",
+    "valid.h5": "242e56ee647f5a47606523274b88abfdc8b8e4aba2ab5b74d8067a3f9433d3c4"
+  }
+}

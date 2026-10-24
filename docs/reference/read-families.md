@@ -130,6 +130,18 @@ and Name dimensions are checked; no global/Base Time substitution occurs for DSS
 The legacy plan capability for reference points now reports these qualified reads,
 aggregating per-entry failures; layer fields preserve per-dataset capabilities.
 
+`ReadFamily::ReferenceLines` results are linked to `Geometry/Reference Lines/Attributes`
+rows the same way, reported separately in `geometry_link` so that a failed link never
+changes a dataset's read capability. Each literal Name entry (`<name>|<SA-2D>`) must
+uniquely match one geometry Name/SA-2D pair; the Name axis's `<name>|Faces` attribute must
+equal, in order, the geometry `Internal Faces` of that row; and `2D Areas` ordinals, where
+stored, must name the same areas. `geometry_link` is Supported exactly when
+`geometry_locations` is populated (in column order, including reordered Name axes);
+Unavailable when the plan stores no reference-line geometry; Unsupported(identity_layout)
+for an unmatched, duplicate or incomplete identity layout; Corrupt when stored Faces or
+area ordinals contradict the named geometry. Reference points report `geometry_link`
+Supported whenever their (mandatory) link succeeds; other families report Unavailable.
+
 Direction is present in the 7.0.1 fixture and absent in 6.6; its absence does not
 refuse the remaining point series or invent a derived angle. Direction is a stored degree-angle series (`Units=deg`, role `direction_series`),
 not flow, a velocity component or a north-bearing conversion. Stored f32 values,

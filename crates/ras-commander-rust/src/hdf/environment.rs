@@ -367,6 +367,7 @@ impl ReadOnlyHdfSession {
                 locations: Vec::new(),
                 names: Vec::new(),
                 geometry_locations: Vec::new(),
+                geometry_link: crate::Capability::unavailable("no geometry link for this family"),
                 stored_location_ids: None,
                 time_of_extreme_row: None,
             };
@@ -417,6 +418,7 @@ impl ReadOnlyHdfSession {
             locations: Vec::new(),
             names: Vec::new(),
             geometry_locations: Vec::new(),
+            geometry_link: crate::Capability::unavailable("no geometry link for this family"),
             stored_location_ids: None,
             time_of_extreme_row: None,
         };
