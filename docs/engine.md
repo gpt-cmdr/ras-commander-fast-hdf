@@ -51,7 +51,7 @@ session is open; returned arrays own their buffers and outlive the session.
 |---|---|
 | `catalog` | `ProjectCatalog`, plan and file-link records. |
 | `hdf` | `ReadOnlyHdfSession` and every HDF read: numeric selections and batches, typed attributes, fixed strings, capability reports, mesh summary/series/boundary reads, cross sections (`xs1d`, `xs_geometry`, `xs_results`), 1D summary and structures, stored read families (`families`, `structures`, `reference_points`, `terrain_modifications`), `time`, `units`, `layers`. |
-| `mesh` | `Topology`, `GeometryPolicy` (`Strict` or explicit quarantine) and packed polygon assembly. |
+| `mesh` | `Topology`, `GeometryPolicy` (`Strict` or explicit quarantine), packed polygon assembly, face polylines (`face_lines`) and stored perimeters (`read_mesh_perimeter`). |
 | `results` | `ReductionRequest` and temporal reduction over time rows: maximum, row of the maximum, finite count, and optional threshold exceedance count and first exceedance row. |
 | `crs` | Raw projection evidence. The engine reports stored WKT and where it came from; it never guesses an EPSG code. |
 | `capability` | The shared status types below. |

@@ -838,6 +838,135 @@ impl crate::hdf::ReadOnlyHdfSession {
         })
     }
 }
+/// Face polylines packed like [`PackedMesh`]: line `i` is
+/// `coordinates[offsets[i]..offsets[i + 1]]`, for stored face `face_ids[i]`.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct PackedLines {
+    pub coordinates: Vec<[f64; 2]>,
+    pub offsets: Vec<u64>,
+    pub face_ids: Vec<i64>,
+}
+impl Topology {
+    /// Every face as a polyline, in stored face order, exactly as ras-commander's Python
+    /// `HdfMesh.get_mesh_cell_faces` builds it: the face's start point
+    /// (`FacePoints Coordinate[Faces FacePoint Indexes[f, 0]]`), then its
+    /// `Faces Perimeter Values[start..start + count]` rows in stored order, then its end point.
+    /// No vertex is dropped, merged or reordered, and no face is skipped. The topology is
+    /// validated first (the same structural checks as [`assemble`](Self::assemble)).
+    pub fn face_lines(&self) -> crate::Result<PackedLines> {
+        self.validate()
+            .map_err(|e| Error::new(ErrorKind::StructuralTopology, e))?;
+        let faces = self.ends.nrows();
+        let mut out = PackedLines {
+            coordinates: Vec::new(),
+            offsets: Vec::with_capacity(faces + 1),
+            face_ids: Vec::with_capacity(faces),
+        };
+        out.offsets.push(0);
+        let point = |i: i64| -> [f64; 2] {
+            // In range: validate() checked every endpoint.
+            let i = i as usize;
+            [self.points[[i, 0]], self.points[[i, 1]]]
+        };
+        for face in 0..faces {
+            out.coordinates.push(point(self.ends[[face, 0]]));
+            let range = span(
+                self.perim_info[[face, 0]],
+                self.perim_info[[face, 1]],
+                self.perim.nrows(),
+                "face perimeter",
+            )
+            .map_err(|e| Error::new(ErrorKind::StructuralTopology, e))?;
+            for row in range {
+                out.coordinates
+                    .push([self.perim[[row, 0]], self.perim[[row, 1]]]);
+            }
+            out.coordinates.push(point(self.ends[[face, 1]]));
+            let end = u64::try_from(out.coordinates.len()).map_err(|_| {
+                Error::new(
+                    ErrorKind::StructuralTopology,
+                    "coordinate count exceeds u64",
+                )
+            })?;
+            out.offsets.push(end);
+            out.face_ids.push(
+                i64::try_from(face)
+                    .map_err(|_| Error::new(ErrorKind::StructuralTopology, "face ID overflow"))?,
+            );
+        }
+        Ok(out)
+    }
+}
+/// A 2D flow area's stored perimeter as a closed ring.
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+pub struct MeshPerimeter {
+    pub source: std::path::PathBuf,
+    pub mesh_name: String,
+    /// The stored `Perimeter` rows in stored order (`f32` widened exactly), with the first
+    /// point repeated at the end when the stored rows are not already closed.
+    pub ring: Vec<[f64; 2]>,
+    /// Rows stored in the `Perimeter` dataset.
+    pub stored_points: usize,
+}
+impl crate::hdf::ReadOnlyHdfSession {
+    /// Read `Geometry/2D Flow Areas/<mesh>/Perimeter` as ras-commander's Python
+    /// `HdfMesh.get_mesh_areas` does for an area that stores it (`Polygon(rows)`): the stored
+    /// rows, closed by repeating the first point when the last differs. Nothing is
+    /// simplified, reoriented or validated beyond what that polygon construction requires.
+    ///
+    /// An absent dataset is NotFound (the Python collection-level `Polygon Info/Parts/Points`
+    /// fallback is not implemented). A dataset that is not `(rows, 2)` floats, holds a
+    /// nonfinite value or gives fewer than four ring coordinates after closing is Corrupt.
+    pub fn read_mesh_perimeter(
+        &self,
+        mesh_name: &str,
+        max_bytes: usize,
+    ) -> crate::Result<MeshPerimeter> {
+        if mesh_name.is_empty() || mesh_name.contains('/') || mesh_name.contains('\\') {
+            return Err(Error::new(
+                ErrorKind::InvalidRequest,
+                "mesh name must be one group component",
+            ));
+        }
+        let path = format!("Geometry/2D Flow Areas/{mesh_name}/Perimeter");
+        let array = self
+            .read_numeric_batch_bounded(&[path.as_str()], max_bytes)?
+            .into_iter()
+            .next()
+            .map(|(_, a)| a)
+            .ok_or_else(|| Error::new(ErrorKind::Internal, "empty batch result"))?;
+        let corrupt = |m: &str| Error::new(ErrorKind::Corrupt, format!("{path}: {m}"));
+        if array.shape.len() != 2 || array.shape[1] != 2 {
+            return Err(corrupt("perimeter must be (rows, 2)"));
+        }
+        let values: Vec<f64> = match array.values {
+            crate::hdf::NumericValues::F64(v) => v,
+            crate::hdf::NumericValues::F32(v) => v.into_iter().map(f64::from).collect(),
+            _ => return Err(corrupt("perimeter coordinates must be floats")),
+        };
+        if values.iter().any(|v| !v.is_finite()) {
+            return Err(corrupt("nonfinite perimeter coordinate"));
+        }
+        let mut ring: Vec<[f64; 2]> = values.chunks_exact(2).map(|c| [c[0], c[1]]).collect();
+        let stored_points = ring.len();
+        if let (Some(&first), Some(&last)) = (ring.first(), ring.last()) {
+            if first != last {
+                ring.push(first);
+            }
+        }
+        if ring.len() < 4 {
+            return Err(corrupt("fewer than four ring coordinates after closing"));
+        }
+        Ok(MeshPerimeter {
+            source: self.path().to_path_buf(),
+            mesh_name: mesh_name.into(),
+            ring,
+            stored_points,
+        })
+    }
+}
 fn dims(a: &crate::hdf::NumericArray) -> crate::Result<(usize, usize)> {
     if a.shape.len() != 2 {
         return Err(Error::new(
