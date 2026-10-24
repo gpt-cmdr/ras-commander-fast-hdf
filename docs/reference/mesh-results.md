@@ -222,3 +222,35 @@ are not bypassed. Unlabelled JUL extrema and iteration/difference summaries rema
 refused; the four JUL series qualify through the API 9 legacy rule above. Current
 seven-file oracle: 238 qualified variables, 39 explicit refusals (234/43 before API 9),
 with generic literal checks preserved for every refusal.
+
+## HEC-RAS 5.0 row-label summaries (`legacy_row_labels`)
+
+HEC-RAS 5.0.x writes no `Location`, `Rows Variables` or `Units` on Summary Output arrays.
+Instead each row carries one attribute named `Row <i>:  <quantity>` (two spaces) whose value
+is the unit. With Location absent, a dataset under the canonical Base Output/Summary Output/
+2D Flow Areas/<area> namespace qualifies as a stored-cell summary (`DomainRule::LegacyRowLabels`)
+only when:
+
+- it is rank two with exactly two rows;
+- its only attributes are `Row 0:  WSEL` = `Feet` and `Row 1:  Time` = `Days` (proven fixed
+  text, exact spelling and units; no other attribute);
+- its columns equal `Geometry/2D Flow Areas/<area>/Cells Center Coordinate` rows (ghosts
+  included). A mismatch is Corrupt, as for the other cell rules.
+
+Row 1 is reported as `time_of_extreme_row`. Values stay literal (no unit or time conversion);
+`dataset_units` still reports no unit for these arrays. SI (`Meters`) labels, other quantities
+(`Velocity`, `Shear Stress` on faces), extra attributes, a different label spelling and three-row
+arrays stay refused (Unsupported(identity_layout)): none of them has been observed and verified.
+
+Evidence: the layout occurs in HEC's public BaldEagleCrkMulti2D BaldEagleDamBrk p07, p08 and p19
+(HEC-RAS 5.0.3), for Maximum and Minimum Water Surface. ras-commander's h5py path reads no 2D
+areas in these files (they have no `2D Flow Areas/Attributes` table), so there is no Python
+reference. Instead, the opt-in `real_5_0_summaries_are_literal_and_physically_cell_aligned`
+test checks that the typed values equal the literal dataset and that the stored column order is
+the cell order: for every drawn cell the maximum water surface is at or above
+`Cells Minimum Elevation`, and it equals it exactly on 1,276 to 1,343 dry cells per plan.
+Committed excerpts and mutations are in `tests/fixtures/legacy_row_labels`
+(`generate_legacy_row_labels.py`, `tests/legacy_row_labels.rs`). The mesh-results oracle
+generator applies the same rule independently; on eight public plan HDFs (BaldEagleDamBrk
+p07/p08/p19, Chippewa_2D p02, DavisStormSystem p02, Muncie p02/p04/p05) it gives 92 qualified
+variables and 42 refusals, the six BaldEagle water-surface summaries being the only change.

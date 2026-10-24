@@ -1,0 +1,43 @@
+{
+  "source": "HEC BaldEagleCrkMulti2D example, BaldEagleDamBrk.p07.hdf (HEC-RAS 5.0.3)",
+  "source_sha256": "e16d67bc3eb66efafe834da0b36672a3d9814cfa5f306c6a830732ad760a522d",
+  "generator": "generate_legacy_row_labels.py",
+  "h5py": "3.15.1",
+  "files": [
+    {
+      "file": "valid.h5",
+      "bytes": 15344,
+      "sha256": "9fa437bf6c35d341ea0e7b6f634624ce2ccccc5d2765af5f9ebb51b5de2455a4"
+    },
+    {
+      "file": "units_meters.h5",
+      "bytes": 15344,
+      "sha256": "bfbb37a46b993acb64608a1f7f51a74c643f1e146169b9eea1d1cbd7d1ca254d"
+    },
+    {
+      "file": "extra_attribute.h5",
+      "bytes": 15424,
+      "sha256": "217778c1476b757723f0f3846d5435f8338e7977de1eabd3594aa3a1d070a7e1"
+    },
+    {
+      "file": "wrong_count.h5",
+      "bytes": 15344,
+      "sha256": "444c9504478daaf2e5468486f14c6f779fd6ff28a0f42afe277b397812717012"
+    },
+    {
+      "file": "three_rows.h5",
+      "bytes": 15344,
+      "sha256": "a16cdcbbcb33ae6f0264959ae27555add00c899e79eaa8914cf7e9e4fc5a7715"
+    },
+    {
+      "file": "face_velocity.h5",
+      "bytes": 15344,
+      "sha256": "f6aedf2e3483d15a8eab064f0b4ffe63619ec03a6876de6441e3c0fa3c598c83"
+    },
+    {
+      "file": "label_case.h5",
+      "bytes": 15344,
+      "sha256": "bb08ac87414220d34ba7c51f103509cd3273d41f83b6afcfc13d335e19ade857"
+    }
+  ]
+}

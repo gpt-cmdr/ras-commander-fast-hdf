@@ -31,6 +31,8 @@ for r in probe:
       labels=[bytes(v).decode() for v in d.attrs.get('Rows Variables',[])]
       units=[bytes(v).decode() for v in d.attrs.get('Units',[])]
       if labels==['WSEL','Time'] and len(units)==2 and units[0] in ['ft','m'] and units[1]=='days':domain,rule='cell','labelled_summary'
+      # HEC-RAS 5.0: only the two per-row label attributes, with the observed US Customary units.
+      elif sorted(d.attrs.keys())==['Row 0:  WSEL','Row 1:  Time'] and [bytes(d.attrs[k]).decode().rstrip(' '+chr(0)) for k in ['Row 0:  WSEL','Row 1:  Time']]==['Feet','Days']:domain,rule='cell','legacy_row_labels'
      assert domain=='other' or (domain in counts and counts[domain]==cols),(d.name,location,d.shape,counts)
      ids=sorted(set(np.linspace(0,max(cols-1,0),min(64,cols),dtype=int).tolist()))
      if len(ids)>1:ids=ids[::-1]+ids[:1] # unsorted and duplicate selection
@@ -39,7 +41,7 @@ for r in probe:
      refusal = 'schema' if family!='Summary Output' and d.ndim!=2 else ('identity_layout' if family!='Boundary Conditions' and domain=='other' else None)
      v['expected_code']=refusal
      v['chunks']=d.chunks
-     v['time_row']=1 if family=='Summary Output' and d.ndim==2 and d.shape[0]==2 and any(k in d.attrs and list(d.attrs[k])[-1]==b'Time' for k in ['Rows Variables','Row Variables']) else None
+     v['time_row']=1 if family=='Summary Output' and d.ndim==2 and d.shape[0]==2 and (rule=='legacy_row_labels' or any(k in d.attrs and list(d.attrs[k])[-1]==b'Time' for k in ['Rows Variables','Row Variables'])) else None
      if family!='Summary Output' and d.ndim==2:
       v['slab_end']=min(7,d.shape[0]);v['slab']=np.asarray(d[:v['slab_end']:2,:][:,ids],dtype=d.dtype.newbyteorder('<')).tobytes().hex()
      for row in rows:
