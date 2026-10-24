@@ -285,15 +285,14 @@ Join stored reference line and reference point results to their geometry in
 the engine, so terrio and other Rust consumers get result-bearing reference
 features without reassembling them from separate reads.
 
-### Maximum depth from stored map outputs
+### Depth
 
-**Status:** in progress (for terrio).
+**Status:** decided; no depth computation planned.
 
-Depth comes from RAS Mapper's stored map outputs (the stored Depth rasters),
-never computed by the engine. RAS Mapper's depth is terrain-based, so a depth
-derived from water-surface results and mesh elevations would not match it.
-Consumers read the stored Depth output; neither the engine nor the terrio
-driver computes depth.
+Depth is available only where HEC-RAS stored a depth dataset in the HDF file.
+Neither the engine nor the terrio driver computes depth (for example from
+water-surface results and mesh or terrain elevations); where no depth dataset
+is stored, none is reported.
 
 ### In-memory byte sources and WebAssembly
 
