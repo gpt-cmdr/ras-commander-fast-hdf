@@ -1,7 +1,9 @@
 # Typed source exports
 
-`ras-export` is a reusable library inside the optional native backend. It reads
-no HDF files, runs no model and performs no coordinate transformation. Its public
+This is the `exports` module of `ras-commander-fast-hdf` (formerly the separate
+crate `ras-export`), compiled only with the `exports-*` features and reached
+through the Python extension. It is not part of the crate's public Rust API. It
+reads no HDF files, runs no model and performs no coordinate transformation. Its
 entry point accepts a schema and an iterator of `Result<RecordBatch>`. A Python
 adapter (such as a `fast_hdf.export_arrow` helper in ras-commander) can stream an
 Arrow table/reader to temporary IPC and call the native extension. There is no
@@ -85,8 +87,8 @@ reported as independently measured stages.
 From the repository root:
 
 ```powershell
-cargo test --locked --manifest-path python/src/exports/Cargo.toml --features all-writers
-cargo clippy --locked --manifest-path python/src/exports/Cargo.toml --all-features -- -D warnings
+cargo test --locked --features python,exports-all,exports-pmtiles
+cargo clippy --locked --all-features --all-targets --no-deps -- -D warnings
 ```
 
 ras-commander's `tests/rust_first_tier_exports` suite (with its harness crate) is
@@ -97,24 +99,23 @@ registration of the export bindings lives in the extension's `exports-*` feature
 
 ```powershell
 uv pip install maturin pyarrow pyproj shapely
-uv run maturin develop --release --locked --features extension-module,exports-all --manifest-path python/Cargo.toml
+cd python
+uv run maturin develop --release --locked --features extension-module,exports-all,exports-pmtiles
 ```
 
-Default library features include Arrow IPC only. Opt in with `geojson`,
-`flatgeobuf`, `geoparquet`, `geopackage` or `all-writers`. The extension features
-are `exports-arrow`, `exports-geojson`, `exports-flatgeobuf`,
-`exports-geoparquet`, `exports-geopackage`, `exports-all`. Basic HDF builds gain
+`exports-arrow` (implied by every writer feature) gives Arrow IPC only. Opt in
+to writers with `exports-geojson`, `exports-flatgeobuf`, `exports-geoparquet`,
+`exports-geopackage`, `exports-all` (all four) and `exports-pmtiles`. Basic HDF builds gain
 no mandatory GDAL or SQLite dependency. The GeoPackage feature bundles SQLite C
 and needs a C toolchain. This writer crate needs no GDAL; GDAL/pyogrio are
 independent qualification readers. Python reprojection uses pyproj/PROJ. The
-extension's freestiler dependency still includes native compression dependencies.
+embedded `freestiler-core` (feature `python`) brings its own compression
+dependencies.
 
 Direct pins: Arrow/Parquet 59.0.0 (Apache-2.0), GeoParquet 0.9.0 and
 GeoZero 0.15.1 (MIT OR Apache-2.0), FlatGeobuf 6.0.1 (BSD-2-Clause),
 GeoPackage 0.10.0 (MIT OR Apache-2.0). Lockfiles pin transitive resolution.
-This is not a full legal redistribution audit. The writers have been built on
-Windows x64 with Python 3.12 only; cross-platform/abi3 wheel matrices,
-SQLite/PROJ redistribution, licence notices for the `exports-*` graph and
-optional wheel feature packaging are not done yet. The default wheel does not
-include these features. Other Rust applications can use this library without
-PyO3.
+This is not a full legal redistribution audit. Release wheels include
+`exports-all` and `exports-pmtiles`, and `python/THIRD-PARTY-NOTICES.md` covers
+their dependency graph. The writers need Rust 1.95 or later and, because every
+`exports-*` feature implies `python`, PyO3.

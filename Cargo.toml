@@ -3,6 +3,7 @@ name = "ras-commander-fast-hdf"
 version = "0.2.0"
 edition = "2021"
 rust-version = "1.88"
+# The exports-geoparquet and exports-geopackage dependencies need Rust 1.95.
 authors = ["CLB Engineering Corporation"]
 description = "Native, read-only HEC-RAS project, plan and HDF5 results engine in pure Rust; also the Python extension behind ras-commander"
 # Our code is MIT. The package also carries the hdf5-reader/hdf5-core source

@@ -126,16 +126,16 @@ hot-array byte budget. These copies are additional to the configured chunk cache
 a Python session LRU bounds open files, not retained datasets within each file.
 A session-total hot-array budget or LRU is not implemented.
 
-For the vendored reader's old-group cache regression test, set the cache fixture from the
+For the embedded reader's old-group cache regression test, set the cache fixture from the
 repository root (the test is skipped if it is unset):
 
 ```powershell
-$env:HDF5_READER_CACHE_FIXTURE = (Resolve-Path crates/ras-commander-rust/tests/fixtures/hdf_numeric/numeric_types_v1.h5).Path
-cargo test --manifest-path vendor/hdf5-reader/Cargo.toml
+$env:HDF5_READER_CACHE_FIXTURE = (Resolve-Path tests/fixtures/hdf_numeric/numeric_types_v1.h5).Path
+cargo test --manifest-path vendor/reader-tests/Cargo.toml
 ```
 
 ```sh
-HDF5_READER_CACHE_FIXTURE="$PWD/crates/ras-commander-rust/tests/fixtures/hdf_numeric/numeric_types_v1.h5" cargo test --manifest-path vendor/hdf5-reader/Cargo.toml
+HDF5_READER_CACHE_FIXTURE="$PWD/tests/fixtures/hdf_numeric/numeric_types_v1.h5" cargo test --manifest-path vendor/reader-tests/Cargo.toml
 ```
 
 ## Absent-Location legacy mesh series (API 9)

@@ -9,15 +9,20 @@ what allows a native path to be used by default.
 
 ```bash
 cargo fmt --all -- --check
-cargo test --locked --no-default-features --features catalog     # std-only build
-cargo test --locked --all-features                                 # engine
+cargo test --locked --no-default-features --features catalog                     # std-only build
+cargo test --locked --no-default-features --features catalog,hdf,mesh,results    # engine, pure Rust
+cargo test --locked --features python,exports-all,exports-pmtiles                # engine, extension and exports
 cargo clippy --locked --all-features --all-targets --no-deps -- -D warnings
-cargo test --locked --manifest-path python/Cargo.toml              # extension (Rust side)
-cargo test --locked --all-features --manifest-path vendor/hdf5-reader/Cargo.toml   # vendored reader
+cargo test --locked --manifest-path vendor/reader-tests/Cargo.toml               # embedded reader, upstream tests
+python scripts/vendor_sources.py --check                                         # vendor/ matches PROVENANCE.json
 ```
 
-The committed fixtures under `crates/ras-commander-rust/tests/fixtures` are
-small synthetic HDF5 files (each with the script that generated it and a
+Do not use `cargo test --all-features` on Linux: `extension-module` leaves the
+Python symbols to the interpreter, so a test binary cannot link. The
+`python,exports-all,exports-pmtiles` line enables everything else.
+
+All integration tests are in `tests/`, including the former extension tests.
+The committed fixtures under `tests/fixtures` are small synthetic HDF5 files (each with the script that generated it and a
 manifest of SHA-256 hashes), excerpts of public HEC-RAS example results, and
 malformed files that must fail with a typed error rather than crash.
 
@@ -33,7 +38,7 @@ files from environment variables:
 | `RAS_ENCODING_EVIDENCE`, `RAS_REVISION_EVIDENCE` | Override the committed metadata encoding and revision evidence. |
 
 ```bash
-RAS_NATIVE_FIXTURES=/data/ras-examples cargo test --locked --all-features -- --include-ignored
+RAS_NATIVE_FIXTURES=/data/ras-examples cargo test --locked --features python,exports-all,exports-pmtiles -- --include-ignored
 ```
 
 A requested fixture that is missing fails the test; it never passes silently.

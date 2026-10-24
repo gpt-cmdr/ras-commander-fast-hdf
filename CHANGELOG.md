@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.2.0 (unreleased, pending qualification)
+
+- One Rust crate, `ras-commander-fast-hdf` (Rust import
+  `ras_commander_fast_hdf`), at the repository root, ready to publish on
+  crates.io. It replaces the engine crate `ras-commander-rust`, the separate
+  extension crate in `python/`, the export crate `ras-export` and the vendored
+  `hdf5-reader`/`hdf5-core` path crates. The name `ras-commander-rust` is
+  retired. Rust users enable `hdf`, `mesh` and `results` as needed (default:
+  `catalog`, standard library only); without the `python` feature no PyO3 or
+  NumPy is in the dependency tree.
+- The PyPI wheel is built from the same crate (`python/pyproject.toml`, features
+  `python,extension-module`; release wheels add `exports-all,exports-pmtiles`).
+  The Python API and behaviour are unchanged from 0.1.1; extension
+  `API_VERSION` stays 11 and engine `API_VERSION` stays 10.
+- HDF5 reader rebased from `hdf5-reader` 0.9.1 and its older local patch set
+  onto upstream 0.9.3 (roteiro-gis/netcdf-rust `v0.9.3`) plus 14 local patches
+  (`vendor/patches/`, described in `vendor/LOCAL_PATCHES.md`).
+- `freestiler-core` (walkerke/freestiler `beb64b0`), previously a Git
+  dependency, is embedded from `vendor/freestiler-core`. No Git dependencies
+  remain.
+- Embedded third-party source is compiled as private modules, recorded with
+  hashes in `vendor/PROVENANCE.json` and checked by
+  `scripts/vendor_sources.py --check`. Upstream's reader tests run from
+  `vendor/reader-tests`.
+- Layout: engine in `src/`, Python bridge in `src/python/` (was `python/src`),
+  export writers in `src/exports/`, all tests in `tests/` with fixtures in
+  `tests/fixtures`, `build.rs` at the root, notice scripts in `scripts/`.
+- Licence notices: `THIRD-PARTY-NOTICES.md` (crate, all features) and
+  `python/THIRD-PARTY-NOTICES.md` (wheel) come from one script,
+  `scripts/generate_third_party_notices.py`. The engine is still listed there
+  under its former name `ras-commander-rust`, which ras-commander's wheel
+  check looks for.
+
 ## 0.1.1 (2026-10-24)
 
 - Linux wheels for older and musl-based distributions: `manylinux2014`
