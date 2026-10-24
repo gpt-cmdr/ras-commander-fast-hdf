@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Engine: HEC-RAS 5.0 Maximum/Minimum Water Surface summaries, which carry
+  only `Row 0:  WSEL` = `Feet` and `Row 1:  Time` = `Days` attributes and no
+  `Location`, now qualify as cell summaries (new `DomainRule::LegacyRowLabels`)
+  instead of `unsupported(identity_layout)`. Values are the literal stored
+  arrays, so ras-commander results do not change: before, it read the same
+  values through its literal fallback. Any other layout stays refused.
 - Engine (additive within API 10): `Topology::face_lines()` returns every 2D
   face as a polyline (start point, stored perimeter vertices, end point) and
   `read_mesh_perimeter()` returns an area's stored `Perimeter` as a closed ring,

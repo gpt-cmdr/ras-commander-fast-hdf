@@ -37,6 +37,9 @@ pub enum DomainRule {
     LegacyExactName,
     /// Location absent; two-row summary labelled `WSEL`/`Time` with ft|m/days units.
     LabelledSummary,
+    /// Location absent; HEC-RAS 5.0 two-row summary whose only attributes are the per-row
+    /// labels `Row 0:  WSEL` = `Feet` and `Row 1:  Time` = `Days`.
+    LegacyRowLabels,
     /// Boundary-condition columns are their own stored axis, not mesh elements.
     BoundaryColumns,
     /// No rule qualified a domain (the capability says why).
@@ -48,6 +51,7 @@ impl DomainRule {
             Self::StoredLocation => "stored_location",
             Self::LegacyExactName => "legacy_exact_name",
             Self::LabelledSummary => "labelled_summary",
+            Self::LegacyRowLabels => "legacy_row_labels",
             Self::BoundaryColumns => "boundary_columns",
             Self::Unqualified => "unqualified",
         }
@@ -366,6 +370,24 @@ impl ReadOnlyHdfSession {
             && path.starts_with(&format!("{BASE}/Summary Output/2D Flow Areas/"))
             && matches!(row_labels.map(|a| &a.value), Some(MetadataValue::Strings(v)) if v == &["WSEL", "Time"])
             && matches!(row_units.map(|a| &a.value), Some(MetadataValue::Strings(v)) if v.len()==2 && matches!(v[0].as_str(), "ft" | "m") && v[1]=="days");
+        // HEC-RAS 5.0.x writes no Location/Rows Variables/Units on summaries; it labels each
+        // row with an attribute `Row <i>:  <quantity>` whose value is the unit. Only the exact
+        // observed water-surface layout qualifies (both attributes and nothing else, US
+        // Customary units); the column count must still equal the stored cell rows below.
+        let one_text = |name: &str, want: &str| {
+            attributes.iter().any(|a| {
+                a.name == name
+                    && matches!(&a.value, MetadataValue::Strings(v) if v.len() == 1 && v[0] == want)
+            })
+        };
+        let legacy_row_label_summary = summary
+            && !bc
+            && cap.shape.len() == 2
+            && cap.shape[0] == 2
+            && path.starts_with(&format!("{BASE}/Summary Output/2D Flow Areas/"))
+            && attributes.len() == 2
+            && one_text("Row 0:  WSEL", "Feet")
+            && one_text("Row 1:  Time", "Days");
         // The legacy exact-name rule is confined to rank-two numeric Base Output series at
         // their canonical path; summaries keep the labelled-summary rule above.
         let series_area = path
@@ -382,6 +404,8 @@ impl ReadOnlyHdfSession {
             Ok((ElementDomain::Other, DomainRule::BoundaryColumns))
         } else if labelled_cell_summary && !attributes.iter().any(|a| a.name == "Location") {
             Ok((ElementDomain::Cell, DomainRule::LabelledSummary))
+        } else if legacy_row_label_summary {
+            Ok((ElementDomain::Cell, DomainRule::LegacyRowLabels))
         } else {
             super::location::mesh_series(&attributes, &name, legacy_eligible)
         };
@@ -447,10 +471,10 @@ impl ReadOnlyHdfSession {
         let time_of_extreme_row = if summary
             && cap.shape.first() == Some(&2)
             && cap.shape.len() == 2
-            && attributes.iter().any(|a| {
+            && (legacy_row_label_summary || attributes.iter().any(|a| {
                 matches!(a.name.as_str(), "Rows Variables" | "Row Variables")
                     && matches!(&a.value,MetadataValue::Strings(v) if v.len()==2 && v[1]=="Time")
-            }) {
+            })) {
             Some(1)
         } else {
             None
