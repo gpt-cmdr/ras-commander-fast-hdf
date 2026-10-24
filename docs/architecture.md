@@ -39,7 +39,7 @@ hdf5-reader / hdf5-core (vendor/, pure Rust HDF5 decoding)
 
 ## Packaging
 
-ras-commander 0.108.0 and later declare `ras-commander-fast-hdf>=0.1,<0.2` as
+ras-commander 0.107.1 and later declare `ras-commander-fast-hdf>=0.1,<0.2` as
 a core dependency with an environment marker that limits it to CPython on
 Windows x64, Linux x64 and macOS arm64, the platforms with published wheels.
 `pip install ras-commander` therefore installs the engine there and never

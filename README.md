@@ -9,7 +9,7 @@ ras-commander's default HDF engine: a native (Rust) HEC-RAS HDF reader and its P
 
 This repository contains a native (Rust) reader for HEC-RAS HDF files and the
 Python extension through which ras-commander uses it. It is ras-commander's
-default HDF engine: ras-commander 0.108.0 and later install it automatically
+default HDF engine: ras-commander 0.107.1 and later install it automatically
 on Windows x64, Linux x64 and macOS arm64.
 
 ras-commander reads plan results, geometry, terrain and land-cover HDF files
@@ -60,7 +60,7 @@ No code changes are needed. To choose the engine, set
 | Item | Status |
 |---|---|
 | Version | **0.1.0**, Python extension `API_VERSION` 11. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
-| Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 (`manylinux_2_28`) are qualified. macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. ras-commander 0.108.0 and later install the engine on these three platforms; elsewhere they use h5py. |
+| Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 (`manylinux_2_28`) are qualified. macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. ras-commander 0.107.1 and later install the engine on these three platforms; elsewhere they use h5py. |
 | Equivalence with h5py | Identical results to h5py on 201 public ras-commander method cases across 137 HEC-RAS 5.x–7.x result and geometry files: 3,800 method × file pairs in three modes, plus 1,428 calls replayed from the example notebooks. Methods the corpus has not exercised natively stay on h5py in `auto` mode. |
 | Speed | 2D cell polygons 4–19× faster, depending on mesh size; mesh time series 2–7× faster on large meshes; small single reads a few milliseconds slower. See [Performance](#performance). |
 | Not supported natively | Cross-section tables written before HEC-RAS 5.0.7, and names containing non-ASCII characters. ras-commander uses h5py for these in `auto` mode. |

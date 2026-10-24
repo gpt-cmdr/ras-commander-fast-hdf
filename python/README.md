@@ -14,7 +14,7 @@ uses h5py.
 
 ## Install
 
-ras-commander 0.108.0 and later install this package automatically on
+ras-commander 0.107.1 and later install this package automatically on
 Windows x64, Linux x64 and macOS arm64, so this is enough:
 
 ```bash
