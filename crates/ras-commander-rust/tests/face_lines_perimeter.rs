@@ -78,7 +78,7 @@ fn real_face_lines_and_perimeters_match_ras_commander() {
         use sha2::{Digest, Sha256};
         let mut h = Sha256::new();
         for w in offsets.windows(2) {
-            h.update(((w[1] - w[0]) as u64).to_le_bytes());
+            h.update((w[1] - w[0]).to_le_bytes());
             for c in &coords[w[0] as usize..w[1] as usize] {
                 h.update(c[0].to_le_bytes());
                 h.update(c[1].to_le_bytes());

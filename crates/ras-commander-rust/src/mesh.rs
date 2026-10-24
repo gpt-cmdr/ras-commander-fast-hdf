@@ -949,7 +949,7 @@ impl crate::hdf::ReadOnlyHdfSession {
         if values.iter().any(|v| !v.is_finite()) {
             return Err(corrupt("nonfinite perimeter coordinate"));
         }
-        let mut ring: Vec<[f64; 2]> = values.chunks_exact(2).map(|c| [c[0], c[1]]).collect();
+        let mut ring: Vec<[f64; 2]> = values.as_chunks::<2>().0.to_vec();
         let stored_points = ring.len();
         if let (Some(&first), Some(&last)) = (ring.first(), ring.last()) {
             if first != last {
