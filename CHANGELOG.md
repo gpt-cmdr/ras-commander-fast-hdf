@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- The engine no longer depends on `geo`. Cell-ring validation and winding now
+  use the `robust` crate's adaptive-precision `orient2d` (the predicate `geo`
+  used) and a port of `geo` 0.29's segment-contact classification. `geo` 0.29
+  pinned `i_overlay`/`i_float` versions that conflict with `geo` 0.33, so Rust
+  consumers that use `geo` 0.33 (terrio 0.5, RustGIS) could not link the
+  engine. Results are unchanged: unit tests compare the predicates with
+  `geo` 0.29 on every segment pair of a 4 x 4 grid and 800,000 random and
+  near-collinear pairs, and packed polygons and omissions of 134 mesh/policy
+  reads across 31 public HEC example HDF files are bit-identical to 0.1.1.
+  Engine `API_VERSION` (10) and extension `API_VERSION` (11) are unchanged.
+
 ## 0.1.1 (2026-10-24)
 
 - Linux wheels for older and musl-based distributions: `manylinux2014`
