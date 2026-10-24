@@ -20,6 +20,14 @@
   when that field or the full `xs_geometry_inventory` is requested. Results are
   unchanged. On the BaldEagle example the first cross-section read in a session
   drops from about 40-70 ms to under 2 ms.
+- The stored-family index (the first stored-family read of a file in a
+  session) runs its independent work on the session's thread pool: the walk of
+  `Output Blocks` warms the group listings level by level in parallel, and the
+  per-dataset descriptors of every read family and non-Base output block are
+  computed in parallel, then handled in path order exactly as before (the
+  first error in order still wins; the walk's depth and entry limits refuse
+  exactly as before). One-thread sessions, which every path-based call uses,
+  stay sequential. Results are unchanged.
 
 ## 0.1.1 (2026-10-24)
 
