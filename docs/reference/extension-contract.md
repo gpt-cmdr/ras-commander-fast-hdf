@@ -11,34 +11,38 @@ the [API version history](#api-version-history) at the end lists what each versi
 
 ## Build and identity
 
-The engine is a Cargo path dependency (`../crates/ras-commander-rust`) declared in
-`python/Cargo.toml`. The main ras-commander package remains installable without a Rust
-compiler; wheels are built by CI (see [../releasing.md](../releasing.md)). To build locally,
-use a Rust toolchain with an installed platform linker and Python 3.10 or later, from the
-repository root:
+The extension and the engine are one crate, `ras-commander-fast-hdf`; the extension is its
+`python` feature (sources in `src/python/`). maturin builds the wheel from
+`python/pyproject.toml`, which points at the root `Cargo.toml` and enables
+`python,extension-module`. The main ras-commander package remains installable without a
+Rust compiler; wheels are built by CI (see [../releasing.md](../releasing.md)). To build
+locally, use a Rust toolchain with an installed platform linker and Python 3.10 or later:
 
 ```text
-uv tool run --from maturin maturin build --release --locked --manifest-path python/Cargo.toml
+cd python
+uv tool run --from maturin maturin build --release --locked --out ../dist
 uv pip install --python <your-python> <resulting-wheel>
-cargo test --locked --manifest-path python/Cargo.toml
+cd ..
+cargo test --locked --features python,exports-all,exports-pmtiles
 ```
 
 Set `CARGO_TARGET_DIR` to a local directory rather than placing build outputs on a network
 share. Windows needs the Visual Studio C++ Build Tools. `PYO3_PYTHON` can select the
 interpreter explicitly. The wheel uses the CPython 3.10 stable ABI; cross-platform
-compatibility is tested per platform. `extension-module` is enabled by maturin, while plain
-`cargo test` links Python normally. The minimum supported Rust version is 1.88.
+compatibility is tested per platform. `extension-module` is enabled by maturin, while
+`cargo test` with `python` (and without `extension-module`) links Python normally. The
+minimum supported Rust version is 1.88.
 
 | Name | Meaning |
 |---|---|
 | `API_VERSION` | Binding contract version (11). One Rust constant; ras-commander requires an exact match. |
 | `TEXT_API_VERSION` | Version of the RAS text-file bindings (1). |
-| `ENGINE_COMMIT` | Commit of this repository the wheel was built from (`git rev-parse HEAD`), or the 40-digit value of `RAS_ENGINE_COMMIT` when set (for builds from a source archive), else `"unknown"`. |
-| `ENGINE_FEATURES` | Engine Cargo features, read from the dependency declaration in `python/Cargo.toml`: `("catalog", "hdf", "mesh", "results")`. |
+| `ENGINE_COMMIT` | Commit of this checkout the wheel was built from (`git rev-parse HEAD`), or the 40-digit value of `RAS_ENGINE_COMMIT` when set (for builds from a source archive), else `"unknown"`. |
+| `ENGINE_FEATURES` | Engine Cargo features enabled in the build, in a fixed order: `("catalog", "hdf", "mesh", "results")` (the `python` feature enables all four). |
 
-`python/build.rs` parses `Cargo.toml` as TOML and fails the build with an explicit error if
-the `ras-commander-rust` dependency is not the in-repository path or lacks a `features`
-array. `Cargo.lock` freezes resolution.
+The root `build.rs` sets `ENGINE_COMMIT` and `ENGINE_FEATURES` for the `python` feature. It
+asks Git only when the package directory is itself a Git checkout, and rejects a
+`RAS_ENGINE_COMMIT` that is not a full 40-digit commit. `Cargo.lock` freezes resolution.
 
 `capabilities()` returns the engine commit and feature list, `engine_api_version`,
 `engine_capabilities` (the engine's compiled features and owner/name/feature entry points),
@@ -142,7 +146,7 @@ parts of the same feature with unchanged IDs and property tags. Repair operates 
 final tile grid, avoiding a second projection or quantization. Processing uses batches of
 32 tiles and spools compressed output. Eight decoded real failures, with source
 mesh/cell/tile metadata, are kept as compact Rust regression fixtures in
-`python/tests/quantized_regressions.json`.
+`tests/fixtures/python/quantized_regressions.json`.
 
 ## Threads
 
@@ -319,12 +323,12 @@ every column-label table; per-series columns and inventory diagnostics keep
 unsupported/corrupt label evidence. No identity, unit or absent series is invented. Reads
 keep `f32`/`f64` dtype, shape and bit values, engine path validation, explicit byte
 budgets and the standard error mapping. ras-commander's tests use the engine's
-`crates/ras-commander-rust/tests/fixtures/structures` fixtures, whose manifest is the hash
+`tests/fixtures/structures` fixtures, whose manifest is the hash
 oracle.
 
 ## Mesh result and geometry bindings
 
-Implemented in `python/src/fim.rs`: mesh summary, series and boundary-condition
+Implemented in `src/python/fim.rs`: mesh summary, series and boundary-condition
 inventories and reads, extrema with first stored indices, geometry arrays and packed
 families, exact identity comparison, layer inventory and typed run-summary attributes;
 plus `mesh_geometry` (field descriptors), `mesh_geometry_tables` (exact Attributes compound
@@ -335,7 +339,7 @@ descriptors and catalogue mesh-result layers carry `domain_rule` (`stored_locati
 
 ## 1D bindings
 
-Implemented in `python/src/one_d.rs`: `xs_geometry_inventory`, `read_xs_geometry`,
+Implemented in `src/python/one_d.rs`: `xs_geometry_inventory`, `read_xs_geometry`,
 `one_d_line_family`, `river_reaches`, `river_junctions`, `xs_interpolation_surfaces`,
 `xs_result_inventory`, `read_xs_result`, `unsteady_row_window`, `one_d_summary_inventory`,
 `read_one_d_summary`, `structure_geometry`, `one_d_geometry_group`, `pump_stations`,
@@ -345,7 +349,7 @@ Implemented in `python/src/one_d.rs`: `xs_geometry_inventory`, `read_xs_geometry
 
 ## Read family bindings
 
-Implemented in `python/src/wave3.rs`:
+Implemented in `src/python/wave3.rs`:
 
 | Binding | Engine API | Returns |
 |---|---|---|
@@ -412,14 +416,16 @@ define how the bindings are used:
 
 ## Dependency provenance
 
-* `hdf5-reader`/`hdf5-core` are vendored in this repository's `vendor/` directory and used
-  by the engine, based on upstream `roteiro-gis/netcdf-rust` tag `v0.9.3`
+* `hdf5-reader`/`hdf5-core` are vendored in this repository's `vendor/` directory and
+  compiled into the crate as private modules, based on upstream `roteiro-gis/netcdf-rust` tag `v0.9.3`
   (`3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`) plus 14 local patches, `MIT OR Apache-2.0`.
   `vendor/hdf5-reader/PROVENANCE.md` and `vendor/LOCAL_PATCHES.md` record the local
   changes. The extension has no direct generic-reader dependency.
 * `freestiler-core`: `walkerke/freestiler`, revision
-  `beb64b0d4414da895ec67d02b2f91db6ab6acc37`, MIT AND ISC. Its crate is unpublished; Cargo
-  resolves the pinned Git source.
+  `beb64b0d4414da895ec67d02b2f91db6ab6acc37`, MIT AND ISC. Its crate is unpublished, so its
+  source is embedded from `vendor/freestiler-core` (feature `python`; see
+  `vendor/freestiler-core/PROVENANCE.md`). `vendor/PROVENANCE.json` records both upstreams
+  and the file hashes.
 * PyO3/rust-numpy provide the binding. ndarray allocations transfer to NumPy on numeric
   return. Owned input copies are intentional and are not zero-copy.
 * `flate2` enables zlib-rs. Cargo feature unification also enables upstream
@@ -428,7 +434,7 @@ define how the bindings are used:
   integer-grid repair; their licence notices are included. `prost` uses the same 0.13
   version as freestiler, preserving MVT field representations.
 
-`python/Cargo.lock` records exact transitive dependencies. Retain upstream licence notices
+`Cargo.lock` records exact transitive dependencies. Retain upstream licence notices
 when distributing wheels. Source provenance of the extension and engine is in
 [provenance.md](provenance.md).
 
@@ -442,26 +448,27 @@ The wheel ships these files under `.dist-info/licenses/`, through maturin
 - `licenses/ras-commander-LICENSE.txt`: the original ras-commander MIT notice (William M.
   Katzenmeyer), for the code extracted from ras-commander.
 - the other `licenses/*.txt` per-crate notices.
-- `THIRD-PARTY-NOTICES.md`: generated from the locked default-wheel graph
-  (`extension-module`). It lists every crate linked for any target platform, with the full
+- `THIRD-PARTY-NOTICES.md`: generated from the locked release-wheel graph
+  (`python,extension-module,exports-all,exports-pmtiles`). It lists the engine (under its
+  former crate name `ras-commander-rust`, which ras-commander's wheel gate looks for), the
+  embedded vendor sources and every crate linked for any target platform, with the full
   licence texts each crate ships. It includes the bundled zstd C library (BSD-3-Clause,
   elected from BSD-3-Clause OR GPL-2.0) and the Apache-2.0-only `approx` and `prost`.
   Compile-time proc-macro crates (such as `prost-derive`) are listed too, marked as such.
 
-Regenerate the notices after any change to `python/Cargo.lock` or the engine's
-dependencies. From `python/`:
+Regenerate the notices after any change to `Cargo.lock`. From the repository root:
 
 ```text
-python scripts/generate_third_party_notices.py --features extension-module --own-licence ../LICENSE --title "ras-commander-fast-hdf wheel (default features)"
-python scripts/generate_third_party_notices.py --features extension-module --own-licence ../LICENSE --title "ras-commander-fast-hdf wheel (default features)" --check
+python scripts/generate_third_party_notices.py --features python,extension-module,exports-all,exports-pmtiles --title "ras-commander-fast-hdf wheel (release features)" --output python/THIRD-PARTY-NOTICES.md
+python scripts/generate_third_party_notices.py --features python,extension-module,exports-all,exports-pmtiles --title "ras-commander-fast-hdf wheel (release features)" --output python/THIRD-PARTY-NOTICES.md --check
 ```
 
-The script uses only the Python standard library and `cargo metadata --locked`, and is the
-same as `scripts/generate_third_party_notices.py` at the repository root. A crate whose
-published package ships no licence file needs its upstream texts under
+The script uses only the Python standard library and `cargo metadata --locked`; the same
+script writes the crate's `THIRD-PARTY-NOTICES.md` (see [../building.md](../building.md)). A
+crate whose published package ships no licence file needs its upstream texts under
 `scripts/licence-fallbacks/<crate>-<version>/`, with a `SOURCE.txt`, and generation fails
-until they are added. Wheels built with `exports-*` features link a larger graph:
-regenerate with those features and add any missing fallbacks before distributing them.
+until they are added. A wheel built with other features links a different graph:
+regenerate with those features before distributing it.
 Tested datasets, measured timings and limitations are in [validation.md](validation.md).
 
 ## API version history
@@ -469,8 +476,8 @@ Tested datasets, measured timings and limitations are in [validation.md](validat
 | API | Engine API | Added or changed |
 |---|---|---|
 | 5 | 5 | Hardened bindings: `numeric_capability`, `temporal_reduce`, `raw_crs_evidence`, `typed_group_attributes`, `mesh_inventory`, `cross_sections`, `plan_result_mode`, `steady_profile_names`, `read_cross_section_result`, `plan_capabilities`; central typed exception mapping; time/unit bindings and `mesh_name_diagnostics`; structure bindings; unified wire shapes (capability `{status, code, reason}`, `Reported<T>` evidence, `{source, table, row}` identities, snake_case enum strings, optional `max_bytes` defaults, dictionary diagnostics). |
-| 6 | 5 | Mesh result and geometry bindings in `src/fim.rs` (45 entry points). |
+| 6 | 5 | Mesh result and geometry bindings in `src/python/fim.rs` (45 entry points). |
 | 7, 8 | 6 | Sessions (`HdfSession`, NumPy element/index outputs), cache controls (`cache_bytes`, `cache_slots`, `cache_stats()`), `read_mesh_summary_values` and `read_mesh_boundary_batch`; see [sessions.md](sessions.md). |
-| 9 | 7 | 1D bindings (`src/one_d.rs`) and the mesh-geometry tables, geometry family capability and boundary links (67 entry points). |
-| 10 | 8 | Read family bindings (`src/wave3.rs`) and `stored_family_index` (75 entry points). |
+| 9 | 7 | 1D bindings (`src/python/one_d.rs`) and the mesh-geometry tables, geometry family capability and boundary links (67 entry points). |
+| 10 | 8 | Read family bindings (`src/python/wave3.rs`) and `stored_family_index` (75 entry points). |
 | 11 | 9, then 10 | `typed_dataset_attributes`, `raw_fixed_strings`, `dataspace` and bitfield attribute types, `domain_rule`; panic containment and `_panic_for_test` (78 entry points). Built against engine API 10: ring-order contract, malformed-input hardening and the 2 GiB default read budget; bindings unchanged. |

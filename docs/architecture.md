@@ -14,23 +14,27 @@ ras-commander (Python, separate repository)
   ras_commander/fast_hdf.py ── routing: auto | h5py | native, sessions, fallback
         │
         ▼
-ras_commander_fast_hdf (python/, PyO3 extension)
+ras_commander_fast_hdf (src/python/, PyO3 extension, feature "python")
   converts engine results to NumPy arrays, dicts and Python exceptions;
   native kernels: mesh polygons, fluvial/pluvial, PMTiles and vector exports, RAS text
         │
         ▼
-ras-commander-rust (crates/ras-commander-rust, pure Rust library)
+engine (src/, pure Rust library)
   HEC-RAS knowledge: project/plan catalog, HDF layouts, identities, units, time, CRS evidence
         │
         ▼
-hdf5-reader / hdf5-core (vendor/, pure Rust HDF5 decoding)
+hdf5-reader / hdf5-core (embedded from vendor/, pure Rust HDF5 decoding)
 ```
 
-- **The engine** (`crates/ras-commander-rust`) knows how HEC-RAS stores things:
+All three Rust layers are one crate, `ras-commander-fast-hdf`. The extension is
+its `python` feature; the HDF5 reader is compiled in as private modules.
+
+- **The engine** (`src/`) knows how HEC-RAS stores things:
   which datasets and tables exist in each HEC-RAS version, how mesh topology is
   laid out, how cross-section identities, time stamps and units are recorded.
-  It has no Python in it, so other Rust programs can use it directly.
-- **The extension** (`python/`) is the only place Python appears. It turns
+  Built without the `python` feature it has no Python in it, so other Rust
+  programs can use it directly.
+- **The extension** (`src/python/`) is the only place Python appears. It turns
   engine results into NumPy arrays and plain Python objects, maps engine errors
   to Python exceptions, contains panics, and adds kernels that only
   ras-commander needs.
@@ -87,14 +91,15 @@ in `auto` mode. See [Testing and qualification](testing.md).
 
 ## Safety
 
-- The engine is `#![forbid(unsafe_code)]`. The vendored HDF5 reader uses
-  `unsafe` only for read-only memory mapping and a few decoding paths.
+- The engine modules are `#![forbid(unsafe_code)]`. The embedded HDF5 reader
+  uses `unsafe` only for read-only memory mapping and copies of decoded chunks
+  into preallocated buffers.
 - Every count, offset and size read from a file is checked before use, and
   release builds keep integer-overflow checks on.
 - Every read is budgeted before allocation (2 GiB of decoded values per call by
   default). Larger reads are refused; ras-commander then reads them in chunks.
 - A panic that escapes despite this becomes an ordinary Python exception
-  (`python/src/panic_guard.rs`), so `auto` falls back instead of the process
+  (`src/python/panic_guard.rs`), so `auto` falls back instead of the process
   crashing.
 - Files are opened read-only. Sessions are closed when the public
   ras-commander call returns, so no file stays locked on Windows.

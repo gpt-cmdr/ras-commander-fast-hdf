@@ -33,6 +33,8 @@ jobs:
         run: |
           version=$(grep -m1 '^version' python/pyproject.toml | cut -d'"' -f2)
           test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          crate=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          test "$crate" = "$version" || { echo "Cargo.toml $crate != pyproject.toml $version"; exit 1; }
       - uses: dtolnay/rust-toolchain@stable
       # Self-hosted Windows images can preset CARGO_HOME with rustup already
       # installed; the toolchain action then skips adding Cargo's bin to PATH.
@@ -48,19 +50,21 @@ jobs:
         run: |
           py="${{ steps.py.outputs.python-path }}"
           "$py" -m pip install --upgrade pip "maturin>=1.9,<2"
-          args=(--release --locked --manifest-path python/Cargo.toml --features "$WHEEL_FEATURES" --out dist)
+          # python/pyproject.toml builds the crate at the repository root.
+          cd python
+          args=(--release --locked --features "$WHEEL_FEATURES" --out ../dist)
           if [ "$RUNNER_OS" = Linux ]; then
             # manylinux2014 (glibc 2.17 and later); musllinux_1_2 (Alpine) below.
             "$py" -m pip install ziglang
             args+=(--zig --compatibility manylinux2014)
           fi
           "$py" -m maturin build "${args[@]}"
-          "$py" -m pip install --force-reinstall dist/*.whl
-          "$py" -I .github/scripts/smoke_wheel.py dist "$(git rev-parse HEAD)"
+          "$py" -m pip install --force-reinstall ../dist/*.whl
+          "$py" -I ../.github/scripts/smoke_wheel.py ../dist "$(git rev-parse HEAD)"
           if [ "$RUNNER_OS" = Linux ]; then
             rustup target add x86_64-unknown-linux-musl
-            "$py" -m maturin build --release --locked --manifest-path python/Cargo.toml \
-              --features "$WHEEL_FEATURES" --out dist \
+            "$py" -m maturin build --release --locked \
+              --features "$WHEEL_FEATURES" --out ../dist \
               --zig --target x86_64-unknown-linux-musl --compatibility musllinux_1_2
           fi
       - uses: actions/upload-artifact@v4
@@ -84,9 +88,10 @@ jobs:
           python-version: "3.13"
       - name: Source distribution
         shell: bash
+        working-directory: python
         run: |
           "${{ steps.py.outputs.python-path }}" -m pip install "maturin>=1.9,<2"
-          "${{ steps.py.outputs.python-path }}" -m maturin sdist --manifest-path python/Cargo.toml --out dist
+          "${{ steps.py.outputs.python-path }}" -m maturin sdist --out ../dist
       - uses: actions/upload-artifact@v4
         with:
           name: dist-sdist

@@ -1,30 +1,37 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (unreleased, pending qualification)
 
-- Engine: HEC-RAS 5.0 Maximum/Minimum Water Surface summaries, which carry
-  only `Row 0:  WSEL` = `Feet` and `Row 1:  Time` = `Days` attributes and no
-  `Location`, now qualify as cell summaries (new `DomainRule::LegacyRowLabels`)
-  instead of `unsupported(identity_layout)`. Values are the literal stored
-  arrays, so ras-commander results do not change: before, it read the same
-  values through its literal fallback. Any other layout stays refused.
-- Engine (additive within API 10): `Topology::face_lines()` returns every 2D
-  face as a polyline (start point, stored perimeter vertices, end point) and
-  `read_mesh_perimeter()` returns an area's stored `Perimeter` as a closed ring,
-  both exactly as ras-commander's Python `get_mesh_cell_faces` and
-  `get_mesh_areas` build them (bit-identical on 20 public HEC example files).
-  The extension does not call them yet; its API is unchanged.
-
-- The engine no longer depends on `geo`. Cell-ring validation and winding now
-  use the `robust` crate's adaptive-precision `orient2d` (the predicate `geo`
-  used) and a port of `geo` 0.29's segment-contact classification. `geo` 0.29
-  pinned `i_overlay`/`i_float` versions that conflict with `geo` 0.33, so Rust
-  consumers that use `geo` 0.33 (terrio 0.5, RustGIS) could not link the
-  engine. Results are unchanged: unit tests compare the predicates with
-  `geo` 0.29 on every segment pair of a 4 x 4 grid and 800,000 random and
-  near-collinear pairs, and packed polygons and omissions of 134 mesh/policy
-  reads across 31 public HEC example HDF files are bit-identical to 0.1.1.
-  Engine `API_VERSION` (10) and extension `API_VERSION` (11) are unchanged.
+- One Rust crate, `ras-commander-fast-hdf` (Rust import
+  `ras_commander_fast_hdf`), at the repository root, ready to publish on
+  crates.io. It replaces the engine crate `ras-commander-rust`, the separate
+  extension crate in `python/`, the export crate `ras-export` and the vendored
+  `hdf5-reader`/`hdf5-core` path crates. The name `ras-commander-rust` is
+  retired. Rust users enable `hdf`, `mesh` and `results` as needed (default:
+  `catalog`, standard library only); without the `python` feature no PyO3 or
+  NumPy is in the dependency tree.
+- The PyPI wheel is built from the same crate (`python/pyproject.toml`, features
+  `python,extension-module`; release wheels add `exports-all,exports-pmtiles`).
+  The Python API and behaviour are unchanged from 0.1.1; extension
+  `API_VERSION` stays 11 and engine `API_VERSION` stays 10.
+- HDF5 reader rebased from `hdf5-reader` 0.9.1 and its older local patch set
+  onto upstream 0.9.3 (roteiro-gis/netcdf-rust `v0.9.3`) plus 14 local patches
+  (`vendor/patches/`, described in `vendor/LOCAL_PATCHES.md`).
+- `freestiler-core` (walkerke/freestiler `beb64b0`), previously a Git
+  dependency, is embedded from `vendor/freestiler-core`. No Git dependencies
+  remain.
+- Embedded third-party source is compiled as private modules, recorded with
+  hashes in `vendor/PROVENANCE.json` and checked by
+  `scripts/vendor_sources.py --check`. Upstream's reader tests run from
+  `vendor/reader-tests`.
+- Layout: engine in `src/`, Python bridge in `src/python/` (was `python/src`),
+  export writers in `src/exports/`, all tests in `tests/` with fixtures in
+  `tests/fixtures`, `build.rs` at the root, notice scripts in `scripts/`.
+- Licence notices: `THIRD-PARTY-NOTICES.md` (crate, all features) and
+  `python/THIRD-PARTY-NOTICES.md` (wheel) come from one script,
+  `scripts/generate_third_party_notices.py`. The engine is still listed there
+  under its former name `ras-commander-rust`, which ras-commander's wheel
+  check looks for.
 - Path-based typed reads can share an open session. Every module-level
   function that takes an HDF path for a typed read (typed attributes, fixed
   strings, 1D line, geometry, result, summary and structure readers, 2D
@@ -43,6 +50,28 @@
   when that field or the full `xs_geometry_inventory` is requested. Results are
   unchanged. On the BaldEagle example the first cross-section read in a session
   drops from about 40-70 ms to under 2 ms.
+- Engine (additive within API 10): `Topology::face_lines()` returns every 2D
+  face as a polyline (start point, stored perimeter vertices, end point) and
+  `read_mesh_perimeter()` returns an area's stored `Perimeter` as a closed ring,
+  both exactly as ras-commander's Python `get_mesh_cell_faces` and
+  `get_mesh_areas` build them (bit-identical on 20 public HEC example files).
+  The extension does not call them yet; its API is unchanged.
+- The engine no longer depends on `geo`. Cell-ring validation and winding now
+  use the `robust` crate's adaptive-precision `orient2d` (the predicate `geo`
+  used) and a port of `geo` 0.29's segment-contact classification. `geo` 0.29
+  pinned `i_overlay`/`i_float` versions that conflict with `geo` 0.33, so Rust
+  consumers that use `geo` 0.33 (terrio 0.5, RustGIS) could not link the
+  engine. Results are unchanged: unit tests compare the predicates with
+  `geo` 0.29 on every segment pair of a 4 x 4 grid and 800,000 random and
+  near-collinear pairs, and packed polygons and omissions of 134 mesh/policy
+  reads across 31 public HEC example HDF files are bit-identical to 0.1.1.
+  Engine `API_VERSION` (10) and extension `API_VERSION` (11) are unchanged.
+- Engine: HEC-RAS 5.0 Maximum/Minimum Water Surface summaries, which carry
+  only `Row 0:  WSEL` = `Feet` and `Row 1:  Time` = `Days` attributes and no
+  `Location`, now qualify as cell summaries (new `DomainRule::LegacyRowLabels`)
+  instead of `unsupported(identity_layout)`. Values are the literal stored
+  arrays, so ras-commander results do not change: before, it read the same
+  values through its literal fallback. Any other layout stays refused.
 
 ## 0.1.1 (2026-10-24)
 

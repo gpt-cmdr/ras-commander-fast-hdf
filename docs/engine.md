@@ -1,31 +1,40 @@
-# Rust engine: `ras-commander-rust`
+# Rust engine: `ras-commander-fast-hdf`
 
-`crates/ras-commander-rust` is a read-only Rust library for HEC-RAS projects
-and the HDF5 files HEC-RAS writes. It has no Python dependency. The Python
-extension in `python/` is one consumer; any Rust program can be another.
+The crate `ras-commander-fast-hdf` (Rust import `ras_commander_fast_hdf`) is a
+read-only Rust library for HEC-RAS projects and the HDF5 files HEC-RAS writes.
+Its source is in `src/`. Without the `python` feature it has no Python
+dependency. The Python extension (`src/python/`, feature `python`) is one
+consumer; any Rust program can be another.
 
-The crate is not published on crates.io. Depend on it by Git commit:
+Add it from crates.io (`cargo add ras-commander-fast-hdf`), with the features
+you need:
 
 ```toml
 [dependencies]
-ras-commander-rust = { git = "https://github.com/gpt-cmdr/ras-commander-fast-hdf", rev = "<commit>", default-features = false, features = ["hdf", "mesh", "results"] }
+ras-commander-fast-hdf = { version = "0.2", features = ["hdf", "mesh", "results"] }
 ```
 
-Minimum Rust version: 1.88. The crate is `#![forbid(unsafe_code)]`.
+The Rust API is documented on [docs.rs](https://docs.rs/ras-commander-fast-hdf).
+Minimum Rust version: 1.88. The engine modules are `#![forbid(unsafe_code)]`;
+only the embedded HDF5 reader uses `unsafe` (read-only memory mapping and
+chunk copies into preallocated buffers).
 
 ## Cargo features
 
 | Feature | Adds | Dependencies |
 |---|---|---|
 | `catalog` (default) | Project (`.prj`) and plan (`.p##`) records, linked geometry/flow files, declared simulation windows | Standard library only |
-| `hdf` | Read-only HDF sessions; numeric, compound, string and attribute reads; capabilities; 1D geometry and results; structures; read families; time and units; CRS evidence | `hdf5-reader` (vendored), `ndarray`, `rayon`, `flate2` |
+| `hdf` | Read-only HDF sessions; numeric, compound, string and attribute reads; capabilities; 1D geometry and results; structures; read families; time and units; CRS evidence | `hdf5-reader` and `hdf5-core` (embedded from `vendor/`), `ndarray`, `rayon`, `flate2`, `lz4_flex` and the reader's other pure-Rust dependencies |
 | `mesh` | 2D mesh topology and cell polygon assembly (implies `hdf`) | `robust` |
 | `results` | Bounded temporal reduction of result arrays (implies `hdf`) | none extra |
+
+The other features (`python`, `extension-module`, `exports-*`) build the Python
+extension and are not needed from Rust; see [Building](building.md).
 
 ## Main entry points
 
 ```rust,ignore
-use ras_commander_rust::catalog::ProjectCatalog;
+use ras_commander_fast_hdf::catalog::ProjectCatalog;
 
 let project = ProjectCatalog::open("Model.prj")?;
 println!("{}: {} plans", project.title, project.plans.len());
@@ -33,8 +42,8 @@ println!("{}: {} plans", project.title, project.plans.len());
 ```
 
 ```rust,ignore
-use ras_commander_rust::hdf::ReadOnlyHdfSession;
-use ras_commander_rust::mesh::GeometryPolicy;
+use ras_commander_fast_hdf::hdf::ReadOnlyHdfSession;
+use ras_commander_fast_hdf::mesh::GeometryPolicy;
 
 let source = ReadOnlyHdfSession::open("Model.p01.hdf")?;
 for mesh_name in source.mesh_names()? {
@@ -97,12 +106,16 @@ HEC-RAS 5.0.7), so ras-commander reads them with h5py.
 
 ## Licenses
 
-MIT. The vendored `hdf5-reader` and `hdf5-core` are modified copies of
-[netcdf-rust](https://github.com/roteiro-gis/netcdf-rust), used under its MIT
-option; changes are listed in `vendor/LOCAL_PATCHES.md` and
-`vendor/hdf5-reader/PROVENANCE.md`. `THIRD-PARTY-NOTICES.md` lists every crate
-linked with all features enabled; regenerate it after any `Cargo.lock` change:
+MIT. The embedded `hdf5-reader` and `hdf5-core` are modified copies of
+[netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) v0.9.3 (MIT OR
+Apache-2.0) with 14 local patches; the changes are listed in
+`vendor/LOCAL_PATCHES.md` and `vendor/hdf5-reader/PROVENANCE.md`. The
+`python` feature also embeds `freestiler-core` (MIT AND ISC; see
+`vendor/freestiler-core/PROVENANCE.md`). These are private modules, not part
+of the public API; `vendor/PROVENANCE.json` records their upstream commits and
+file hashes. `THIRD-PARTY-NOTICES.md` lists every crate linked with all
+features enabled; regenerate it after any `Cargo.lock` change:
 
 ```bash
-python scripts/generate_third_party_notices.py --title "ras-commander-rust (all features)"
+python scripts/generate_third_party_notices.py --title "ras-commander-fast-hdf (all features)"
 ```
