@@ -137,6 +137,12 @@ jobs:
               --features "$WHEEL_FEATURES" --out ../dist-musl \
               --zig --target x86_64-unknown-linux-musl --compatibility musllinux_1_2
           fi
+      # The release sdist puts pyproject.toml and the crate in one root.
+      - name: Source distribution builds
+        if: runner.os == 'Linux'
+        shell: bash
+        working-directory: python
+        run: '"${{ steps.py313.outputs.python-path }}" -m maturin sdist --out ../dist-sdist'
       - name: Smoke test the wheel (Python 3.10 and 3.13)
         shell: bash
         run: |
