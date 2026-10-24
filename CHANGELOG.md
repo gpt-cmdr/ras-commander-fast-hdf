@@ -27,7 +27,8 @@
   computed in parallel, then handled in path order exactly as before (the
   first error in order still wins; the walk's depth and entry limits refuse
   exactly as before). One-thread sessions, which every path-based call uses,
-  stay sequential. Results are unchanged.
+  and calls made from rayon worker threads stay sequential. Results are
+  unchanged.
 
 ## 0.1.1 (2026-10-24)
 

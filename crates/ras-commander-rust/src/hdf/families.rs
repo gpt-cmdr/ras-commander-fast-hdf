@@ -992,6 +992,39 @@ mod walk_tests {
     }
 
     #[test]
+    fn inventories_from_rayon_workers_stay_sequential_and_identical() {
+        use rayon::prelude::*;
+        let inventory = |s: &ReadOnlyHdfSession| -> Vec<String> {
+            let mut out: Vec<String> = READ_FAMILIES
+                .iter()
+                .map(|&f| render(&s.read_family_inventory(f, 64 << 20)))
+                .collect();
+            out.push(render(&s.output_block_inventory(64 << 20)));
+            out
+        };
+        let reference = inventory(&sessions("stored_walk.h5")[0]);
+        let foreign = rayon::ThreadPoolBuilder::new()
+            .num_threads(4)
+            .build()
+            .unwrap();
+        // Fresh sessions, so first calls race to initialize the same memo cells.
+        let own = &sessions("stored_walk.h5")[1];
+        own.pool.install(|| {
+            assert!(!own.parallel_metadata());
+            (0..8)
+                .into_par_iter()
+                .for_each(|_| assert_eq!(inventory(own), reference));
+        });
+        let shared = &sessions("stored_walk.h5")[1];
+        foreign.install(|| {
+            assert!(!shared.parallel_metadata());
+            (0..8)
+                .into_par_iter()
+                .for_each(|_| assert_eq!(inventory(shared), reference));
+        });
+    }
+
+    #[test]
     fn hierarchy_limits_refuse_identically_with_and_without_the_pool() {
         // Depth beyond 24 under Output Blocks: every walk of it is refused.
         for s in sessions("stored_walk_deep.h5") {
