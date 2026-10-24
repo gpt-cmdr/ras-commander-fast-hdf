@@ -76,3 +76,17 @@ first.
 - Update [CHANGELOG.md](CHANGELOG.md) and the relevant page in `docs/` with
   every behavior change. Write docs for an engineer who uses HEC-RAS: plain
   language, short sentences, exact terms.
+
+## Documentation site
+
+- The docs in `docs/` publish to https://rascommander.info/fasthdf/ on every push
+  to `main`. The build infrastructure is in
+  `CLB-Engineering-Corporation/ras-commander-docs`. A broken `mkdocs.yml` or a
+  missing nav page fails the live build.
+- The site build adds the shared cross-product theme (product switcher,
+  `stylesheets/clb-branding.css`) into `docs/overrides/` at publish time. Keep
+  `theme.custom_dir: docs/overrides` and the `extra_css` entry in `mkdocs.yml`,
+  and do not copy the shared theme into this repository.
+- User-facing guidance for ras-commander users stays on the ras-commander site
+  (https://rascommander.info/ras/native-engine/); link to it rather than
+  duplicating it here.
