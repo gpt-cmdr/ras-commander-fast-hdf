@@ -163,7 +163,7 @@ fn decompress_inner(
         .checked_mul(params.size)
         .ok_or_else(|| filter_error("scaleoffset output size overflowed"))?;
     validate_output_limit(total_size, max_output_len)?;
-    let mut out = vec![0u8; total_size];
+    let mut out = super::zeroed_output(total_size, "scaleoffset")?;
 
     if minbits == full_width_bits {
         let payload_end = HEADER_SIZE

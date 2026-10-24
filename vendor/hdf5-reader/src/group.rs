@@ -47,6 +47,8 @@ enum OldTarget {
 struct ChildEntry {
     name: String,
     location: ObjectLocation,
+    /// The link's stored creation order, when its group tracks it.
+    creation_order: Option<u64>,
 }
 
 #[derive(Clone)]
@@ -320,10 +322,8 @@ impl Group {
                     base,
                     kind: VarLenKind::String,
                     ..
-                } if matches!(
-                    base.as_ref(),
-                    crate::messages::datatype::Datatype::FixedPoint { size: 1, .. }
-                ) && matches!(attr.dataspace.num_elements(), Ok(1)) =>
+                } if base.is_vlen_string_base()
+                    && matches!(attr.dataspace.num_elements(), Ok(1)) =>
                 {
                     resolve_vlen_bytes_storage(
                         &attr.raw_data,
@@ -387,6 +387,7 @@ impl Group {
                         |location| ChildEntry {
                             name: name.into(),
                             location,
+                            creation_order: None,
                         },
                     ));
                 }
@@ -462,6 +463,16 @@ impl Group {
                     }
                 }
             }
+
+            // Storage order is not creation order: libhdf5 places compact link
+            // messages wherever the object header has room, and dense links
+            // sit in name-hash order. When the group tracks creation order
+            // (every link carries one, as in all NetCDF-4 groups), list the
+            // children in it, as `H5Literate(H5_INDEX_CRT_ORDER)` and netcdf-c
+            // do. A stable sort keeps any equal values in storage order.
+            if children.iter().all(|child| child.creation_order.is_some()) {
+                children.sort_by_key(|child| child.creation_order);
+            }
         }
 
         Ok(children)
@@ -491,6 +502,7 @@ impl Group {
             LinkTarget::Hard { address } => Ok(Some(ChildEntry {
                 name: link.name.clone(),
                 location: self.local_location(*address),
+                creation_order: link.creation_order,
             })),
             LinkTarget::Soft { path } => {
                 Ok(self
@@ -499,6 +511,7 @@ impl Group {
                     .map(|location| ChildEntry {
                         name: link.name.clone(),
                         location,
+                        creation_order: link.creation_order,
                     }))
             }
             LinkTarget::External { filename, path } => Ok(self
@@ -506,6 +519,7 @@ impl Group {
                 .map(|location| ChildEntry {
                     name: link.name.clone(),
                     location,
+                    creation_order: link.creation_order,
                 })),
         }
     }
@@ -545,6 +559,7 @@ impl Group {
                     .map(|location| ChildEntry {
                         name: n.clone(),
                         location,
+                        creation_order: None,
                     })
             })
             .collect())
@@ -694,6 +709,7 @@ impl Group {
                     children.push(ChildEntry {
                         name: link_msg.name.clone(),
                         location: self.local_location(*address),
+                        creation_order: link_msg.creation_order,
                     });
                 }
                 LinkTarget::Soft { path } => {
@@ -701,6 +717,7 @@ impl Group {
                         children.push(ChildEntry {
                             name: link_msg.name.clone(),
                             location,
+                            creation_order: link_msg.creation_order,
                         });
                     }
                 }
@@ -709,6 +726,7 @@ impl Group {
                         children.push(ChildEntry {
                             name: link_msg.name.clone(),
                             location,
+                            creation_order: link_msg.creation_order,
                         });
                     }
                 }

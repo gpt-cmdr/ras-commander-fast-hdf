@@ -127,8 +127,8 @@ SOFTWARE.
 | hashbrown | 0.16.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown | [143368af9701](#licence-143368af9701), [ff8f68cb076c](#licence-ff8f68cb076c) |
 | hashbrown | 0.17.1 | MIT OR Apache-2.0 | https://github.com/rust-lang/hashbrown | [143368af9701](#licence-143368af9701), [ff8f68cb076c](#licence-ff8f68cb076c) |
 | hashlink | 0.12.2 | MIT OR Apache-2.0 | https://github.com/djc/hashlink | [af975c9737b3](#licence-af975c9737b3), [f1fa5f9e9d8f](#licence-f1fa5f9e9d8f) |
-| hdf5-core | 0.9.1 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
-| hdf5-reader | 0.9.1 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
+| hdf5-core | 0.9.3 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
+| hdf5-reader | 0.9.3 | MIT OR Apache-2.0 | https://github.com/roteiro-gis/netcdf-rust | [ccc3098cda80](#licence-ccc3098cda80), [24a4eeee33af](#licence-24a4eeee33af) |
 | heapless | 0.8.0 | MIT OR Apache-2.0 | https://github.com/rust-embedded/heapless | [143368af9701](#licence-143368af9701), [035e70219855](#licence-035e70219855) |
 | heck (compile time only) | 0.4.1 | MIT OR Apache-2.0 | https://github.com/withoutboats/heck | [143368af9701](#licence-143368af9701), [7b63ecd5f190](#licence-7b63ecd5f190) |
 | heck (compile time only) | 0.5.0 | MIT OR Apache-2.0 | https://github.com/withoutboats/heck | [143368af9701](#licence-143368af9701), [7b63ecd5f190](#licence-7b63ecd5f190) |
@@ -4882,7 +4882,7 @@ Apache License
 
 ### licence-ccc3098cda80
 
-File(s): LICENSE-APACHE. Used by: hdf5-core 0.9.1, hdf5-reader 0.9.1.
+File(s): LICENSE-APACHE. Used by: hdf5-core 0.9.3, hdf5-reader 0.9.3.
 
 ```text
 Apache License
@@ -6637,7 +6637,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### licence-24a4eeee33af
 
-File(s): LICENSE-MIT. Used by: hdf5-core 0.9.1, hdf5-reader 0.9.1.
+File(s): LICENSE-MIT. Used by: hdf5-core 0.9.3, hdf5-reader 0.9.3.
 
 ```text
 MIT License

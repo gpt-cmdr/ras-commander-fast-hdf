@@ -25,10 +25,11 @@ depends on the engine through a Cargo path dependency on `../crates/ras-commande
 
 `vendor/` contains a modified copy of the `hdf5-reader` and `hdf5-core` crates from
 [roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (`MIT OR
-Apache-2.0`, copyright Ian Norden), based on upstream commit
-`24ff6fcfcc79a35c30aa5d8cb3028ab4d9d00564`. The base requires the local shared-message and
-filtered fixed-array width fixes to read the qualified HEC-RAS corpus. Generic reader
-changes are kept generic: no RAS-specific parsing is hidden in the reader.
+Apache-2.0`, copyright Ian Norden), based on upstream tag `v0.9.3` (commit
+`3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`) with 14 local patches (`vendor/patches/`).
+Generic reader changes are kept generic: no RAS-specific parsing is hidden in the reader.
+Two patches are fail-closed engine policies (unbounded filters and non-inline
+extensible-array indexes are refused).
 
 - [`vendor/hdf5-reader/PROVENANCE.md`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/hdf5-reader/PROVENANCE.md) is the
   change notice for every modified file.

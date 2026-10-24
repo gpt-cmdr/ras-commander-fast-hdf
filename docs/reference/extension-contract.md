@@ -413,8 +413,8 @@ define how the bindings are used:
 ## Dependency provenance
 
 * `hdf5-reader`/`hdf5-core` are vendored in this repository's `vendor/` directory and used
-  by the engine, based on upstream `roteiro-gis/netcdf-rust` at
-  `24ff6fcfcc79a35c30aa5d8cb3028ab4d9d00564`, `MIT OR Apache-2.0`.
+  by the engine, based on upstream `roteiro-gis/netcdf-rust` tag `v0.9.3`
+  (`3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`) plus 14 local patches, `MIT OR Apache-2.0`.
   `vendor/hdf5-reader/PROVENANCE.md` and `vendor/LOCAL_PATCHES.md` record the local
   changes. The extension has no direct generic-reader dependency.
 * `freestiler-core`: `walkerke/freestiler`, revision

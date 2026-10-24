@@ -1,0 +1,79 @@
+From aabc183c5e5caafba8240df303a1eaa61471e96c Mon Sep 17 00:00:00 2001
+From: "William Mark Katzenmeyer, P.E., C.F.M." <heccommander@gmail.com>
+Date: Sat, 24 Oct 2026 06:11:35 -0400
+Subject: [PATCH 03/14] hdf5-reader: check attribute element counts against the
+ stored payload
+
+[L15] Status vs upstream v0.9.3: NOT UPSTREAM (complements PR #100).
+Kind: safety fix. Proposed upstream grouping: PR-B hardening.
+Applies on roteiro-gis/netcdf-rust v0.9.3 (3d708fd) after the earlier patches of this series.
+
+A zero-size datatype let an attribute declare up to 2^62 elements with no
+data, and read_1d reserved the declared count (8 TiB, or a capacity
+overflow abort). Refuse declared counts the payload cannot hold before
+allocating, refuse zero-width fixed strings, and reserve string results
+only for elements present in the payload. Uses map_or instead of
+is_none_or to keep rust-version 1.81.
+---
+ hdf5-reader/src/attribute_api.rs | 30 ++++++++++++++++++++++++++++--
+ 1 file changed, 28 insertions(+), 2 deletions(-)
+
+diff --git a/hdf5-reader/src/attribute_api.rs b/hdf5-reader/src/attribute_api.rs
+index 814fd14..e84d237 100644
+--- a/hdf5-reader/src/attribute_api.rs
++++ b/hdf5-reader/src/attribute_api.rs
+@@ -96,10 +96,27 @@ impl Attribute {
+         T::from_bytes(&self.raw_data, &self.datatype)
+     }
+ 
++    /// Refuse a declared element count the stored payload cannot hold.
++    fn check_payload(&self, n: usize, elem_size: usize) -> Result<()> {
++        let needed = n.checked_mul(elem_size);
++        if n > 0 && (elem_size == 0 || needed.map_or(true, |bytes| bytes > self.raw_data.len())) {
++            return Err(Error::InvalidData(format!(
++                "attribute '{}' declares {n} elements of {elem_size} bytes but holds {} bytes",
++                self.name,
++                self.raw_data.len()
++            )));
++        }
++        Ok(())
++    }
++
+     /// Read the attribute as a 1-D vector of the given type.
+     pub fn read_1d<T: crate::datatype_api::H5Type>(&self) -> Result<Vec<T>> {
+         let elem_size = T::element_size(&self.datatype);
+         let n = checked_usize(self.num_elements()?, "attribute element count")?;
++        // The dataspace and datatype come from the file: a zero-size datatype
++        // lets the element count reach 2^62 with no data. Size the result
++        // from bytes actually present, never from the declared count alone.
++        self.check_payload(n, elem_size)?;
+         let mut result = Vec::with_capacity(n);
+         for i in 0..n {
+             let start = i * elem_size;
+@@ -252,7 +269,8 @@ impl Attribute {
+             } => {
+                 let ref_size = 4 + offset_size as usize + 4;
+                 let n = checked_usize(self.num_elements()?, "attribute string element count")?;
+-                let mut result = Vec::with_capacity(n);
++                // Elements past the payload are not read, so never reserve them.
++                let mut result = Vec::with_capacity(n.min(self.raw_data.len() / ref_size));
+                 for i in 0..n {
+                     let offset = i * ref_size;
+                     if offset + ref_size > self.raw_data.len() {
+@@ -293,7 +311,15 @@ impl Attribute {
+             } => {
+                 let len = *len as usize;
+                 let n = checked_usize(self.num_elements()?, "attribute string element count")?;
+-                let mut result = Vec::with_capacity(n);
++                if len == 0 && n > 0 {
++                    return Err(Error::InvalidData(format!(
++                        "fixed-length string attribute '{}' has zero width",
++                        self.name
++                    )));
++                }
++                // Elements past the payload are not read, so never reserve them.
++                let mut result =
++                    Vec::with_capacity(n.min(self.raw_data.len().div_ceil(len.max(1))));
+                 for i in 0..n {
+                     let start = i * len;
+                     let end = (start + len).min(self.raw_data.len());

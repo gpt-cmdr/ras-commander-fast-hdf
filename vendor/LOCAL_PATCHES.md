@@ -1,58 +1,73 @@
 # Local reader patches
 
 `vendor/` holds a modified copy of the `hdf5-reader` and `hdf5-core` crates from
-[roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust), based on upstream
-commit `24ff6fcfcc79a35c30aa5d8cb3028ab4d9d00564` (crate version 0.9.1). The upstream
-licences (`LICENSE-MIT`, `LICENSE-APACHE`) and upstream `README.md` are retained unchanged.
-None of these changes has been submitted upstream yet.
+[roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) at tag `v0.9.3`
+(commit `3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`, crate version 0.9.3), with the 14
+patches in `patches/` applied in order. Copyright (c) 2026 Ian Norden. The upstream
+licences (`LICENSE-MIT`, `LICENSE-APACHE`) and the upstream `README.md` are retained
+byte for byte. None of these changes has been accepted upstream yet.
 
-The full change notice, listing every modified file and the reason for each change, is
+The change notice, listing every modified file and the reason for each change, is
 [`hdf5-reader/PROVENANCE.md`](hdf5-reader/PROVENANCE.md). Per-file SHA-256 hashes of the
 vendored tree are recorded in [`PROVENANCE.json`](PROVENANCE.json) and checked by
-`scripts/prepare-reader.ps1`.
+`scripts/prepare-reader.ps1` and `python scripts/vendor_reader.py --check`.
 
-## Patch files
+## Reproducing the tree
 
-The first four changes are also kept as unified diffs in `patches/`. They apply in order,
-from the `vendor/` directory, with `git apply`, starting from the upstream base.
+```bash
+git clone https://github.com/roteiro-gis/netcdf-rust
+python scripts/vendor_reader.py --upstream netcdf-rust          # compare
+python scripts/vendor_reader.py --upstream netcdf-rust --write  # replace
+```
 
-| Patch | Change |
-|---|---|
-| `01-dependency-shared-message.patch` | `messages/shared.rs`: resolve shared object-header messages. |
-| `02-dependency-fixed-array-width.patch` | `fixed_array.rs`: correct the width of the chunk-size field in filtered fixed-array entries. |
-| `03-metadata-raw-encoding.patch` | Keep exact datatype envelopes (`DatatypeMessage.raw_encoding`, `AttributeMessage.raw_datatype`); add non-eager `Group::raw_attributes` and `Dataset::raw_datatype`; add `Error::UnsupportedEncoding`; bound attribute-message parsing. |
-| `04-dataset-raw-attributes.patch` | Add `Dataset::raw_attributes()`, the dataset counterpart of `Group::raw_attributes`. |
+The script checks out `3d708fd` in a temporary worktree, applies `patches/*.patch` with
+`git am`, compares the result with `vendor/` file by file and rewrites `PROVENANCE.json`.
 
-Notes on patches 03 and 04:
+## Patch series
 
-- `DatatypeMessage.raw_encoding` and `AttributeMessage.raw_datatype` are new required
-  fields, which is a breaking change for external struct-literal constructors.
-  `Group::raw_attributes`, `Dataset::raw_datatype` and `Dataset::raw_attributes` are
-  additive APIs.
-- The engine proves raw numeric and fixed-string encodings before decoding. All
-  variable-length metadata remains unsupported before dereference. The generic high-level
-  variable-length APIs keep their previous behaviour and are not certified safe by these
-  patches. Arrays, references and nested metadata remain unsupported.
-- `Dataset::raw_attributes` returns a borrowed `&[AttributeMessage]` (infallible) while
-  `Group::raw_attributes` returns `Result<Vec<AttributeMessage>>`, because dataset
-  attribute messages are already parsed when the dataset is opened whereas group headers
-  are parsed lazily.
-- Neither patch contains HEC-RAS-specific names or schema.
+Each patch starts with a header that gives its status against upstream v0.9.3, its kind
+and a proposed upstream grouping. Patch 0006 also adjusts four `OpenOptions` literals in
+upstream's `netcdf-reader`; that crate is not vendored, so those hunks have no effect here.
 
-## Later changes
+| Patch | Change | Kind |
+|---|---|---|
+| `0001` | Read the location of v2/v3 shared messages directly after the type byte, and accept type 2 (committed) for v2 messages. Without it, any HDF5 1.8+ dataset with a committed datatype fails to open. | spec fix |
+| `0002` | Keep exact datatype envelopes (`DatatypeMessage::raw_encoding`, `AttributeMessage::raw_datatype`); add `Group::raw_attributes`, `Dataset::raw_attributes`, `Dataset::raw_datatype` and `Error::UnsupportedEncoding`; bound attribute parsing to the message size and reject reserved attribute flags. | API + hardening |
+| `0003` | Check an attribute's declared element count against its stored payload before allocating; refuse zero-width fixed strings. | safety |
+| `0004` | Clear an in-flight chunk-cache entry from a drop guard, so a panicking decoder cannot block later loads of the chunk. | safety |
+| `0005` | Checked arithmetic for file-derived sizes in fixed and extensible array indexes, the global heap, object-header continuations and the N-Bit and scale-offset filters. | safety |
+| `0006` | `OpenOptions::max_chunk_bytes` (256 MiB default, clamped to 4 GiB) checked before any chunk allocation; `Error::ResourceLimit`; every built-in filter call clamped to the format maximum. | safety + API |
+| `0007` | Bound each stage of a multi-filter pipeline by the encoded-size bound of the earlier filters (HEC-RAS writes DEFLATE twice on small chunks). Adds `tests/fixtures/scaleoffset_deflate.h5`. | spec fix |
+| `0008` | **Engine policy.** Refuse custom, unknown and LZ4-prefix filters whenever a decoded-size limit applies. | policy |
+| `0009` | Ignore well-formed, grid-aligned stale chunk-index entries wholly outside a shrunk dataset's extent. | fix |
+| `0010` | One link walk per soft/external link resolution: shared depth limit, cycle guard and expansion budget (upstream overflows the stack on `/s -> /s/x`). | safety |
+| `0011` | Cache old-style (symbol-table) group names in the file context; read the local heap once; add `Group::member_names`. Adds `testdata/empty_heap_past_eof.h5`. | performance + API |
+| `0012` | Follow soft links in old-style groups (symbol-table cache type 2). | spec fix |
+| `0013` | Sparse row/column gathers (`read_rows_columns_chunked*`), uncached full reads (`read_array_uncached*`), zero-byte cache bypass, `DEFAULT_CHUNK_CACHE_{BYTES,SLOTS}`. Adds `tests/fixtures/perf2/gather.h5`. | performance + API |
+| `0014` | **Engine policy.** Refuse extensible-array chunk indexes with more elements than the index block (`UnsupportedEncoding`), because upstream 0.9.3 silently returns fill values for chunks past the index block. Adjusts two upstream integration tests. Adds `tests/fixtures/perf2/ea_latest.h5`. | policy |
 
-Changes made after patch 04 exist only in the vendored source (there are no separate
-`.patch` files for them). They are described in `hdf5-reader/PROVENANCE.md`. In summary:
+Patches 0008 and 0014 are fail-closed qualification policies of the engine and are not
+intended for upstream as they stand.
 
-- an old-style (symbol-table) group name cache in `FileContext`, keyed by group address,
-  storing only names and addresses; the local heap segment is read once per first
-  enumeration with checked UTF-8, offset and terminator handling; and
-  `Group::member_names`, which lists object kinds without materialising child datasets;
-- sparse row/column gathers from chunks, a cache bypass for large reads and one index
-  traversal for parallel cold gathers;
-- refusal of unqualified non-inline extensible-array layouts;
-- bounded filter pipelines and a configurable per-chunk allocation limit;
-- tolerance of stale chunks wholly outside a shrunk dataset's extent;
-- soft links in old-style groups, with one shared depth, cycle and expansion budget;
-- checked arithmetic for file-derived sizes, a panic-safe chunk cache, and attribute
-  element counts checked against the stored payload before allocation.
+## Changes from the previous vendored copy
+
+The previous copy was upstream `24ff6fc` (0.9.1 plus upstream PR #95) with 15 local
+changes. Moving to v0.9.3:
+
+- brings upstream PRs #90, #91 (fractal-heap huge objects and short indirect heap IDs),
+  #92 (creation-order member listing), #93 (vlen strings with a one-byte base), #94
+  (filtered chunk sizes as 1-8 byte integers in fixed arrays, extensible arrays and v2
+  B-trees) and #100 (fallible selection buffers; filters fail instead of aborting);
+- drops the local fixed-array chunk-size-width patch (superseded by #94) and the local
+  DEFLATE/LZ4 allocation changes (superseded by #100);
+- drops test-only CLB additions (`cfg(test)` work counters, the `perf2b_work_counters`
+  test and `tests/malformed.rs`; the engine's `tests/malformed_inputs.rs` covers the same
+  files);
+- keeps upstream's own integration, corruption and property tests (`hdf5-reader/tests/`)
+  and the fixtures they read (`testdata/hdf5/`, from upstream `testdata/hdf5`).
+
+## Rules
+
+Change the vendored source only by adding a patch to `patches/`, regenerating with
+`scripts/vendor_reader.py` and describing the change in `hdf5-reader/PROVENANCE.md` and
+this file.

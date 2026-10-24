@@ -52,17 +52,14 @@ fn decompress_inner(data: &[u8], max_output_len: Option<usize>) -> Result<Vec<u8
             )));
         }
     }
-    // A caller's limit is the chunk size, which file content also controls;
-    // the declared size must also be reachable from this input.
-    let reachable = data.len().saturating_mul(LZ4_MAX_EXPANSION);
-    if orig_size > reachable {
-        return Err(Error::DecompressionError(format!(
-            "LZ4: declared output size {orig_size} exceeds what {} input bytes can decode to",
-            data.len()
-        )));
-    }
 
-    let mut output = Vec::with_capacity(orig_size);
+    // The output grows as blocks are decoded; reserve no more than LZ4 can expand to
+    // (~255:1), so a corrupted size field cannot abort the process.
+    let mut output = Vec::new();
+    let capacity = orig_size.min(data.len().saturating_mul(255).saturating_add(64));
+    output.try_reserve_exact(capacity).map_err(|_| {
+        Error::DecompressionError(format!("LZ4: cannot allocate {capacity} output bytes"))
+    })?;
     let mut pos = 8;
 
     while pos < data.len() && output.len() < orig_size {
@@ -165,15 +162,6 @@ mod tests {
         let data = (4096u64).to_be_bytes();
         let err = decompress_with_limit(&data, 32).unwrap_err();
         assert!(err.to_string().contains("exceeds limit"));
-    }
-
-    #[test]
-    fn lz4_declared_size_must_be_reachable_from_input() {
-        // 16 input bytes cannot decode to 1 GiB, even under a larger limit.
-        let mut data = (1u64 << 30).to_be_bytes().to_vec();
-        data.extend_from_slice(&[0; 8]);
-        let err = decompress_with_limit(&data, 1 << 40).unwrap_err();
-        assert!(err.to_string().contains("input bytes can decode to"));
     }
 
     #[test]

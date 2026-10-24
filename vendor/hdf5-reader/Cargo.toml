@@ -1,7 +1,9 @@
+# Standalone adaptation of upstream hdf5-reader/Cargo.toml (roteiro-gis/netcdf-rust v0.9.3):
+# workspace-inherited package, dependency and lint settings written out. See ../LOCAL_PATCHES.md.
 [package]
 name = "hdf5-reader"
 description = "Pure-Rust, read-only HDF5 file decoder with no C dependencies"
-version = "0.9.1"
+version = "0.9.3"
 edition = "2021"
 rust-version = "1.81"
 license = "MIT OR Apache-2.0"
@@ -11,10 +13,17 @@ readme = "../README.md"
 documentation = "https://docs.rs/hdf5-reader"
 keywords = ["hdf5", "decoder", "scientific-data", "read-only"]
 categories = ["science", "parser-implementations"]
+publish = false
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(test)"] }
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
 
 [dependencies]
-hdf5-core = { version = "0.9.1", path = "../hdf5-core" }
+hdf5-core = { version = "0.9.3", path = "../hdf5-core" }
 ndarray = "0.17"
 thiserror = "2"
 memmap2 = "0.9"
@@ -40,4 +49,3 @@ optional = true
 [dependencies.rayon]
 version = "1"
 optional = true
-
