@@ -53,6 +53,7 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("crs", "catalog_projection", "catalog"),
     e("ReadOnlyHdfSession", "open", "hdf"),
     e("ReadOnlyHdfSession", "with_options", "hdf"),
+    e("ReadOnlyHdfSession", "from_bytes", "hdf"),
     e("ReadOnlyHdfSession", "thread_count", "hdf"),
     e("ReadOnlyHdfSession", "path", "hdf"),
     e("ReadOnlyHdfSession", "group_members", "hdf"),

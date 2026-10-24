@@ -297,12 +297,16 @@ is stored, none is reported.
 
 ### In-memory byte sources and WebAssembly
 
-**Status:** planned.
+**Status:** in-memory sessions done (`ReadOnlyHdfSession::from_bytes`); range
+reads planned.
 
-The engine and `terrio-hecras` compile for wasm32, but sessions open files by
-path, so they cannot read in a browser. A byte-source session (reading from
-memory or through a range-read callback) would allow WebAssembly use in terrio
-and RustGIS. It shares design with the S3 reads at the top of this page.
+Sessions open a file by path or from its bytes. `from_bytes` lets terrio's
+JavaScript package and RustGIS read HEC-RAS files in WebAssembly, with the whole
+file in memory (at most 4 GiB of module memory on wasm32). Range reads (HTTP,
+S3) need a byte-source interface instead: plan the byte ranges a read needs from
+the HDF5 metadata, fetch them, then decode, as terrio's `sparse::SparseFile`
+does. That shares design with the S3 reads at the top of this page; the session
+constructors are where such a source would be accepted.
 
 ## Platform and distribution
 

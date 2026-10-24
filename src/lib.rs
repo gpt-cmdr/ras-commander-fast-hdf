@@ -86,10 +86,52 @@ pub(crate) fn pool(threads: usize) -> Result<std::sync::Arc<rayon::ThreadPool>> 
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(threads)
         .build()
-        .map_err(|e| Error::new(ErrorKind::Internal, e.to_string()))?;
+        .map_err(|e| {
+            // WebAssembly without threads cannot start any.
+            let io = std::error::Error::source(&e).and_then(|s| s.downcast_ref::<std::io::Error>());
+            if io.is_some_and(|io| io.kind() == std::io::ErrorKind::Unsupported) {
+                Error::new(ErrorKind::Unsupported, format!("threads unavailable: {e}"))
+            } else {
+                Error::new(ErrorKind::Internal, e.to_string())
+            }
+        })?;
     let pool = std::sync::Arc::new(pool);
     pools.insert(threads, pool.clone());
     Ok(pool)
+}
+/// The worker pool of a read session. Where the platform cannot start threads
+/// (WebAssembly without threads), a one-thread session has no pool and runs
+/// its work on the calling thread, with the same results.
+#[cfg(feature = "hdf")]
+pub(crate) struct SessionPool(Option<std::sync::Arc<rayon::ThreadPool>>);
+#[cfg(feature = "hdf")]
+impl SessionPool {
+    pub(crate) fn new(threads: usize) -> Result<Self> {
+        match pool(threads) {
+            Ok(p) => Ok(Self(Some(p))),
+            Err(e) if threads == 1 && e.kind == ErrorKind::Unsupported => Ok(Self(None)),
+            Err(e) => Err(e),
+        }
+    }
+    pub(crate) fn install<R: Send>(&self, op: impl FnOnce() -> R + Send) -> R {
+        match &self.0 {
+            Some(pool) => pool.install(op),
+            None => op(),
+        }
+    }
+    pub(crate) fn current_num_threads(&self) -> usize {
+        self.0.as_ref().map_or(1, |p| p.current_num_threads())
+    }
+    /// The rayon pool, when there is one.
+    pub(crate) fn rayon(&self) -> Option<&rayon::ThreadPool> {
+        self.0.as_deref()
+    }
+}
+#[cfg(feature = "hdf")]
+impl From<std::sync::Arc<rayon::ThreadPool>> for SessionPool {
+    fn from(pool: std::sync::Arc<rayon::ThreadPool>) -> Self {
+        Self(Some(pool))
+    }
 }
 #[forbid(unsafe_code)]
 pub mod crs;

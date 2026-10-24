@@ -659,7 +659,7 @@ impl Topology {
     pub fn assemble(&self, policy: GeometryPolicy, threads: usize) -> crate::Result<PackedMesh> {
         self.validate()
             .map_err(|e| Error::new(ErrorKind::StructuralTopology, e))?;
-        let pool = crate::pool(threads)?;
+        let pool = crate::SessionPool::from(crate::pool(threads)?);
         self.assemble_on_pool(policy, &pool, true)
     }
     /// Reuse exactly the session pool; session parallel=false executes rings serially.
@@ -675,7 +675,7 @@ impl Topology {
     fn assemble_on_pool(
         &self,
         policy: GeometryPolicy,
-        pool: &rayon::ThreadPool,
+        pool: &crate::SessionPool,
         parallel: bool,
     ) -> crate::Result<PackedMesh> {
         let rings: Vec<_> = if parallel {

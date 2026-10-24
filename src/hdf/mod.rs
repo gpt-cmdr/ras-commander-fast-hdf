@@ -151,7 +151,7 @@ pub struct GroupMembers {
 #[non_exhaustive]
 pub struct ReadOnlyHdfSession {
     pub(crate) file: Hdf5File,
-    pub(crate) pool: std::sync::Arc<rayon::ThreadPool>,
+    pub(crate) pool: crate::SessionPool,
     memo: memo::Memo,
     path: PathBuf,
     parallel: bool,
@@ -200,7 +200,7 @@ impl ReadOnlyHdfSession {
                 "chunk_cache_slots must be in 1..=1048576",
             ));
         }
-        let pool = crate::pool(threads)?;
+        let pool = crate::SessionPool::new(threads)?;
         let options = crate::hdf5_reader::OpenOptions {
             chunk_cache_bytes,
             chunk_cache_slots,
@@ -213,6 +213,34 @@ impl ReadOnlyHdfSession {
             memo: memo::Memo::default(),
             pool,
             path: path.as_ref().to_path_buf(),
+            parallel,
+            chunk_cache_bytes,
+        })
+    }
+    /// Open an HDF5 file held in memory (a download or an upload), with the
+    /// default chunk cache. `name` stands in for the path: it names the file in
+    /// identities ([`Self::path`]) and error messages, and is never opened.
+    ///
+    /// The session owns `data`, so the whole file stays in memory while it is
+    /// open. Every read keeps its usual byte budgets, and the same rules apply as
+    /// for a file opened by path: the bytes are read exactly as the file would be.
+    pub fn from_bytes(
+        data: Vec<u8>,
+        name: impl Into<PathBuf>,
+        threads: usize,
+        parallel: bool,
+    ) -> Result<Self> {
+        let name = name.into();
+        let pool = crate::SessionPool::new(threads)?;
+        let options = crate::hdf5_reader::OpenOptions::default();
+        let chunk_cache_bytes = options.chunk_cache_bytes;
+        let file = Hdf5File::from_vec_with_options(data, options)
+            .map_err(|e| map_error(e).with_path(name.clone()))?;
+        Ok(Self {
+            file,
+            memo: memo::Memo::default(),
+            pool,
+            path: name,
             parallel,
             chunk_cache_bytes,
         })
@@ -533,14 +561,17 @@ impl ReadOnlyHdfSession {
         let ds = &cached.dataset;
         macro_rules! gather {
             ($t:ty,$v:ident) => {{
-                let result = if self.parallel && self.thread_count() > 1 {
-                    ds.read_rows_columns_chunked_in_pool::<$t>(
+                let result = match self.pool.rayon() {
+                    Some(pool) if self.parallel && self.thread_count() > 1 => ds
+                        .read_rows_columns_chunked_in_pool::<$t>(
+                            (rows.start, rows.end, rows.step),
+                            columns,
+                            pool,
+                        ),
+                    _ => ds.read_rows_columns_chunked::<$t>(
                         (rows.start, rows.end, rows.step),
                         columns,
-                        &self.pool,
-                    )
-                } else {
-                    ds.read_rows_columns_chunked::<$t>((rows.start, rows.end, rows.step), columns)
+                    ),
                 };
                 let Some(a) = result.map_err(map_error)? else {
                     return Ok(None);
