@@ -493,6 +493,7 @@ dependencies = [
  "hdf5-reader",
  "ndarray",
  "rayon",
+ "robust",
  "serde",
  "serde_json",
  "sha2",

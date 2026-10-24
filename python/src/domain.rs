@@ -134,11 +134,9 @@ fn capabilities(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     })
 }
 #[pyfunction]
-fn raw_crs_evidence(py: Python<'_>, path: PathBuf) -> PyResult<Bound<'_, PyDict>> {
+fn raw_crs_evidence(py: Python<'_>, path: crate::session::Source) -> PyResult<Bound<'_, PyDict>> {
     crate::panic_guard::guard(|| {
-        let r = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.raw_crs_evidence())
-            .map_err(crate::reader::err)?;
+        let r = path.run(py, |engine_session| engine_session.raw_crs_evidence())?;
         let ev = r
             .evidence
             .iter()
@@ -158,13 +156,13 @@ fn raw_crs_evidence(py: Python<'_>, path: PathBuf) -> PyResult<Bound<'_, PyDict>
 #[pyo3(signature=(path,group="/"))]
 fn typed_group_attributes<'py>(
     py: Python<'py>,
-    path: PathBuf,
+    path: crate::session::Source,
     group: &str,
 ) -> PyResult<Vec<Bound<'py, PyDict>>> {
     crate::panic_guard::guard(|| {
-        let attrs = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.typed_group_attributes(group))
-            .map_err(crate::reader::err)?;
+        let attrs = path.run(py, |engine_session| {
+            engine_session.typed_group_attributes(group)
+        })?;
         attrs.iter().map(|a| typed_attribute_dict(py, a)).collect()
     })
 }
@@ -174,14 +172,14 @@ fn typed_group_attributes<'py>(
 #[pyo3(signature=(path,dataset,max_bytes=67108864))]
 fn typed_dataset_attributes<'py>(
     py: Python<'py>,
-    path: PathBuf,
+    path: crate::session::Source,
     dataset: &str,
     max_bytes: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     crate::panic_guard::guard(|| {
-        let r = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.typed_dataset_attributes(dataset, max_bytes))
-            .map_err(crate::reader::err)?;
+        let r = path.run(py, |engine_session| {
+            engine_session.typed_dataset_attributes(dataset, max_bytes)
+        })?;
         let d = dict!(py,"capability"=>capability(py,r.capability())?,"value"=>py.None());
         if let Some(attrs) = r.value() {
             let values = attrs
@@ -199,15 +197,15 @@ fn typed_dataset_attributes<'py>(
 #[pyo3(signature=(path,dataset,max_bytes=67108864))]
 fn raw_fixed_strings<'py>(
     py: Python<'py>,
-    path: PathBuf,
+    path: crate::session::Source,
     dataset: &str,
     max_bytes: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     crate::panic_guard::guard(|| {
         use ras_commander_rust::hdf::{StringCharset as C, StringPadding as P};
-        let r = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.raw_fixed_strings(dataset, max_bytes))
-            .map_err(crate::reader::err)?;
+        let r = path.run(py, |engine_session| {
+            engine_session.raw_fixed_strings(dataset, max_bytes)
+        })?;
         let d = dict!(py,"capability"=>capability(py,r.capability())?,"value"=>py.None());
         if let Some(v) = r.value() {
             let charset = match v.charset {
@@ -272,13 +270,13 @@ fn result_availability<'py>(
 #[pyo3(signature=(path,max_bytes=67108864))]
 fn mesh_inventory(
     py: Python<'_>,
-    path: PathBuf,
+    path: crate::session::Source,
     max_bytes: usize,
 ) -> PyResult<Vec<Bound<'_, PyDict>>> {
     crate::panic_guard::guard(|| {
-        let meshes = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.mesh_inventory(max_bytes))
-            .map_err(crate::reader::err)?;
+        let meshes = path.run(py, |engine_session| {
+            engine_session.mesh_inventory(max_bytes)
+        })?;
         meshes.into_iter().map(|m| {
         let blocks=m.output_blocks.iter().map(|b| Ok(dict!(py,"mode"=>b.mode.as_str(),"block_name"=>&b.block_name,"dataset_root"=>&b.dataset_root,"results"=>result_availability(py,&b.results)?))).collect::<PyResult<Vec<_>>>()?;
         Ok(dict!(py,"source"=>&m.id.source,"identity"=>identity(py,&m.id)?,"mesh_name"=>m.mesh_name,"physical_cells"=>m.physical_cells,"stored_cells"=>m.stored_cells,"ghost_cells"=>m.ghost_cells,"results"=>result_availability(py,&m.results)?,"output_blocks"=>blocks))
@@ -286,28 +284,36 @@ fn mesh_inventory(
     })
 }
 #[pyfunction]
-fn plan_result_mode(py: Python<'_>, path: PathBuf) -> PyResult<&'static str> {
+fn plan_result_mode(py: Python<'_>, path: crate::session::Source) -> PyResult<&'static str> {
     crate::panic_guard::guard(|| {
-        py.detach(|| ReadOnlyHdfSession::open(path)?.plan_result_mode())
+        path.run(py, |engine_session| engine_session.plan_result_mode())
             .map(mode)
-            .map_err(crate::reader::err)
     })
 }
 #[pyfunction]
 #[pyo3(signature=(path,max_bytes=67108864))]
-fn steady_profile_names(py: Python<'_>, path: PathBuf, max_bytes: usize) -> PyResult<Vec<String>> {
+fn steady_profile_names(
+    py: Python<'_>,
+    path: crate::session::Source,
+    max_bytes: usize,
+) -> PyResult<Vec<String>> {
     crate::panic_guard::guard(|| {
-        py.detach(|| ReadOnlyHdfSession::open(path)?.steady_profile_names(max_bytes))
-            .map_err(crate::reader::err)
+        path.run(py, |engine_session| {
+            engine_session.steady_profile_names(max_bytes)
+        })
     })
 }
 #[pyfunction]
 #[pyo3(signature=(path,max_bytes=67108864))]
-fn cross_sections(py: Python<'_>, path: PathBuf, max_bytes: usize) -> PyResult<Bound<'_, PyDict>> {
+fn cross_sections(
+    py: Python<'_>,
+    path: crate::session::Source,
+    max_bytes: usize,
+) -> PyResult<Bound<'_, PyDict>> {
     crate::panic_guard::guard(|| {
-        let g = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.cross_sections(max_bytes))
-            .map_err(crate::reader::err)?;
+        let g = path.run(py, |engine_session| {
+            engine_session.cross_sections(max_bytes)
+        })?;
         cross_section_geometry(py, g)
     })
 }
@@ -389,13 +395,13 @@ fn read_cross_section_result<'py>(
 #[pyo3(signature=(path,max_bytes=67108864))]
 fn plan_capabilities(
     py: Python<'_>,
-    path: PathBuf,
+    path: crate::session::Source,
     max_bytes: usize,
 ) -> PyResult<Bound<'_, PyDict>> {
     crate::panic_guard::guard(|| {
-        let c = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.plan_capabilities(max_bytes))
-            .map_err(crate::reader::err)?;
+        let c = path.run(py, |engine_session| {
+            engine_session.plan_capabilities(max_bytes)
+        })?;
         let families=c.families.iter().map(|f| {
         let family=f.family.as_str();
         Ok(dict!(py,"family"=>family,"capability"=>capability(py,&f.status)?,"datasets"=>&f.datasets))
@@ -421,14 +427,14 @@ fn axis_capability(a: &ras_commander_rust::hdf::time::TimeAxis) -> Capability {
 #[pyo3(signature=(path,max_bytes=67108864))]
 fn unsteady_time_axis(
     py: Python<'_>,
-    path: PathBuf,
+    path: crate::session::Source,
     max_bytes: usize,
 ) -> PyResult<Bound<'_, PyDict>> {
     crate::panic_guard::guard(|| {
         use ras_commander_rust::hdf::time::{MillisecondSource, TimeEpoch};
-        let a = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.unsteady_time_axis(max_bytes))
-            .map_err(crate::reader::err)?;
+        let a = path.run(py, |engine_session| {
+            engine_session.unsteady_time_axis(max_bytes)
+        })?;
         let timestamps = a
             .timestamps
             .as_ref()
@@ -508,23 +514,23 @@ pub(crate) fn dataset_units<'py>(
 #[pyfunction]
 fn dataset_unit_evidence<'py>(
     py: Python<'py>,
-    path: PathBuf,
+    path: crate::session::Source,
     dataset: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
     crate::panic_guard::guard(|| {
-        let u = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.dataset_units(dataset))
-            .map_err(crate::reader::err)?;
+        let u = path.run(py, |engine_session| engine_session.dataset_units(dataset))?;
         dataset_units(py, &u.units, &u.source, &u.quantity_name)
     })
 }
 #[pyfunction]
 #[pyo3(signature=(path,max_bytes=67108864))]
-fn result_units(py: Python<'_>, path: PathBuf, max_bytes: usize) -> PyResult<Bound<'_, PyDict>> {
+fn result_units(
+    py: Python<'_>,
+    path: crate::session::Source,
+    max_bytes: usize,
+) -> PyResult<Bound<'_, PyDict>> {
     crate::panic_guard::guard(|| {
-        let u = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.result_units(max_bytes))
-            .map_err(crate::reader::err)?;
+        let u = path.run(py, |engine_session| engine_session.result_units(max_bytes))?;
         let variables=u.variables.iter().map(|v|Ok(dict!(py,"family"=>v.family.as_str(),"area"=>&v.area,"variable"=>&v.variable,"dataset"=>&v.dataset,"dataset_path"=>&v.dataset,"units"=>dataset_units(py,&v.units,&v.source,&v.quantity_name)?))).collect::<PyResult<Vec<_>>>()?;
         let systems = u
             .unit_system
@@ -545,14 +551,14 @@ fn result_units(py: Python<'_>, path: PathBuf, max_bytes: usize) -> PyResult<Bou
 #[pyo3(signature=(path,max_bytes=67108864))]
 fn mesh_name_diagnostics(
     py: Python<'_>,
-    path: PathBuf,
+    path: crate::session::Source,
     max_bytes: usize,
 ) -> PyResult<Vec<Bound<'_, PyDict>>> {
     crate::panic_guard::guard(|| {
         use ras_commander_rust::schema::MeshNameIssue as I;
-        let d = py
-            .detach(|| ReadOnlyHdfSession::open(path)?.mesh_name_diagnostics(max_bytes))
-            .map_err(crate::reader::err)?;
+        let d = path.run(py, |engine_session| {
+            engine_session.mesh_name_diagnostics(max_bytes)
+        })?;
         d.iter().map(|v|Ok(dict!(py,"subject"=>Some(&v.mesh_name),"message"=>None::<String>,"capability"=>None::<String>,"mesh_name"=>&v.mesh_name,"issue"=>match v.issue {I::MissingGroup=>"missing_group",I::ExtraGroup=>"extra_group",I::DuplicateAttributeName=>"duplicate_attribute_name",I::InvalidName=>"invalid_name",_=>"unknown"}))).collect()
     })
 }
@@ -587,4 +593,67 @@ pub(crate) fn diagnostic<'py>(
     Ok(
         dict!(py,"subject"=>subject,"message"=>message,"capability"=>capability(py,c.unwrap_or(&Capability::unavailable("engine diagnostic carries no capability")))?),
     )
+}
+
+#[cfg(test)]
+mod source_tests {
+    use super::*;
+    use crate::session::Source;
+    use pyo3::types::PyAnyMethods;
+
+    fn fixture() -> PathBuf {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../crates/ras-commander-rust/tests/fixtures/hdf_numeric/numeric_types_v1.h5")
+    }
+
+    #[test]
+    fn a_session_source_returns_what_a_path_source_returns() {
+        pyo3::Python::initialize();
+        Python::attach(|py| {
+            let module = PyModule::new(py, "source_test").unwrap();
+            crate::session::register(&module).unwrap();
+            let session = module
+                .getattr("HdfSession")
+                .unwrap()
+                .call1((fixture(),))
+                .unwrap();
+            let source = |o: &Bound<'_, PyAny>| o.extract::<Source>().unwrap();
+            let path = fixture().into_pyobject(py).unwrap().into_any();
+            for name in ["class/fixed_string", "int/u64_bounds"] {
+                let by_path = raw_fixed_strings(py, source(&path), name, 67108864);
+                let by_session = raw_fixed_strings(py, source(&session), name, 67108864);
+                match (by_path, by_session) {
+                    (Ok(a), Ok(b)) => assert!(a.eq(b).unwrap(), "{name}"),
+                    (Err(a), Err(b)) => {
+                        assert!(a.get_type(py).is(b.get_type(py)), "{name}");
+                        assert_eq!(a.to_string(), b.to_string(), "{name}");
+                    }
+                    (a, b) => panic!("{name}: path {a:?} versus session {b:?}"),
+                }
+                let a = typed_dataset_attributes(py, source(&path), name, 67108864).unwrap();
+                let b = typed_dataset_attributes(py, source(&session), name, 67108864).unwrap();
+                assert!(a.eq(b).unwrap(), "{name}");
+            }
+            let a = typed_group_attributes(py, source(&path), "/").unwrap();
+            let b = typed_group_attributes(py, source(&session), "/").unwrap();
+            assert_eq!(a.len(), b.len());
+            for (x, y) in a.iter().zip(&b) {
+                assert!(x.eq(y).unwrap());
+            }
+            // A closed session is refused with the session's own error, never reopened.
+            session.call_method0("close").unwrap();
+            let closed = typed_group_attributes(py, source(&session), "/").unwrap_err();
+            assert!(closed.is_instance_of::<pyo3::exceptions::PyValueError>(py));
+            assert!(closed.to_string().contains("HDF session is closed"));
+            // Anything that is neither a session nor a path keeps the path TypeError.
+            let wrong = 5i64.into_pyobject(py).unwrap().into_any();
+            let error = match wrong.extract::<Source>() {
+                Ok(_) => panic!("an integer is not a source"),
+                Err(e) => e,
+            };
+            let expected = wrong.extract::<PathBuf>().unwrap_err();
+            assert!(error.get_type(py).is(expected.get_type(py)));
+            assert_eq!(error.to_string(), expected.to_string());
+        });
+    }
 }

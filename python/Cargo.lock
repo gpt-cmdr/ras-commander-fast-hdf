@@ -1756,10 +1756,10 @@ name = "ras-commander-rust"
 version = "0.1.0"
 dependencies = [
  "flate2",
- "geo",
  "hdf5-reader",
  "ndarray",
  "rayon",
+ "robust",
 ]
 
 [[package]]

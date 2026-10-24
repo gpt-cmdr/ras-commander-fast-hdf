@@ -8,6 +8,41 @@
   instead of `unsupported(identity_layout)`. Values are the literal stored
   arrays, so ras-commander results do not change: before, it read the same
   values through its literal fallback. Any other layout stays refused.
+- Engine (additive within API 10): `Topology::face_lines()` returns every 2D
+  face as a polyline (start point, stored perimeter vertices, end point) and
+  `read_mesh_perimeter()` returns an area's stored `Perimeter` as a closed ring,
+  both exactly as ras-commander's Python `get_mesh_cell_faces` and
+  `get_mesh_areas` build them (bit-identical on 20 public HEC example files).
+  The extension does not call them yet; its API is unchanged.
+
+- The engine no longer depends on `geo`. Cell-ring validation and winding now
+  use the `robust` crate's adaptive-precision `orient2d` (the predicate `geo`
+  used) and a port of `geo` 0.29's segment-contact classification. `geo` 0.29
+  pinned `i_overlay`/`i_float` versions that conflict with `geo` 0.33, so Rust
+  consumers that use `geo` 0.33 (terrio 0.5, RustGIS) could not link the
+  engine. Results are unchanged: unit tests compare the predicates with
+  `geo` 0.29 on every segment pair of a 4 x 4 grid and 800,000 random and
+  near-collinear pairs, and packed polygons and omissions of 134 mesh/policy
+  reads across 31 public HEC example HDF files are bit-identical to 0.1.1.
+  Engine `API_VERSION` (10) and extension `API_VERSION` (11) are unchanged.
+- Path-based typed reads can share an open session. Every module-level
+  function that takes an HDF path for a typed read (typed attributes, fixed
+  strings, 1D line, geometry, result, summary and structure readers, 2D
+  geometry families, stored-family and output-block readers) now also accepts
+  an open `HdfSession` in place of the path. The call then reuses that
+  session's file mapping, chunk cache and metadata memo instead of opening the
+  file and repeating the layout and encoding proofs for each small read. The
+  values are the same. A closed session raises `ValueError("HDF session is
+  closed")`; a path behaves exactly as before. The module flag
+  `SESSION_SOURCES = True` lets callers detect support. This is additive:
+  `API_VERSION` stays 11.
+- Cross-section geometry reads other than the property table no longer decode
+  the whole HTAB value table (`Property Tables/XSEC Value`, stored by HEC-RAS
+  with one row per compressed chunk) only to count its leading section rows.
+  That count is used by the property-table field alone; it is now computed
+  when that field or the full `xs_geometry_inventory` is requested. Results are
+  unchanged. On the BaldEagle example the first cross-section read in a session
+  drops from about 40-70 ms to under 2 ms.
 
 ## 0.1.1 (2026-10-24)
 

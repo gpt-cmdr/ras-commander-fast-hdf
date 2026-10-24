@@ -10,6 +10,8 @@ pub mod catalog;
 pub mod hdf;
 #[cfg(feature = "mesh")]
 pub mod mesh;
+#[cfg(feature = "mesh")]
+mod predicates;
 #[cfg(feature = "results")]
 pub mod results;
 #[cfg(all(test, feature = "hdf"))]

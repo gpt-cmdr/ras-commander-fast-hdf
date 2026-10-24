@@ -160,6 +160,9 @@ fn ras_commander_fast_hdf(m: &Bound<'_, PyModule>) -> PyResult<()> {
         )?,
     )?;
     m.add("API_VERSION", API_VERSION)?;
+    // Additive (API 11 unchanged): path-based typed entry points also accept an
+    // open HdfSession as their first argument (see session::Source).
+    m.add("SESSION_SOURCES", true)?;
     m.add("CorruptDataError", m.py().get_type::<CorruptDataError>())?;
     panic_guard::register(m)?;
     domain::register(m)?;
