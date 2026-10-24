@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Documentation: this package is ras-commander's default HDF engine, not an
+  optional extension. ras-commander 0.107.1 and later list it as a core
+  dependency on Windows x64, Linux x64 and macOS arm64 (CPython), so
+  `pip install ras-commander` installs it; on other platforms ras-commander
+  uses h5py. `RAS_COMMANDER_FAST_HDF=h5py` still turns it off. The package
+  itself is unchanged.
+
 ## 0.1.0 (2026-10-23)
 
 First public release. The engine (previously the private
