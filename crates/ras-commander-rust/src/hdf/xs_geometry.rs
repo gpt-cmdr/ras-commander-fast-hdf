@@ -637,11 +637,8 @@ impl ReadOnlyHdfSession {
             for row in iv.chunks_exact(cols) {
                 checked_range(row[0], row[1], bound)?;
             }
-            if field == XsGeometryField::PropertyTable && ic.shape[0] > sections {
-                d.section_records = self
-                    .htab_leading_sections(&iv, cols, &values_path, sections, max_bytes)
-                    .unwrap_or(0);
-            }
+            // The optional HTAB identity count of a property table with more Info
+            // rows than sections is added by `xs_geometry_inventory` (see there).
             Ok(Some(()))
         })();
         match probe {
@@ -705,6 +702,32 @@ impl ReadOnlyHdfSession {
     /// hybrid) layouts are Unsupported(identity_layout); absence of the XS table is NotFound.
     pub fn xs_geometry_inventory(&self, max_bytes: usize) -> Result<XsGeometryInventory> {
         self.memo(format!("xs_geometry_inventory:{max_bytes}"), || {
+            let mut inv = self.xs_geometry_inventory_core(max_bytes)?;
+            let sections = inv.geometry.sections.len() as u64;
+            for d in &mut inv.fields {
+                // A property table with more Info rows than sections: qualify its leading
+                // rows as sections by HTAB identity. Any problem qualifies none (0).
+                if d.field == XsGeometryField::PropertyTable
+                    && matches!(d.capability, Capability::Supported)
+                    && d.info_shape.first().is_some_and(|&rows| rows > sections)
+                {
+                    let iv = integers(&exact_array(self, &d.info_path, max_bytes)?)?;
+                    let cols = d.info_shape[1] as usize;
+                    d.section_records = self
+                        .htab_leading_sections(&iv, cols, &d.values_path, sections, max_bytes)
+                        .unwrap_or(0);
+                }
+            }
+            Ok(inv)
+        })
+    }
+    /// [`xs_geometry_inventory`](Self::xs_geometry_inventory) without the property table's
+    /// HTAB identity count (`section_records` of a property table with more Info rows than
+    /// sections stays 0). Every other descriptor is identical. The count decodes the whole
+    /// HTAB value table, which HEC-RAS stores with one row per compressed chunk; reads of
+    /// the other fields do not depend on it, so they use this inventory.
+    fn xs_geometry_inventory_core(&self, max_bytes: usize) -> Result<XsGeometryInventory> {
+        self.memo(format!("xs_geometry_inventory_core:{max_bytes}"), || {
             self.xs_layout_guard()?;
             let geometry = self.cross_sections(max_bytes)?;
             let attributes = exact_compound(self, XS_ATTRIBUTES, max_bytes)?;
@@ -777,7 +800,13 @@ impl ReadOnlyHdfSession {
         metadata_max_bytes: usize,
         max_bytes: usize,
     ) -> Result<XsGeometrySelection> {
-        let inv = self.xs_geometry_inventory(metadata_max_bytes)?;
+        // Only the requested field's descriptor is used; the HTAB identity count is
+        // needed only by the property table itself.
+        let inv = if field == XsGeometryField::PropertyTable {
+            self.xs_geometry_inventory(metadata_max_bytes)?
+        } else {
+            self.xs_geometry_inventory_core(metadata_max_bytes)?
+        };
         let d = inv
             .fields
             .iter()
@@ -1156,5 +1185,70 @@ pub(super) fn concat(parts: Vec<NumericValues>, kind: NumericKind) -> NumericVal
         NumericKind::U64 => cat!(U64),
         NumericKind::F32 => cat!(F32),
         NumericKind::F64 => cat!(F64),
+    }
+}
+
+#[cfg(test)]
+mod inventory_core_tests {
+    use super::*;
+
+    fn open(rel: &str) -> ReadOnlyHdfSession {
+        ReadOnlyHdfSession::open(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/fixtures")
+                .join(rel),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn core_inventory_differs_only_by_the_htab_identity_count() {
+        for rel in [
+            "wave2_1d/xs_fields.h5",
+            "w3c/htab_station_scalar.h5",
+            "w3c/htab_station_vector.h5",
+            "w3c/htab_station_rank3.h5",
+        ] {
+            let s = open(rel);
+            let core = s.xs_geometry_inventory_core(64 << 20).unwrap();
+            let full = s.xs_geometry_inventory(64 << 20).unwrap();
+            assert_eq!(core.geometry, full.geometry, "{rel}");
+            assert_eq!(core.attributes, full.attributes, "{rel}");
+            assert_eq!(core.unqualified, full.unqualified, "{rel}");
+            assert_eq!(core.fields.len(), full.fields.len(), "{rel}");
+            for (c, f) in core.fields.iter().zip(&full.fields) {
+                let mut c = c.clone();
+                if c.field == XsGeometryField::PropertyTable {
+                    c.section_records = f.section_records;
+                }
+                assert_eq!(&c, f, "{rel} {:?}", f.field);
+            }
+        }
+    }
+
+    #[test]
+    fn field_reads_do_not_depend_on_which_inventory_was_built_first() {
+        for rel in ["wave2_1d/xs_fields.h5", "w3c/htab_station_scalar.h5"] {
+            for &field in XS_GEOMETRY_FIELDS {
+                let fresh = open(rel).read_xs_geometry(field, None, 64 << 20, 256 << 20);
+                let s = open(rel);
+                s.xs_geometry_inventory(64 << 20).unwrap();
+                let after_full = s.read_xs_geometry(field, None, 64 << 20, 256 << 20);
+                match (fresh, after_full) {
+                    // Debug output compares stored NaN values too (NaN != NaN under PartialEq).
+                    (Ok(a), Ok(b)) => {
+                        assert_eq!(format!("{a:?}"), format!("{b:?}"), "{rel} {field:?}")
+                    }
+                    (Err(a), Err(b)) => {
+                        assert_eq!(
+                            (a.kind, a.to_string()),
+                            (b.kind, b.to_string()),
+                            "{rel} {field:?}"
+                        )
+                    }
+                    (a, b) => panic!("{rel} {field:?}: {a:?} versus {b:?}"),
+                }
+            }
+        }
     }
 }
