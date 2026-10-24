@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "ras-commander-fast-hdf"
 version = "0.2.0"
 description = "Native (Rust) HEC-RAS HDF engine for ras-commander"
-readme = "README.md"
+readme = "PYPI_README.md"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 license = "MIT"
@@ -29,10 +29,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Hydrology",
 ]
 # licenses/: this repository's LICENSE (ras-commander-rust-LICENSE.txt, a copy of ../LICENSE),
-# the ras-commander code the bridge was extracted from, plus earlier per-crate notices;
+# the ras-commander code the bridge was extracted from, earlier per-crate notices, and
 # THIRD-PARTY-NOTICES.md: every crate linked into the wheel with full licence texts.
 # Regenerate with scripts/generate_third_party_notices.py (see docs/reference/extension-contract.md, "Licences").
-license-files = ["licenses/*", "THIRD-PARTY-NOTICES.md"]
+# The wheel's notices live in licenses/ because the sdist root already holds the crate's
+# own ../THIRD-PARTY-NOTICES.md (all features).
+license-files = ["licenses/*"]
 
 [project.urls]
 Homepage = "https://github.com/gpt-cmdr/ras-commander-fast-hdf"

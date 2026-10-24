@@ -459,8 +459,8 @@ The wheel ships these files under `.dist-info/licenses/`, through maturin
 Regenerate the notices after any change to `Cargo.lock`. From the repository root:
 
 ```text
-python scripts/generate_third_party_notices.py --features python,extension-module,exports-all,exports-pmtiles --title "ras-commander-fast-hdf wheel (release features)" --output python/THIRD-PARTY-NOTICES.md
-python scripts/generate_third_party_notices.py --features python,extension-module,exports-all,exports-pmtiles --title "ras-commander-fast-hdf wheel (release features)" --output python/THIRD-PARTY-NOTICES.md --check
+python scripts/generate_third_party_notices.py --features python,extension-module,exports-all,exports-pmtiles --title "ras-commander-fast-hdf wheel (release features)" --output python/licenses/THIRD-PARTY-NOTICES.md
+python scripts/generate_third_party_notices.py --features python,extension-module,exports-all,exports-pmtiles --title "ras-commander-fast-hdf wheel (release features)" --output python/licenses/THIRD-PARTY-NOTICES.md --check
 ```
 
 The script uses only the Python standard library and `cargo metadata --locked`; the same

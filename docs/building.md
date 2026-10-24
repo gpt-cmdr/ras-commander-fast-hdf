@@ -115,11 +115,11 @@ Two notice files must stay current; CI checks both (the same commands with
 # Crate, all features: THIRD-PARTY-NOTICES.md
 python scripts/generate_third_party_notices.py --title "ras-commander-fast-hdf (all features)"
 
-# Wheel, release features: python/THIRD-PARTY-NOTICES.md
+# Wheel, release features: python/licenses/THIRD-PARTY-NOTICES.md
 python scripts/generate_third_party_notices.py \
     --features python,extension-module,exports-all,exports-pmtiles \
     --title "ras-commander-fast-hdf wheel (release features)" \
-    --output python/THIRD-PARTY-NOTICES.md
+    --output python/licenses/THIRD-PARTY-NOTICES.md
 ```
 
 Run them from the repository root after any `Cargo.lock` change. Both list the

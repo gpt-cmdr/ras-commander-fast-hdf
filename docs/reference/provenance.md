@@ -60,7 +60,7 @@ dependency; `vendor/freestiler-core/PROVENANCE.md` lists the changes.
   `MIT OR Apache-2.0`.
 - `vendor/freestiler-core/LICENSE`, `LICENSE.md`, `LICENSE.note` and `COPYRIGHTS`: the
   freestiler licence texts, retained unchanged.
-- `THIRD-PARTY-NOTICES.md` (repository root) and `python/THIRD-PARTY-NOTICES.md` are the
+- `THIRD-PARTY-NOTICES.md` (repository root) and `python/licenses/THIRD-PARTY-NOTICES.md` are the
   generated dependency licence bundles for the crate (all features) and for the wheel.
 
 ## What is not committed

@@ -110,7 +110,7 @@ jobs:
           py="${{ steps.py313.outputs.python-path }}"
           "$py" scripts/generate_third_party_notices.py --title "ras-commander-fast-hdf (all features)" --check
           "$py" scripts/generate_third_party_notices.py --features "python,$WHEEL_FEATURES" \
-            --title "ras-commander-fast-hdf wheel (release features)" --output python/THIRD-PARTY-NOTICES.md --check
+            --title "ras-commander-fast-hdf wheel (release features)" --output python/licenses/THIRD-PARTY-NOTICES.md --check
       # crates.io accepts only registry dependencies and packages under 10 MiB.
       - name: Crate package (crates.io dry run)
         if: runner.os == 'Linux'

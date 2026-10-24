@@ -28,10 +28,12 @@
   export writers in `src/exports/`, all tests in `tests/` with fixtures in
   `tests/fixtures`, `build.rs` at the root, notice scripts in `scripts/`.
 - Licence notices: `THIRD-PARTY-NOTICES.md` (crate, all features) and
-  `python/THIRD-PARTY-NOTICES.md` (wheel) come from one script,
+  `python/licenses/THIRD-PARTY-NOTICES.md` (wheel) come from one script,
   `scripts/generate_third_party_notices.py`. The engine is still listed there
   under its former name `ras-commander-rust`, which ras-commander's wheel
-  check looks for.
+  check looks for. Inside the wheel the notices file is now under
+  `.dist-info/licenses/licenses/` (same file name), because the sdist root
+  already holds the crate's own notices.
 
 ## 0.1.1 (2026-10-24)
 
