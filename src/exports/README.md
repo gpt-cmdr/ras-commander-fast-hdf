@@ -116,6 +116,6 @@ Direct pins: Arrow/Parquet 59.0.0 (Apache-2.0), GeoParquet 0.9.0 and
 GeoZero 0.15.1 (MIT OR Apache-2.0), FlatGeobuf 6.0.1 (BSD-2-Clause),
 GeoPackage 0.10.0 (MIT OR Apache-2.0). Lockfiles pin transitive resolution.
 This is not a full legal redistribution audit. Release wheels include
-`exports-all` and `exports-pmtiles`, and `python/THIRD-PARTY-NOTICES.md` covers
+`exports-all` and `exports-pmtiles`, and `python/licenses/THIRD-PARTY-NOTICES.md` covers
 their dependency graph. The writers need Rust 1.95 or later and, because every
 `exports-*` feature implies `python`, PyO3.

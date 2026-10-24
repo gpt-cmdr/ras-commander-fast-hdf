@@ -189,7 +189,7 @@ MIT; see [LICENSE](LICENSE). The embedded third-party source keeps its own
 licences (`hdf5-reader` and `hdf5-core`: MIT OR Apache-2.0; `freestiler-core`:
 MIT AND ISC); the texts are in [`vendor`](vendor). The licences of every linked
 crate are in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) (crate, all
-features) and [`python/THIRD-PARTY-NOTICES.md`](python/THIRD-PARTY-NOTICES.md)
+features) and [`python/licenses/THIRD-PARTY-NOTICES.md`](python/licenses/THIRD-PARTY-NOTICES.md)
 (wheel).
 
 ras-commander-fast-hdf is an independent open source project. HEC-RAS is
