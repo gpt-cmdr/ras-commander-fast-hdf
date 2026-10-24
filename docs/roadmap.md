@@ -151,12 +151,16 @@ the gap on small reads that were slower than h5py; results are unchanged
 
 ### First-read cost of the stored-family index
 
-**Status:** in progress (to be added to PR #6).
+**Status:** planned; one attempt tried and reverted.
 
 `stored_family_index` costs 5 to 25 ms on the first read of each file in a
 process, which makes small first calls (for example `get_runtime_data`)
 slower than h5py. The cost should drop without changing any refusal the index
-reports.
+reports. Building the index on the session's worker pool was tried in PR #6
+and reverted: header parsing serializes on the reader's per-file caches, so
+the parallel walk was slower end to end (cold `get_runtime_data` on OrleansEx
+about 36 ms sequential, 44 ms parallel). Its bounded-walk tests and synthetic
+fixtures remain in the PR #6 history for a later attempt.
 
 ### Remember family descriptors between reads
 
@@ -269,6 +273,27 @@ crates.io release, no Git dependencies, PRs #7 and #8, a minimum Rust version
 compatible with terrio's (1.90), and an engine call that identifies HEC-RAS
 files from the stored root `File Type` attribute, so the driver does not
 claim other HDF5 files.
+
+The driver's output field names stay as implemented.
+
+### Reference line and reference point result joins
+
+**Status:** in progress (a separate engine PR based on `main` after the 0.2.0
+restructure; not part of 0.2.0).
+
+Join stored reference line and reference point results to their geometry in
+the engine, so terrio and other Rust consumers get result-bearing reference
+features without reassembling them from separate reads.
+
+### Maximum depth from stored map outputs
+
+**Status:** in progress (for terrio).
+
+Depth comes from RAS Mapper's stored map outputs (the stored Depth rasters),
+never computed by the engine. RAS Mapper's depth is terrain-based, so a depth
+derived from water-surface results and mesh elevations would not match it.
+Consumers read the stored Depth output; neither the engine nor the terrio
+driver computes depth.
 
 ### In-memory byte sources and WebAssembly
 
