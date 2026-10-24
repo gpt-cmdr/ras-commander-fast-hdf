@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Engine: HEC-RAS 5.0 Maximum/Minimum Water Surface summaries, which carry
+  only `Row 0:  WSEL` = `Feet` and `Row 1:  Time` = `Days` attributes and no
+  `Location`, now qualify as cell summaries (new `DomainRule::LegacyRowLabels`)
+  instead of `unsupported(identity_layout)`. Values are the literal stored
+  arrays, so ras-commander results do not change: before, it read the same
+  values through its literal fallback. Any other layout stays refused.
+
 ## 0.1.1 (2026-10-24)
 
 - Linux wheels for older and musl-based distributions: `manylinux2014`
