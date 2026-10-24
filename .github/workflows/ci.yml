@@ -102,11 +102,18 @@ jobs:
           "$py" -m pip install --upgrade pip "maturin>=1.9,<2"
           args=(--release --locked --manifest-path python/Cargo.toml --features "$WHEEL_FEATURES" --out dist)
           if [ "$RUNNER_OS" = Linux ]; then
-            # manylinux_2_28 without Docker: zig links against the older glibc.
+            # Without Docker, zig links against old libc versions: manylinux2014
+            # (glibc 2.17 and later) here, musllinux_1_2 (Alpine) below.
             "$py" -m pip install ziglang
-            args+=(--zig --compatibility manylinux_2_28)
+            args+=(--zig --compatibility manylinux2014)
           fi
           "$py" -m maturin build "${args[@]}"
+          if [ "$RUNNER_OS" = Linux ]; then
+            rustup target add x86_64-unknown-linux-musl
+            "$py" -m maturin build --release --locked --manifest-path python/Cargo.toml \
+              --features "$WHEEL_FEATURES" --out dist-musl \
+              --zig --target x86_64-unknown-linux-musl --compatibility musllinux_1_2
+          fi
       - name: Smoke test the wheel (Python 3.10 and 3.13)
         shell: bash
         run: |
@@ -120,3 +127,40 @@ jobs:
           name: wheel-${{ runner.os }}
           path: dist/*.whl
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
+        with:
+          name: wheel-Linux-musl
+          path: dist-musl/*.whl
+          if-no-files-found: error
+
+  linux-compat:
+    # Install the Linux wheels where they must run: an old-glibc manylinux2014
+    # image and Alpine (musl). GitHub-hosted: containers need Docker.
+    name: Linux wheel on ${{ matrix.name }}
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: manylinux2014 (glibc 2.17)
+            image: quay.io/pypa/manylinux2014_x86_64
+            artifact: wheel-Linux
+            python: /opt/python/cp310-cp310/bin/python
+          - name: Alpine (musl)
+            image: python:3.12-alpine
+            artifact: wheel-Linux-musl
+            python: python3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist
+      # Only the smoke test runs in the container: the actions themselves need a
+      # newer glibc than manylinux2014's CentOS 7 base.
+      - name: Smoke test in ${{ matrix.image }}
+        run: |
+          docker run --rm -v "$PWD":/w -w /w ${{ matrix.image }} sh -c \
+            '${{ matrix.python }} -m pip install dist/*.whl && ${{ matrix.python }} -I .github/scripts/smoke_wheel.py dist ${{ github.sha }}'

@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.1 (2026-10-24)
+
+- Linux wheels for older and musl-based distributions: `manylinux2014`
+  (glibc 2.17 or later) replaces `manylinux_2_28`, and a new `musllinux_1_2`
+  wheel covers Alpine. `pip install ras-commander` no longer tries to compile
+  the engine on those systems. Engine and extension code are unchanged.
 
 - Documentation: this package is ras-commander's default HDF engine, not an
   optional extension. ras-commander 0.107.1 and later list it as a core
