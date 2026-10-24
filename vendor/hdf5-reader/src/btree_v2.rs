@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 B-tree Version 2.
 //!
 //! V2 B-trees are used by newer-style groups and datasets for indexed link
@@ -10,10 +12,10 @@
 
 use std::collections::HashSet;
 
-use crate::checksum::jenkins_lookup3;
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::storage::Storage;
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::storage::Storage;
 
 // ---------------------------------------------------------------------------
 // Signatures
@@ -1943,7 +1945,7 @@ mod tests {
         let records = collect_btree_v2_records(&data, &header, 8, 8, None, &[], None).unwrap();
         assert_eq!(link_hashes(&records), vec![10, 20, 30]);
 
-        let storage = crate::storage::BytesStorage::new(data);
+        let storage = crate::hdf5_reader::storage::BytesStorage::new(data);
         let records =
             collect_btree_v2_records_storage(&storage, &header, 8, 8, None, &[], None).unwrap();
         assert_eq!(link_hashes(&records), vec![10, 20, 30]);
@@ -2000,7 +2002,7 @@ mod tests {
         let err = collect_btree_v2_records(&data, &header, 8, 8, None, &[], None).unwrap_err();
         assert!(matches!(err, Error::InvalidData(message) if message.contains("revisits node")));
 
-        let storage = crate::storage::BytesStorage::new(data);
+        let storage = crate::hdf5_reader::storage::BytesStorage::new(data);
         let err =
             collect_btree_v2_records_storage(&storage, &header, 8, 8, None, &[], None).unwrap_err();
         assert!(matches!(err, Error::InvalidData(message) if message.contains("revisits node")));

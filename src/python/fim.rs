@@ -1,4 +1,8 @@
 //! FIM typed reads. Engine owns all schema and identity decisions.
+use crate::hdf::lines::GEOMETRY_FAMILIES;
+use crate::hdf::mesh_geometry::{ExactCompound, MESH_GEOMETRY_FIELDS};
+use crate::hdf::mesh_results::{MeshResultInventory, MeshResultSelection};
+use crate::hdf::{ReadOnlyHdfSession, Slice};
 use crate::python::domain::{attribute_type, capability, identity, typed_attribute_dict};
 use numpy::IntoPyArray;
 use pyo3::{
@@ -6,10 +10,6 @@ use pyo3::{
     prelude::*,
     types::{PyBytes, PyDict},
 };
-use crate::hdf::lines::GEOMETRY_FAMILIES;
-use crate::hdf::mesh_geometry::{ExactCompound, MESH_GEOMETRY_FIELDS};
-use crate::hdf::mesh_results::{MeshResultInventory, MeshResultSelection};
-use crate::hdf::{ReadOnlyHdfSession, Slice};
 use std::path::PathBuf;
 macro_rules! dict { ($py:expr, $($k:expr => $v:expr),* $(,)?) => {{ let d=PyDict::new($py); $(d.set_item($k,$v)?;)* d }}; }
 const _: () = assert!(crate::hdf::DEFAULT_MAX_BYTES == 67108864);

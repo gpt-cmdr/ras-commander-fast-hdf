@@ -4,13 +4,6 @@
 //! membership, Location-domain qualification and refusals; this module only converts.
 //! Numeric values keep their stored dtype, compounds keep exact raw bytes, bitfields
 //! keep exact bytes, and strings are the engine's decoded fixed text.
-use crate::python::domain::{capability, identity, typed_attribute_dict};
-use crate::python::fim::{compound, slice};
-use pyo3::{
-    exceptions::PyValueError,
-    prelude::*,
-    types::{PyBytes, PyDict},
-};
 use crate::hdf::environment::{ClassId, ClassificationCatalogue};
 use crate::hdf::families::{
     FamilyDataset, FamilyInventory, OutputBlock, ReadFamily, READ_FAMILIES,
@@ -18,7 +11,14 @@ use crate::hdf::families::{
 use crate::hdf::reference_points::ReferencePointGeometry;
 use crate::hdf::stored::{StoredDataset, StoredValues};
 use crate::hdf::{ReadOnlyHdfSession, Slice};
+use crate::python::domain::{capability, identity, typed_attribute_dict};
+use crate::python::fim::{compound, slice};
 use crate::Reported;
+use pyo3::{
+    exceptions::PyValueError,
+    prelude::*,
+    types::{PyBytes, PyDict},
+};
 use std::path::PathBuf;
 macro_rules! dict { ($py:expr, $($k:expr => $v:expr),* $(,)?) => {{ let d=PyDict::new($py); $(d.set_item($k,$v)?;)* d }}; }
 

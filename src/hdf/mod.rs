@@ -3,10 +3,10 @@
 //! Sessions share a process pool per explicit worker count; metadata/data caches are session-local.
 use crate::{Capability, UnsupportedCode};
 mod encoding;
+use crate::hdf5_reader::{Hdf5File, SliceInfo, SliceInfoElem};
 use crate::{Error, ErrorKind, Result};
 use encoding::map_error;
 pub use encoding::{EncodingDescriptor, FloatLayout};
-use crate::hdf5_reader::{Hdf5File, SliceInfo, SliceInfoElem};
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -351,7 +351,9 @@ impl ReadOnlyHdfSession {
                     byte_order, signed, ..
                 } => (Some(byte_order), Some(*signed)),
                 crate::hdf5_reader::Datatype::FloatingPoint { byte_order, .. }
-                | crate::hdf5_reader::Datatype::Bitfield { byte_order, .. } => (Some(byte_order), None),
+                | crate::hdf5_reader::Datatype::Bitfield { byte_order, .. } => {
+                    (Some(byte_order), None)
+                }
                 _ => (None, None),
             };
             let dataspace = Dataspace::of_dataset(&ds)?;

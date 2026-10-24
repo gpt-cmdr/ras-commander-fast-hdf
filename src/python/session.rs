@@ -1,9 +1,9 @@
 //! Explicit read-only session. Closing waits for in-flight reads and drops mappings.
+use crate::hdf::{ReadOnlyHdfSession, Slice};
 use crate::python::domain::identity;
 use crate::python::fim::{inventory, selection, slice};
 use numpy::IntoPyArray;
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
-use crate::hdf::{ReadOnlyHdfSession, Slice};
 use std::{
     path::PathBuf,
     sync::{Mutex, MutexGuard, PoisonError},

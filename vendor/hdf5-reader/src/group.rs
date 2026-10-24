@@ -1,25 +1,27 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 
-use crate::attribute_api::{
+use crate::hdf5_reader::attribute_api::{
     collect_attribute_messages_storage, decoded_vlen_strings_storage, resolve_vlen_bytes_storage,
     Attribute,
 };
-use crate::btree_v1;
-use crate::btree_v2;
-use crate::checksum::jenkins_lookup3;
-use crate::dataset::Dataset;
-use crate::error::{Error, Result};
-use crate::fractal_heap::{FractalHeap, FractalHeapDirectBlockCache};
-use crate::io::Cursor;
-use crate::local_heap::LocalHeap;
-use crate::messages::datatype::VarLenKind;
-use crate::messages::link::{self, LinkMessage, LinkTarget};
-use crate::messages::link_info::LinkInfoMessage;
-use crate::messages::symbol_table_msg::SymbolTableMessage;
-use crate::messages::HdfMessage;
-use crate::storage::Storage;
-use crate::FileContext;
+use crate::hdf5_reader::btree_v1;
+use crate::hdf5_reader::btree_v2;
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::dataset::Dataset;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::fractal_heap::{FractalHeap, FractalHeapDirectBlockCache};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::local_heap::LocalHeap;
+use crate::hdf5_reader::messages::datatype::VarLenKind;
+use crate::hdf5_reader::messages::link::{self, LinkMessage, LinkTarget};
+use crate::hdf5_reader::messages::link_info::LinkInfoMessage;
+use crate::hdf5_reader::messages::symbol_table_msg::SymbolTableMessage;
+use crate::hdf5_reader::messages::HdfMessage;
+use crate::hdf5_reader::storage::Storage;
+use crate::hdf5_reader::FileContext;
 
 /// A group within an HDF5 file.
 #[derive(Clone)]
@@ -154,7 +156,7 @@ impl Group {
     }
 
     /// Materialize the full file backing this group.
-    pub fn file_data(&self) -> Result<crate::storage::StorageBuffer> {
+    pub fn file_data(&self) -> Result<crate::hdf5_reader::storage::StorageBuffer> {
         self.context.full_file_data()
     }
 
@@ -174,7 +176,7 @@ impl Group {
     }
 
     /// Parse (or retrieve from cache) the object header at the given address.
-    fn cached_header(&self, addr: u64) -> Result<Arc<crate::object_header::ObjectHeader>> {
+    fn cached_header(&self, addr: u64) -> Result<Arc<crate::hdf5_reader::object_header::ObjectHeader>> {
         self.context.get_or_parse_header(addr)
     }
 
@@ -280,7 +282,7 @@ impl Group {
 
     /// Attributes without eager variable-length resolution. Raw datatype and
     /// payload bytes are retained for callers requiring encoding proof.
-    pub fn raw_attributes(&self) -> Result<Vec<crate::messages::attribute::AttributeMessage>> {
+    pub fn raw_attributes(&self) -> Result<Vec<crate::hdf5_reader::messages::attribute::AttributeMessage>> {
         let header = self.cached_header(self.address)?;
         collect_attribute_messages_storage(
             &header,
@@ -318,7 +320,7 @@ impl Group {
                 )
             });
             let raw_data = match &attr.datatype {
-                crate::messages::datatype::Datatype::VarLen {
+                crate::hdf5_reader::messages::datatype::Datatype::VarLen {
                     base,
                     kind: VarLenKind::String,
                     ..
@@ -339,9 +341,9 @@ impl Group {
                 name: attr.name,
                 datatype: attr.datatype,
                 shape: match attr.dataspace.dataspace_type {
-                    crate::messages::dataspace::DataspaceType::Scalar => vec![],
-                    crate::messages::dataspace::DataspaceType::Null => vec![0],
-                    crate::messages::dataspace::DataspaceType::Simple => attr.dataspace.dims,
+                    crate::hdf5_reader::messages::dataspace::DataspaceType::Scalar => vec![],
+                    crate::hdf5_reader::messages::dataspace::DataspaceType::Null => vec![0],
+                    crate::hdf5_reader::messages::dataspace::DataspaceType::Simple => attr.dataspace.dims,
                 },
                 raw_data,
                 decoded_strings,
@@ -611,7 +613,7 @@ impl Group {
                 8 + usize::from(num_symbols) * (2 * usize::from(self.offset_size()) + 4 + 4 + 16);
             let bytes = self.context.read_range(*snod_address, node_len)?;
             let mut cursor = Cursor::new(bytes.as_ref());
-            let snod = crate::symbol_table::SymbolTableNode::parse(
+            let snod = crate::hdf5_reader::symbol_table::SymbolTableNode::parse(
                 &mut cursor,
                 self.offset_size(),
                 self.length_size(),
@@ -824,7 +826,7 @@ impl Group {
         }
 
         Dataset::from_parsed_header(
-            crate::dataset::DatasetParseContext {
+            crate::hdf5_reader::dataset::DatasetParseContext {
                 context: child.location.context.clone(),
             },
             child.location.address,
@@ -838,7 +840,7 @@ impl Group {
     fn cached_child_header(
         &self,
         child: &ChildEntry,
-    ) -> Result<Arc<crate::object_header::ObjectHeader>> {
+    ) -> Result<Arc<crate::hdf5_reader::object_header::ObjectHeader>> {
         child
             .location
             .context
@@ -931,7 +933,7 @@ impl Group {
     }
 }
 
-fn classify_child_header(header: &crate::object_header::ObjectHeader) -> ChildObjectKind {
+fn classify_child_header(header: &crate::hdf5_reader::object_header::ObjectHeader) -> ChildObjectKind {
     let mut has_dataset_message = false;
     let mut has_attribute_message = false;
 

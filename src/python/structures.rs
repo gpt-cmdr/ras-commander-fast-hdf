@@ -1,10 +1,10 @@
 //! Typed structure conversion; all identity/layout decisions remain in the engine.
-use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 use crate::hdf::structures::{
     ColumnLabelSource as S, ColumnLabels as C, StructureFamilyKind as K, StructureSeries,
 };
 use crate::hdf::{ReadOnlyHdfSession, Slice};
 use crate::Capability;
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 use std::path::PathBuf;
 macro_rules! dict { ($py:expr, $($k:expr => $v:expr),* $(,)?) => {{ let d=PyDict::new($py); $(d.set_item($k,$v)?;)* d }}; }
 pub(crate) fn family_name(k: K) -> &'static str {
@@ -21,7 +21,8 @@ fn family(name: &str) -> PyResult<K> {
     }
 }
 pub(crate) fn columns<'py>(py: Python<'py>, c: &C) -> PyResult<Bound<'py, PyDict>> {
-    let d = crate::python::domain::evidence_dict(py, "column_labels", c.raw_bytes(), c.capability())?;
+    let d =
+        crate::python::domain::evidence_dict(py, "column_labels", c.raw_bytes(), c.capability())?;
     if let Some(v) = c.value() {
         let source = match v.source {
             S::VariableUnit => "Variable_Unit",

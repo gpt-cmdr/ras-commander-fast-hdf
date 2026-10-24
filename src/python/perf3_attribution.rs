@@ -1,6 +1,6 @@
 //! Ignored local release attribution; never registered as a Python API.
-use pyo3::prelude::*;
 use crate::hdf::{ReadOnlyHdfSession, DEFAULT_MAX_BYTES};
+use pyo3::prelude::*;
 use std::{path::Path, time::Instant};
 #[test]
 #[ignore = "RAS_PERF3_FIXTURES, embedded numpy; release diagnostic only"]

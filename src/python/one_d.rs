@@ -1,8 +1,5 @@
 //! Wave 2 1D typed reads (engine API 7). Engine owns schema, identity and layout decisions;
 //! this module only converts: stored kinds stay stored kinds, compounds keep raw bytes.
-use crate::python::domain::{capability, dataset_units, identity, typed_attribute_dict};
-use crate::python::fim::{compound, slice};
-use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 use crate::hdf::structures::ColumnLabel;
 use crate::hdf::structures_1d::{
     GeometryGroupData, OneDGeometryGroup, OneDStructureKind, ONE_D_STRUCTURE_KINDS,
@@ -12,7 +9,10 @@ use crate::hdf::xs_geometry::{
     XS_GEOMETRY_FIELDS,
 };
 use crate::hdf::{ReadOnlyHdfSession, ResultMode};
+use crate::python::domain::{capability, dataset_units, identity, typed_attribute_dict};
+use crate::python::fim::{compound, slice};
 use crate::Reported;
+use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
 use std::path::PathBuf;
 macro_rules! dict { ($py:expr, $($k:expr => $v:expr),* $(,)?) => {{ let d=PyDict::new($py); $(d.set_item($k,$v)?;)* d }}; }
 

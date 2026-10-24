@@ -1,11 +1,13 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Modification Time messages.
 //!
 //! Two types carry modification timestamps:
 //! - Old modification time (type 0x000E): raw 4-byte string "YYYYMMDDHHMMSS" (14 bytes).
 //! - New modification time (type 0x0012): version byte + reserved + u32 seconds since epoch.
 
-use crate::error::{Error, Result};
-use crate::io::Cursor;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
 
 /// Parsed modification time.
 #[derive(Debug, Clone)]

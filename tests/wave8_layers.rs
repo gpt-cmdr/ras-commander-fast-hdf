@@ -156,10 +156,8 @@ fn real_mesh_geometry_matches_h5py() {
         }
         let small = s.layer_inventory(64).unwrap();
         assert!(
-            small
-                .iter()
-                .any(|l| l.capability.code()
-                    == Some(ras_commander_fast_hdf::UnsupportedCode::ResourceLimit)),
+            small.iter().any(|l| l.capability.code()
+                == Some(ras_commander_fast_hdf::UnsupportedCode::ResourceLimit)),
             "{path}: budget status missing"
         );
         let layers = s.layer_inventory(limit).unwrap();

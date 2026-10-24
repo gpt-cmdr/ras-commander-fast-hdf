@@ -1,9 +1,9 @@
 //! Owned NumPy conversion and error policy around the engine topology API.
+use crate::mesh::{GeometryPolicy, OmissionKind, Topology};
 use ndarray::Array2;
 use numpy::{IntoPyArray, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
-use crate::mesh::{GeometryPolicy, OmissionKind, Topology};
 /// Assemble simple cell boundary rings, retaining every face perimeter vertex.
 #[pyfunction]
 #[pyo3(signature=(face_points,face_endpoints,face_perimeter_info,face_perimeter_values,cell_face_info,cell_face_values,threads=None,*,strict=true,return_diagnostics=false))]
@@ -83,8 +83,12 @@ pub(crate) fn diagnostic_records<'py>(
         .into_iter()
         .map(|(cell, kind, reason)| {
             let c = crate::Capability::corrupt(&reason);
-            let d =
-                crate::python::domain::diagnostic(py, Some(&cell.to_string()), Some(&reason), Some(&c))?;
+            let d = crate::python::domain::diagnostic(
+                py,
+                Some(&cell.to_string()),
+                Some(&reason),
+                Some(&c),
+            )?;
             d.set_item("cell_id", cell)?;
             d.set_item("kind", kind)?;
             Ok(d)

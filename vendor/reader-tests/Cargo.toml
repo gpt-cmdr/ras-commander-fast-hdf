@@ -1,0 +1,62 @@
+# Test harness for the vendored HDF5 reader (not published; Cargo leaves this
+# directory out of the ras-commander-fast-hdf package because it has its own
+# manifest). It compiles vendor/hdf5-core/src and vendor/hdf5-reader/src as the
+# modules crate::hdf5_core and crate::hdf5_reader, exactly as the crate embeds
+# them, and runs upstream's integration, corruption and property tests against
+# that code. Dependencies match the reader's upstream manifest (v0.9.3).
+[package]
+name = "hdf5-reader-tests"
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.81"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[lib]
+name = "hdf5_reader"
+path = "src/lib.rs"
+
+[features]
+default = ["hdf", "rayon", "lz4"]
+# The embedded reader's upstream "rayon" and "lz4" features are both "hdf" in the
+# embedded source; upstream's test files still test for "rayon" and "lz4".
+hdf = []
+rayon = []
+lz4 = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(test)"] }
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
+
+[dependencies]
+ndarray = "0.17"
+thiserror = "2"
+memmap2 = "0.9"
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+libc = "0.2"
+lru = "0.16.3"
+parking_lot = "0.12"
+smallvec = "1"
+lz4_flex = "0.11"
+rayon = "1"
+
+[dev-dependencies]
+tempfile = "3"
+proptest = "1"
+
+[[test]]
+name = "integration"
+path = "../hdf5-reader/tests/integration.rs"
+
+[[test]]
+name = "corruption"
+path = "../hdf5-reader/tests/corruption.rs"
+
+[[test]]
+name = "property_tests"
+path = "../hdf5-reader/tests/property_tests.rs"

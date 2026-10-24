@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Extensible Array (EA) chunk index.
 //!
 //! This is the default chunk index for datasets with one unlimited dimension
@@ -8,11 +10,11 @@
 //! - `EADB` — Extensible Array Data Block
 //! - `EASB` — Extensible Array Secondary Block
 
-use crate::checksum::jenkins_lookup3;
-use crate::chunk_index::ChunkEntry;
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::storage::Storage;
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::chunk_index::ChunkEntry;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::storage::Storage;
 
 const EAHD_SIGNATURE: [u8; 4] = *b"EAHD";
 const EAIB_SIGNATURE: [u8; 4] = *b"EAIB";
@@ -1819,7 +1821,7 @@ mod tests {
     #[test]
     fn perf2_ea_non_inline_refuses_full_slab_and_gather() {
         let file =
-            crate::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/ea_latest.h5"))
+            crate::hdf5_reader::Hdf5File::from_bytes(include_bytes!("../tests/fixtures/perf2/ea_latest.h5"))
                 .unwrap();
         let d = file.dataset("data").unwrap();
         for error in [
@@ -1835,7 +1837,7 @@ mod tests {
     }
 
     use super::*;
-    use crate::storage::{Storage, StorageBuffer};
+    use crate::hdf5_reader::storage::{Storage, StorageBuffer};
     use std::sync::Mutex;
 
     const TEST_OFFSET_SIZE: u8 = 8;

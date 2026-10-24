@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! Chunk indexing — resolves chunk locations from various storage strategies.
 //!
 //! Supports all six HDF5 chunk indexing types:
@@ -8,8 +10,8 @@
 //! - Fixed array indexing (fixed_array module)
 //! - Extensible array indexing (extensible_array module)
 
-use crate::error::{Error, Result};
-use crate::storage::Storage;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::storage::Storage;
 
 /// A resolved chunk location within the file.
 #[derive(Debug, Clone)]
@@ -77,11 +79,11 @@ pub fn collect_v2_chunk_entries(
     chunk_dims: &[u32],
     chunk_bounds: Option<(&[u64], &[u64])>,
 ) -> Result<Vec<ChunkEntry>> {
-    let mut cursor = crate::io::Cursor::new(data);
+    let mut cursor = crate::hdf5_reader::io::Cursor::new(data);
     cursor.set_position(btree_address);
-    let header = crate::btree_v2::BTreeV2Header::parse(&mut cursor, offset_size, length_size)?;
+    let header = crate::hdf5_reader::btree_v2::BTreeV2Header::parse(&mut cursor, offset_size, length_size)?;
 
-    let records = crate::btree_v2::collect_btree_v2_records(
+    let records = crate::hdf5_reader::btree_v2::collect_btree_v2_records(
         data,
         &header,
         offset_size,
@@ -94,7 +96,7 @@ pub fn collect_v2_chunk_entries(
     let mut entries = Vec::with_capacity(records.len());
     for record in records {
         match record {
-            crate::btree_v2::BTreeV2Record::ChunkedNonFiltered { address, offsets }
+            crate::hdf5_reader::btree_v2::BTreeV2Record::ChunkedNonFiltered { address, offsets }
                 if chunk_overlaps_bounds(&offsets, chunk_dims, chunk_bounds) =>
             {
                 entries.push(ChunkEntry {
@@ -104,7 +106,7 @@ pub fn collect_v2_chunk_entries(
                     offsets,
                 });
             }
-            crate::btree_v2::BTreeV2Record::ChunkedFiltered {
+            crate::hdf5_reader::btree_v2::BTreeV2Record::ChunkedFiltered {
                 address,
                 chunk_size,
                 filter_mask,
@@ -136,13 +138,13 @@ pub fn collect_v2_chunk_entries_storage(
     chunk_dims: &[u32],
     chunk_bounds: Option<(&[u64], &[u64])>,
 ) -> Result<Vec<ChunkEntry>> {
-    let header = crate::btree_v2::BTreeV2Header::parse_at_storage(
+    let header = crate::hdf5_reader::btree_v2::BTreeV2Header::parse_at_storage(
         storage,
         btree_address,
         offset_size,
         length_size,
     )?;
-    let records = crate::btree_v2::collect_btree_v2_records_storage(
+    let records = crate::hdf5_reader::btree_v2::collect_btree_v2_records_storage(
         storage,
         &header,
         offset_size,
@@ -155,7 +157,7 @@ pub fn collect_v2_chunk_entries_storage(
     let mut entries = Vec::with_capacity(records.len());
     for record in records {
         match record {
-            crate::btree_v2::BTreeV2Record::ChunkedNonFiltered { address, offsets }
+            crate::hdf5_reader::btree_v2::BTreeV2Record::ChunkedNonFiltered { address, offsets }
                 if chunk_overlaps_bounds(&offsets, chunk_dims, chunk_bounds) =>
             {
                 entries.push(ChunkEntry {
@@ -165,7 +167,7 @@ pub fn collect_v2_chunk_entries_storage(
                     offsets,
                 });
             }
-            crate::btree_v2::BTreeV2Record::ChunkedFiltered {
+            crate::hdf5_reader::btree_v2::BTreeV2Record::ChunkedFiltered {
                 address,
                 chunk_size,
                 filter_mask,

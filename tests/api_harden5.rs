@@ -251,8 +251,8 @@ fn caller_input_errors_are_invalid_request() {
             .kind,
         ErrorKind::Corrupt
     );
-    let e =
-        ras_commander_fast_hdf::crs::relative_projection("C:/proj/a.prj", "../escape.prj").unwrap_err();
+    let e = ras_commander_fast_hdf::crs::relative_projection("C:/proj/a.prj", "../escape.prj")
+        .unwrap_err();
     assert_eq!(e.kind, ErrorKind::InvalidRequest);
 }
 

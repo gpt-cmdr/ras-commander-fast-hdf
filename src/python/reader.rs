@@ -1,13 +1,13 @@
 //! Thin Python conversion layer over the pinned native engine.
+use crate::hdf::{
+    ByteOrder, NumericArray, NumericKind as Native, NumericValues, ReadOnlyHdfSession, Slice,
+};
 use crate::python::{CorruptDataError, TopologyError, UnsupportedError};
+use crate::{Error, ErrorKind};
 use numpy::IntoPyArray;
 use pyo3::exceptions::{PyFileNotFoundError, PyKeyError, PyOSError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use crate::hdf::{
-    ByteOrder, NumericArray, NumericKind as Native, NumericValues, ReadOnlyHdfSession, Slice,
-};
-use crate::{Error, ErrorKind};
 const CAPABILITY_SCHEMA_VERSION: u32 = 1;
 pub(crate) fn err(e: Error) -> PyErr {
     let message = e.to_string();

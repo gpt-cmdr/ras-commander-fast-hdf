@@ -12,8 +12,8 @@ fn missing_file_is_distinct_and_has_source_path() {
 #[test]
 #[cfg(feature = "catalog")]
 fn catalog_error_conversion_retains_path() {
-    let c =
-        ras_commander_fast_hdf::catalog::SourceDocument::from_bytes("bad.prj", vec![0]).unwrap_err();
+    let c = ras_commander_fast_hdf::catalog::SourceDocument::from_bytes("bad.prj", vec![0])
+        .unwrap_err();
     let e: Error = c.into();
     assert_eq!(e.kind, ErrorKind::Unsupported);
     assert_eq!(e.path.unwrap(), std::path::Path::new("bad.prj"));

@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 LZ4 filter (filter ID 32004).
 //!
 //! On-disk format per the [HDF5 LZ4 plugin](https://github.com/HDFGroup/hdf5_plugins):
@@ -9,7 +11,7 @@
 //!
 //! When `compressed_size == orig_block_size` the block is stored uncompressed.
 
-use crate::error::{Error, Result};
+use crate::hdf5_reader::error::{Error, Result};
 
 /// Decompress HDF5 LZ4-filtered data.
 /// LZ4 cannot expand data by more than ~255x; bound the unlimited path's

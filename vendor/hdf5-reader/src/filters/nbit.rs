@@ -1,4 +1,6 @@
-use crate::error::{Error, Result};
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
+use crate::hdf5_reader::error::{Error, Result};
 
 const NBIT_CLASS_ATOMIC: u32 = 1;
 const NBIT_CLASS_ARRAY: u32 = 2;

@@ -2,12 +2,6 @@
 //! A bundle contains tiles.pmtiles, identities.arrow and manifest.json. Reusing
 //! a prior bundle preserves its IDs; new identities append in sorted order.
 use crate::exports::{contract::Contract, fail, Error, Result};
-use arrow_array::{
-    Array, ArrayRef, BinaryArray, BooleanArray, Float64Array, Int64Array, RecordBatch, StringArray,
-    TimestampMillisecondArray, UInt64Array,
-};
-use arrow_ipc::{reader::FileReader, writer::FileWriter};
-use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use crate::freestiler_core::{
     engine::{generate_pmtiles, SilentReporter, TileConfig},
     geo::CoordsIter,
@@ -15,6 +9,12 @@ use crate::freestiler_core::{
     pmtiles_writer::TileFormat,
     tiler::{Feature, Geometry, LayerData, PropertyValue},
 };
+use arrow_array::{
+    Array, ArrayRef, BinaryArray, BooleanArray, Float64Array, Int64Array, RecordBatch, StringArray,
+    TimestampMillisecondArray, UInt64Array,
+};
+use arrow_ipc::{reader::FileReader, writer::FileWriter};
+use arrow_schema::{DataType, Field, Schema, SchemaRef, TimeUnit};
 use geozero::{wkb::Wkb, ToGeo};
 use serde::{Deserialize, Serialize};
 use std::{

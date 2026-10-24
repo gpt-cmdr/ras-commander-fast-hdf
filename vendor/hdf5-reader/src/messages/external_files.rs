@@ -1,11 +1,13 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 External Data Files message (type 0x0007).
 //!
 //! Indicates that raw data for a dataset is stored in one or more external
 //! files. Rarely used in practice, especially in NetCDF files.
 
-use crate::error::Result;
-use crate::io::Cursor;
-pub use hdf5_core::{ExternalFileSlot, ExternalFilesMessage};
+use crate::hdf5_reader::error::Result;
+use crate::hdf5_reader::io::Cursor;
+pub use crate::hdf5_core::{ExternalFileSlot, ExternalFilesMessage};
 
 /// Parse an external data files message.
 pub fn parse(

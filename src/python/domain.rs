@@ -1,12 +1,12 @@
 //! Explicit conversion only; engine retains schema and capability decisions.
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict};
 use crate::crs::{CrsEvidence, EvidenceStatus};
 use crate::hdf::metadata::MetadataValue;
 use crate::hdf::xs1d::{PlanResultMode, XsVariable};
 use crate::hdf::{AttributeType, ByteOrder, ReadOnlyHdfSession, ResultMode, Slice};
 use crate::{Capability, UnsupportedCode};
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use pyo3::types::{PyBytes, PyDict};
 use std::path::PathBuf;
 macro_rules! dict { ($py:expr, $($k:expr => $v:expr),* $(,)?) => {{ let d=PyDict::new($py); $(d.set_item($k,$v)?;)* d }}; }
 pub(crate) fn capability<'py>(py: Python<'py>, c: &Capability) -> PyResult<Bound<'py, PyDict>> {

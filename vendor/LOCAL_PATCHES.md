@@ -10,18 +10,35 @@ byte for byte. None of these changes has been accepted upstream yet.
 The change notice, listing every modified file and the reason for each change, is
 [`hdf5-reader/PROVENANCE.md`](hdf5-reader/PROVENANCE.md). Per-file SHA-256 hashes of the
 vendored tree are recorded in [`PROVENANCE.json`](PROVENANCE.json) and checked by
-`scripts/prepare-reader.ps1` and `python scripts/vendor_reader.py --check`.
+`scripts/prepare-reader.ps1` and `python scripts/vendor_sources.py --check`.
+
+ras-commander-fast-hdf compiles the reader as private modules of its own crate. After the
+patches, each Rust source file receives a two-line change notice and module-rooted paths
+(`crate::hdf5_reader::`, `crate::hdf5_core::`), and the reader's `rayon`/`lz4` feature
+tests become the crate's `hdf` feature; see "Embedding" in `hdf5-reader/PROVENANCE.md`.
+`vendor/` also holds `freestiler-core` (see `freestiler-core/PROVENANCE.md`).
 
 ## Reproducing the tree
 
 ```bash
 git clone https://github.com/roteiro-gis/netcdf-rust
-python scripts/vendor_reader.py --upstream netcdf-rust          # compare
-python scripts/vendor_reader.py --upstream netcdf-rust --write  # replace
+git clone https://github.com/walkerke/freestiler
+python scripts/vendor_sources.py --netcdf-rust netcdf-rust --freestiler freestiler          # compare
+python scripts/vendor_sources.py --netcdf-rust netcdf-rust --freestiler freestiler --write  # replace
 ```
 
 The script checks out `3d708fd` in a temporary worktree, applies `patches/*.patch` with
-`git am`, compares the result with `vendor/` file by file and rewrites `PROVENANCE.json`.
+`git am`, applies the embedding rules, compares the result with `vendor/` file by file and
+rewrites `PROVENANCE.json` (it does the same for freestiler at `beb64b0`, without patches).
+
+## Testing the reader on its own
+
+```bash
+cargo test --manifest-path vendor/reader-tests/Cargo.toml
+```
+
+runs the reader's in-source unit tests and upstream's integration, corruption and property
+tests (`hdf5-reader/tests/`, fixtures in `testdata/hdf5/`) against the embedded source.
 
 ## Patch series
 
@@ -69,5 +86,5 @@ changes. Moving to v0.9.3:
 ## Rules
 
 Change the vendored source only by adding a patch to `patches/`, regenerating with
-`scripts/vendor_reader.py` and describing the change in `hdf5-reader/PROVENANCE.md` and
-this file.
+`scripts/vendor_sources.py` and describing the change in `hdf5-reader/PROVENANCE.md` and
+this file. Never edit files under `vendor/*/src` by hand.

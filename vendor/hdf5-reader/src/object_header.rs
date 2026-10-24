@@ -1,3 +1,5 @@
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
 //! HDF5 Object Header parser (v1 and v2).
 //!
 //! Object headers contain a collection of header messages that describe an
@@ -14,12 +16,12 @@
 //! to an additional chunk of messages (an `OCHK` block in v2, or a raw message
 //! run in v1).
 
-use crate::checksum::jenkins_lookup3;
-use crate::error::{Error, Result};
-use crate::io::Cursor;
-use crate::messages::shared::SharedMessage;
-use crate::messages::{parse_message, HdfMessage};
-use crate::storage::Storage;
+use crate::hdf5_reader::checksum::jenkins_lookup3;
+use crate::hdf5_reader::error::{Error, Result};
+use crate::hdf5_reader::io::Cursor;
+use crate::hdf5_reader::messages::shared::SharedMessage;
+use crate::hdf5_reader::messages::{parse_message, HdfMessage};
+use crate::hdf5_reader::storage::Storage;
 
 /// Magic signature for v2 object headers.
 const OHDR_SIGNATURE: [u8; 4] = *b"OHDR";
@@ -392,7 +394,7 @@ impl ObjectHeader {
             if is_shared {
                 // Shared message — the stored bytes are a shared-message
                 // reference, not the message payload itself.
-                let shared_msg = crate::messages::shared::parse(
+                let shared_msg = crate::hdf5_reader::messages::shared::parse(
                     &mut Cursor::new(msg_data),
                     msg_type,
                     offset_size,
@@ -403,7 +405,7 @@ impl ObjectHeader {
             } else if msg_type == MSG_TYPE_CONTINUATION {
                 // Parse the continuation message to get offset + length, then
                 // enqueue it for later processing.
-                let cont = crate::messages::continuation::parse(
+                let cont = crate::hdf5_reader::messages::continuation::parse(
                     &mut Cursor::new(msg_data),
                     offset_size,
                     length_size,
@@ -718,7 +720,7 @@ impl ObjectHeader {
             let is_shared = (msg_flags & 0x02) != 0;
 
             if is_shared {
-                let shared_msg = crate::messages::shared::parse(
+                let shared_msg = crate::hdf5_reader::messages::shared::parse(
                     &mut Cursor::new(msg_data),
                     msg_type,
                     offset_size,
@@ -727,7 +729,7 @@ impl ObjectHeader {
                 )?;
                 messages.push(HdfMessage::Shared(shared_msg));
             } else if msg_type == MSG_TYPE_CONTINUATION {
-                let cont = crate::messages::continuation::parse(
+                let cont = crate::hdf5_reader::messages::continuation::parse(
                     &mut Cursor::new(msg_data),
                     offset_size,
                     length_size,
@@ -780,7 +782,7 @@ impl ObjectHeader {
             let msg_data = cursor.read_bytes(msg_data_size)?;
             let is_shared = (msg_flags & 0x02) != 0;
             if is_shared {
-                let shared_msg = crate::messages::shared::parse(
+                let shared_msg = crate::hdf5_reader::messages::shared::parse(
                     &mut Cursor::new(msg_data),
                     msg_type,
                     offset_size,
@@ -789,7 +791,7 @@ impl ObjectHeader {
                 )?;
                 messages.push(HdfMessage::Shared(shared_msg));
             } else if msg_type == MSG_TYPE_CONTINUATION {
-                let cont = crate::messages::continuation::parse(
+                let cont = crate::hdf5_reader::messages::continuation::parse(
                     &mut Cursor::new(msg_data),
                     offset_size,
                     length_size,
@@ -854,7 +856,7 @@ impl ObjectHeader {
             let msg_data = cursor.read_bytes(msg_data_size)?;
             let is_shared = (msg_flags & 0x02) != 0;
             if is_shared {
-                let shared_msg = crate::messages::shared::parse(
+                let shared_msg = crate::hdf5_reader::messages::shared::parse(
                     &mut Cursor::new(msg_data),
                     msg_type,
                     offset_size,
@@ -863,7 +865,7 @@ impl ObjectHeader {
                 )?;
                 messages.push(HdfMessage::Shared(shared_msg));
             } else if msg_type == MSG_TYPE_CONTINUATION {
-                let cont = crate::messages::continuation::parse(
+                let cont = crate::hdf5_reader::messages::continuation::parse(
                     &mut Cursor::new(msg_data),
                     offset_size,
                     length_size,
@@ -1018,7 +1020,7 @@ fn select_shared_message(header: ObjectHeader, message_type: u16) -> Option<HdfM
 }
 
 fn message_matches_type(message: &HdfMessage, message_type: u16) -> bool {
-    use crate::messages::*;
+    use crate::hdf5_reader::messages::*;
 
     matches!(
         (message_type, message),
@@ -1048,8 +1050,8 @@ fn message_matches_type(message: &HdfMessage, message_type: u16) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::checksum::jenkins_lookup3;
-    use crate::storage::BytesStorage;
+    use crate::hdf5_reader::checksum::jenkins_lookup3;
+    use crate::hdf5_reader::storage::BytesStorage;
 
     // ------------------------------------------------------------------
     // Helpers

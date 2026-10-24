@@ -1,36 +1,29 @@
-//! Build metadata exposed as `ENGINE_COMMIT` and `ENGINE_FEATURES`.
+//! Build metadata for the Python extension: `ENGINE_COMMIT` and `ENGINE_FEATURES`.
 //!
-//! The engine is built from this repository (`crates/ras-commander-rust`), so
-//! the engine commit is the commit of this checkout. `RAS_ENGINE_COMMIT`
-//! overrides it (release builds from a source archive); without Git or the
+//! Only the `python` feature uses it; other builds do nothing here.
+//!
+//! The engine and the extension are one crate, so the engine commit is the
+//! commit of this checkout. `RAS_ENGINE_COMMIT` overrides it (release builds
+//! from a source archive). Git is asked only when this package directory is
+//! itself a Git checkout, so a copy of the package inside some other
+//! repository never reports that repository's commit. Without Git or the
 //! override it is `"unknown"`, which ras-commander reports but accepts.
+//!
+//! `ENGINE_FEATURES` lists the enabled engine features in a fixed order
+//! (`catalog`, `hdf`, `mesh`, `results`); the `python` feature enables all four.
 
 use std::path::Path;
 use std::process::Command;
 
-fn engine_features() -> Result<String, String> {
-    let text = std::fs::read_to_string("Cargo.toml")
-        .map_err(|e| format!("cannot read Cargo.toml: {e}"))?;
-    let manifest: toml::Value = text
-        .parse()
-        .map_err(|e| format!("invalid Cargo.toml: {e}"))?;
-    let dep = manifest
-        .get("dependencies")
-        .and_then(|d| d.get("ras-commander-rust"))
-        .ok_or("missing dependencies.ras-commander-rust")?;
-    if dep.get("path").and_then(toml::Value::as_str) != Some("../crates/ras-commander-rust") {
-        return Err(
-            "the engine must be the in-repository crate ../crates/ras-commander-rust".into(),
-        );
-    }
-    Ok(dep
-        .get("features")
-        .and_then(toml::Value::as_array)
-        .ok_or("engine dependency must declare a features array")?
+const ENGINE_FEATURES: [&str; 4] = ["catalog", "hdf", "mesh", "results"];
+
+fn engine_features() -> String {
+    ENGINE_FEATURES
         .iter()
-        .map(|v| v.as_str().ok_or("engine features must be strings"))
-        .collect::<Result<Vec<_>, _>>()?
-        .join(","))
+        .filter(|f| std::env::var_os(format!("CARGO_FEATURE_{}", f.to_ascii_uppercase())).is_some())
+        .copied()
+        .collect::<Vec<_>>()
+        .join(",")
 }
 
 fn is_commit(value: &str) -> bool {
@@ -44,6 +37,9 @@ fn engine_commit() -> Result<String, String> {
             return Err("RAS_ENGINE_COMMIT must be a complete 40-digit hexadecimal commit".into());
         }
         return Ok(value);
+    }
+    if !Path::new(".git").exists() {
+        return Ok("unknown".into());
     }
     let output = Command::new("git").args(["rev-parse", "HEAD"]).output();
     match output {
@@ -62,20 +58,23 @@ fn engine_commit() -> Result<String, String> {
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=Cargo.toml");
+    println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-env-changed=RAS_ENGINE_COMMIT");
-    for head in ["../.git/HEAD", "../.git/refs/heads"] {
+    if std::env::var_os("CARGO_FEATURE_PYTHON").is_none() {
+        return;
+    }
+    for head in [".git/HEAD", ".git/refs/heads"] {
         if Path::new(head).exists() {
             println!("cargo:rerun-if-changed={head}");
         }
     }
-    match (engine_commit(), engine_features()) {
-        (Ok(commit), Ok(features)) => {
+    match engine_commit() {
+        Ok(commit) => {
             println!("cargo:rustc-env=RAS_ENGINE_COMMIT={commit}");
-            println!("cargo:rustc-env=RAS_ENGINE_FEATURES={features}");
+            println!("cargo:rustc-env=RAS_ENGINE_FEATURES={}", engine_features());
         }
-        (Err(message), _) | (_, Err(message)) => {
-            eprintln!("bridge build metadata: {message}");
+        Err(message) => {
+            eprintln!("python extension build metadata: {message}");
             std::process::exit(1);
         }
     }

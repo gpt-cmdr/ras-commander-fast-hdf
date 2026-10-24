@@ -1,9 +1,11 @@
-use crate::error::{ByteOrder, Error, Result};
-use crate::messages::datatype::Datatype;
+// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,
+// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.
+use crate::hdf5_reader::error::{ByteOrder, Error, Result};
+use crate::hdf5_reader::messages::datatype::Datatype;
 
 // Re-export types from the datatype message module so users don't need to
 // reach into messages::datatype.
-pub use crate::messages::datatype::{
+pub use crate::hdf5_reader::messages::datatype::{
     CompoundField, EnumMember, ReferenceType, StringEncoding, StringPadding, StringSize, VarLenKind,
 };
 
