@@ -86,8 +86,14 @@ pub struct FamilyDataset {
     pub locations: Vec<Identity>,
     pub names: Vec<String>,
     /// Exact geometry Attributes identities aligned with result columns when qualified.
-    /// Currently populated for reference points; Name-axis identities stay in locations.
+    /// Populated for reference points and reference lines; Name-axis identities stay in
+    /// locations.
     pub geometry_locations: Vec<Identity>,
+    /// Status of the column-to-geometry link: Supported exactly when `geometry_locations` is
+    /// populated; Unavailable when the family has no geometry link or the geometry is absent;
+    /// Unsupported/Corrupt (with the reason) when the stored identities do not prove one. The
+    /// dataset's own read capability does not depend on it.
+    pub geometry_link: Capability,
     /// Exact integer values from a qualified pipe Node/Conduit Indices table, aligned
     /// with locations. Identity.row is the table position, not this stored ID.
     pub stored_location_ids: Option<super::NumericArray>,
@@ -293,6 +299,9 @@ impl ReadOnlyHdfSession {
                             locations: Vec::new(),
                             names: Vec::new(),
                             geometry_locations: Vec::new(),
+                            geometry_link: Capability::unavailable(
+                                "no geometry link for this family",
+                            ),
                             stored_location_ids: None,
                             time_of_extreme_row: None,
                         }
@@ -720,6 +729,7 @@ impl ReadOnlyHdfSession {
             locations: Vec::new(),
             names: Vec::new(),
             geometry_locations: Vec::new(),
+            geometry_link: Capability::unavailable("no geometry link for this family"),
             stored_location_ids: None,
             time_of_extreme_row: None,
         };
@@ -743,6 +753,9 @@ impl ReadOnlyHdfSession {
         if d.stored.storage != "numeric" {
             if path.ends_with("/Name") && family == ReadFamily::ReferenceLines {
                 d.role = "name_axis".into();
+                let names = self.read_strings(path)?;
+                (d.geometry_locations, d.geometry_link) =
+                    self.reference_line_link(path, &names, &d.stored.attributes, max)?;
                 return Ok(d);
             }
             return Err(Error::unsupported(
@@ -816,6 +829,8 @@ impl ReadOnlyHdfSession {
             if names_ds.shape() != [n] || d.names.len() as u64 != n {
                 return Err(corrupt("reference names and result columns disagree"));
             }
+            (d.geometry_locations, d.geometry_link) =
+                self.reference_line_link(&table, &d.names, &d.stored.attributes, max)?;
             d.identity_table = Some(table);
             d.domain = "reference_line".into();
         } else {

@@ -1,0 +1,13 @@
+{
+  "source_name": "Weise.p01.hdf",
+  "source_sha256": "ff341f17c01c48a1dc146ac274401b9cdbda27e72f0dc6ed5ba64aa4ca65c509",
+  "source": "HEC public example 2D Sediment Transport/Weise_2D, plan p01 (sediment off), reference lines and points added with ras-commander GeomReferenceFeatures and computed with HEC-RAS 7.0.1 by CLB (corpus entry hec701r/Weise.p01.reflines)",
+  "mutations": "see the module docstring of generate_per_area_reference_line_excerpts.py",
+  "files": {
+    "per_area_valid.h5": "70d4f32e6580306fe16c0c80c125d144c0f4a3822c6b025423c7cd5361440649",
+    "per_area_reordered.h5": "723db05f92ecb48eac01984d28491559097f4dddcb2a7ff9af36ec42de1b113c",
+    "per_area_bad_name.h5": "ab642ae234ead5b6c645dcf72c3ee3970616ad96296f3a115fe4df59cf965ca1",
+    "per_area_no_block_name.h5": "fe31110cc5e5fa1d16e448c85a73a0b58c05c795f6f42a6711ac704436f1175b",
+    "per_area_bad_faces.h5": "1d24f231f59463f1a4980de782c1f8c8d0b6187c1180c012f08d81ab29f0b69b"
+  }
+}

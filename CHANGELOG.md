@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Reference-line results are linked to their geometry rows:
+  `FamilyDataset::geometry_locations` is now filled for `ReadFamily::ReferenceLines`,
+  matched by the exact stored `Name|SA-2D` and cross-checked against the geometry's
+  `Internal Faces` and any `2D Areas` ordinals. A new `FamilyDataset::geometry_link`
+  capability reports the link's status (Unavailable without reference-line geometry,
+  Unsupported or Corrupt when the stored identities do not prove it); reading the
+  results is unchanged. HEC-RAS 7.0.1's per-area series
+  (`2D Flow Areas/<area>/Reference Lines`, bare names) are linked through the path's area,
+  with the Faces cross-check against the same output block's `Reference Lines/Name` axis.
+  Additive; the Python extension's `geometry_locations` for reference lines changes from
+  empty to the linked rows.
+
 ## 0.2.1 (2026-10-24)
 
 - Test fixtures replaced with public sources; no API or behaviour change.
