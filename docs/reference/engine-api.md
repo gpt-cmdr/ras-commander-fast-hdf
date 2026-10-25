@@ -348,14 +348,14 @@ Ring order is an explicit guarantee, and it reproduces ras-commander's Python
   stored column says.
 
 Compared with API 9, about 4-21% of rings (the cells left of their first face) are reversed,
-rings with repeated coordinates lose the repeat (five JUL2020 D601 cells had such repeats),
+rings with repeated coordinates lose the repeat,
 and two-face cells with curved perimeters are omitted. Bindings should require API >= 10 to
 get results identical to the Python path.
 
 Evidence: the opt-in `tests/ring_order_oracle.rs` compares native rings with the Python
-reference (`tests/generate_ring_order_reference.py`) on real fixtures: 525,515 rings across
-BaldEagleDamBrk p07, Muncie, DavisStormSystem, AustinOyster, JUL2020, Homewood and
-BaldEagleDamBrk with reference points (HEC-RAS 7.0.1), with 0 mismatches.
+reference (`tests/generate_ring_order_reference.py`) on real fixtures: 1,965,815 rings across
+BaldEagleDamBrk p07, DavisStormSystem p02 (HEC-RAS 7.0.1) and the FEMA eBFE AustinOyster p01
+and p03 plans (HEC-RAS 7.0.1 and 5.0.7), with 0 mismatches.
 `tests/verify_ring_contract.py` independently recomputes every ring from the HDF arrays with
 NumPy, requires `shapely.is_ccw` to be False for every ring, and checks equal cell sets,
 omissions and diagnostics.
@@ -615,7 +615,8 @@ return types are unchanged.
 
 `hdf::structures` reads the unsteady `SA 2D Area Conn`, `Lateral Structures` and
 `Storage Areas` families (`StructureFamilyKind`), the only structure layouts observed in
-stored HEC-RAS 6.x result files (BaldEagleDamBrk p07/p18, JUL2020_D100RAS p04). Layouts are
+stored HEC-RAS 5.0.7, 6.x and 7.0 result files (BaldEagleDamBrk p07/p18, FEMA eBFE AustinOyster
+p03). Layouts are
 never assumed; the h5py oracle `oracle_real_structures.py` records what h5py sees and the
 opt-in test `real_structure_families_match_h5py_oracle_bit_exactly` (`RAS_NATIVE_FIXTURES`,
 `RAS_STRUCT_ORACLE`) compares bit-exactly (IEEE bits and SHA-256 of little-endian selected
@@ -733,7 +734,7 @@ up without code changes.
   7,353/7,353 group attributes match h5py; of 21,160 datasets read through `read_strings`,
   `simple_compound` and the numeric readers, only 20 string results changed, all to h5py's.
   `read_strings` refuses non-UTF-8 bytes in
-  fixed-length text (Corrupt; e.g. JUL2020 `Geometry Info/Node Info`), where h5py returns the
+  fixed-length text (Corrupt; e.g. a 5.0.7 `Geometry Info/Node Info` table), where h5py returns the
   bytes. Variable-length string attributes, including a vlen `Location`, stay
   Unsupported(encoding); see the divergence table in [mesh-results.md](mesh-results.md).
 - **Links.** Soft links to datasets are followed in new-style and old-style (symbol-table)

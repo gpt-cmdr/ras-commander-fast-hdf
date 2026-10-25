@@ -6,20 +6,29 @@ use ras_commander_fast_hdf::hdf::ReadOnlyHdfSession;
 use ras_commander_fast_hdf::mesh::{GeometryPolicy, OmissionKind};
 use sha2::{Digest, Sha256};
 use std::path::PathBuf;
-fn hex(b: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(b))
-}
 fn fixture(name: &str, expected: &str) -> PathBuf {
     let p = PathBuf::from(
         std::env::var_os("RAS_NATIVE_FIXTURES")
             .expect("set RAS_NATIVE_FIXTURES to immutable5/6/7 fixture directory"),
     )
     .join(name);
-    assert_eq!(
-        hex(&std::fs::read(&p).expect("real fixture required")),
-        expected
-    );
+    assert_eq!(file_sha256(&p), expected);
     p
+}
+/// Streamed SHA-256, so multi-GB fixtures are not read into memory.
+fn file_sha256(path: &std::path::Path) -> String {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path).expect("real fixture required");
+    let mut hash = Sha256::new();
+    let mut buffer = vec![0u8; 1 << 22];
+    loop {
+        let n = file.read(&mut buffer).unwrap();
+        if n == 0 {
+            break;
+        }
+        hash.update(&buffer[..n]);
+    }
+    format!("{:x}", hash.finalize())
 }
 
 fn canonical(points: &[[f64; 2]]) -> Vec<[f64; 2]> {
@@ -59,8 +68,8 @@ fn canonical(points: &[[f64; 2]]) -> Vec<[f64; 2]> {
 #[ignore = "requires immutable real5/6/7 fixtures"]
 fn real_mesh_0() {
     let p = fixture(
-        "JUL2020_D100RAS.p04.hdf",
-        "37d91b9f957f78067cb0a8ae5db7cf3355f9c5d7172cb40e7931c35be78b9683",
+        "AustinOyster.p03.hdf",
+        "fdaff5045ad36bf5d424489ff64b3d86a1e0e3ef92a628554488f009047cad92",
     );
     for threads in [1, 4] {
         let s = ReadOnlyHdfSession::with_options(&p, threads, true).unwrap();
@@ -98,20 +107,22 @@ fn real_mesh_0() {
                 }
                 count += 1;
             }
-            assert!(
-                matches!(named.topology.assemble(GeometryPolicy::Strict,threads),Err(e) if e.kind==ras_commander_fast_hdf::ErrorKind::InvalidGeometry&&e.message.contains("317422"))
-            );
+            // The public 5.0.7 eBFE mesh has no invalid cells: strict assembly succeeds too.
+            assert!(named
+                .topology
+                .assemble(GeometryPolicy::Strict, threads)
+                .is_ok());
         }
-        assert_eq!(count, 340246);
+        assert_eq!(count, 1872746);
         assert_eq!(
             format!("{:x}", hash.finalize()),
-            "cf885b8038e4d26c0a92a0a9f2686349cbe7571deb26a9365f647990fa27fa67"
+            "6641444a93bb83a9f6b7a8d9ed586f6b4f56e63775c0f01e834cbd306f1ca392"
         );
-        assert_eq!(invalid, vec![317422, 339176]);
+        assert!(invalid.is_empty());
     }
     assert_eq!(
-        hex(&std::fs::read(&p).unwrap()),
-        "37d91b9f957f78067cb0a8ae5db7cf3355f9c5d7172cb40e7931c35be78b9683"
+        file_sha256(&p),
+        "fdaff5045ad36bf5d424489ff64b3d86a1e0e3ef92a628554488f009047cad92"
     );
 }
 
@@ -167,7 +178,7 @@ fn real_mesh_1() {
         assert!(invalid.is_empty());
     }
     assert_eq!(
-        hex(&std::fs::read(&p).unwrap()),
+        file_sha256(&p),
         "07cad3930a679891f87bbface1ab749b82fd7d7eae6aaac3b5ff041c44280984"
     );
 }
@@ -224,7 +235,7 @@ fn real_mesh_2() {
         assert!(invalid.is_empty());
     }
     assert_eq!(
-        hex(&std::fs::read(&p).unwrap()),
+        file_sha256(&p),
         "1d0063a84fd131ac95ffaa2b3f6647f2ef51c7f38f23c43e8ae6c698bfc95f0b"
     );
 }

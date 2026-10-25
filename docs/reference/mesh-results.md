@@ -140,7 +140,8 @@ HDF5_READER_CACHE_FIXTURE="$PWD/tests/fixtures/hdf_numeric/numeric_types_v1.h5" 
 
 ## Absent-Location legacy mesh series (API 9)
 
-HEC-RAS 5.0.7 output (JUL2020_D100RAS.p04, area D601) stores Depth, Water Surface,
+HEC-RAS 5.0.7 output (for example the FEMA eBFE AustinOyster.p03 plan, area Perimeter 1) stores
+Depth, Water Surface,
 Face Velocity and Face Shear Stress without Location. Only when Location is **absent**,
 a rank-two numeric dataset at exactly
 `Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/<area>/<name>`
@@ -178,7 +179,7 @@ present-but-invalid Location) are in `tests/fixtures/legacy_location`
 (`generate_legacy_location_excerpts.py`, `tests/legacy_location.rs`). The regenerated
 seven-file oracle (`fixtures/mesh_results_oracle.py`, now with the same rule and a
 `domain_rule` per variable) has 238 qualified variables and 39 refusals: exactly the four
-JUL D601 series moved from refused to qualified, nothing else changed. Frozen pre-API-9
+absent-Location 5.0.7 series moved from refused to qualified, nothing else changed. Frozen pre-API-9
 oracles encode the earlier refusal and no longer pass for those four series.
 
 ### Time dataset requirement and intentional strictness
@@ -218,8 +219,8 @@ That stored count includes ghost rows; physical Cell Count never substitutes and
 no clipping occurs. Names such as Maximum or Minimum do not select the domain or
 infer an extremum. Values and the labelled Time row remain literal source data.
 Present Location still uses the primary Location rule; conflicting/unknown values
-are not bypassed. Unlabelled JUL extrema and iteration/difference summaries remain
-refused; the four JUL series qualify through the API 9 legacy rule above. Current
+are not bypassed. Unlabelled 5.0.7 extrema and iteration/difference summaries remain
+refused; the four 5.0.7 series qualify through the API 9 legacy rule above. Current
 seven-file oracle: 238 qualified variables, 39 explicit refusals (234/43 before API 9),
 with generic literal checks preserved for every refusal.
 

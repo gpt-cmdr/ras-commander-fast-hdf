@@ -446,7 +446,8 @@ fn oracle_text(v: &serde_json::Value) -> Option<String> {
 }
 
 /// RAS_NATIVE_FIXTURES = fixture directory; RAS_TIME_ORACLE = JSON from
-/// tests/fixtures/time/oracle_real_time_units.py (h5py) for p07/p18/Davis result files.
+/// tests/fixtures/time/oracle_real_time_units.py (h5py) for the p07/p18, AustinOyster.p03 and
+/// Stream248.p02 result files.
 #[test]
 #[ignore = "requires real fixtures (RAS_NATIVE_FIXTURES) and h5py oracle JSON (RAS_TIME_ORACLE)"]
 fn real_time_axes_and_units_match_h5py_oracle() {
@@ -456,8 +457,8 @@ fn real_time_axes_and_units_match_h5py_oracle() {
     )
     .unwrap();
     let cases = oracle.as_array().unwrap();
-    // All three required real fixtures must be present in the oracle.
-    for token in [".p07.", ".p18.", "JUL2020_D100RAS.p04"] {
+    // All four required real fixtures must be present in the oracle.
+    for token in [".p07.", ".p18.", "AustinOyster.p03", "Stream248.p02"] {
         assert!(
             cases
                 .iter()
@@ -545,8 +546,8 @@ fn real_time_axes_and_units_match_h5py_oracle() {
                 "{name} {ds}"
             );
         }
-        if name.contains("JUL2020_D100RAS.p04") {
-            // Davis: 1D unsteady Cross Sections with declared units and a stored row count.
+        if name.contains("Stream248.p02") {
+            // eBFE Stream248 (7.0.1): 1D unsteady Cross Sections with declared units and a stored row count.
             for v in ["Water Surface", "Flow"] {
                 let x = r
                     .variables

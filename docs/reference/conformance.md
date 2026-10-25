@@ -34,7 +34,7 @@ call Python. Whole inputs are SHA-256 checked before and after each run.
 
 | Fixture | Mesh polygons | Scope |
 |---|---:|---|
-| `JUL2020_D100RAS.p04.hdf`, 5.0.7 | 340,246 | Two invalid cells (317422 and 339176) are explicit quarantine omissions; strict mode refuses invalid geometry; ghost records remain distinct |
+| `AustinOyster.p03.hdf`, 5.0.7 (FEMA eBFE) | 1,872,746 | No invalid cells: quarantine and strict assembly give the same polygons; ghost records remain distinct |
 | `BaldEagleDamBrk.p07.hdf`, 6.6 | 87,039 | Exact canonical coordinates and source/composite IDs |
 | `BaldEagleDamBrk.p18.hdf`, 7.0 | 4,425 | Both meshes and repeated local IDs retained |
 

@@ -177,7 +177,7 @@ session would close more of the remaining gap to h5py on small calls.
 **Status:** deferred (not part of the PR #6 work).
 
 Decoding the cross-section identity table takes about 10 ms on large 1D
-models (for example JUL2020). It is the main remaining engine cost of
+models. It is the main remaining engine cost of
 `get_cross_sections` on large files.
 
 ### Global cap on in-flight chunk decoding
