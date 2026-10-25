@@ -354,8 +354,8 @@ get results identical to the Python path.
 
 Evidence: the opt-in `tests/ring_order_oracle.rs` compares native rings with the Python
 reference (`tests/generate_ring_order_reference.py`) on real fixtures: 1,965,815 rings across
-BaldEagleDamBrk p07, DavisStormSystem p02 (HEC-RAS 7.0.1) and the FEMA eBFE AustinOyster p01
-and p03 plans (HEC-RAS 7.0.1 and 5.0.7), with 0 mismatches.
+BaldEagleDamBrk p07 (HEC-RAS 6.6), DavisStormSystem p02 (7.0.1), the FEMA eBFE-derived
+AustinOyster p01 (6.6) and the FEMA eBFE AustinOyster p03 (5.0.7), with 0 mismatches.
 `tests/verify_ring_contract.py` independently recomputes every ring from the HDF arrays with
 NumPy, requires `shapely.is_ccw` to be False for every ring, and checks equal cell sets,
 omissions and diagnostics.
