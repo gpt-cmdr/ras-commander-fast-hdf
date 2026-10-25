@@ -49,16 +49,16 @@ A requested fixture that is missing fails the test; it never passes silently.
 publishes versioned, hashed HEC-RAS HDF fixtures as release assets, with
 precomputed expected values (`expected/<fixture-id>/oracle.json`). The fixtures
 include HEC-RAS 7.0.1 runs of the HEC examples, public eBFE/RBFS models,
-RAS Mapper layers and excerpts. The `core` profile (74 files, about 150 MB
+RAS Mapper layers and excerpts. The `core` profile (77 files, about 151 MB
 compressed) holds only HEC-RAS 7.0.1 fixtures; `legacy` holds 5.0.5–7.0 files
 for best-effort checks. Fetch a profile at a pinned tag (standard-library
 Python; it checks the archive against `SHA256SUMS` and every file against the
 release manifest):
 
 ```bash
-curl -fsSLO https://raw.githubusercontent.com/gpt-cmdr/ras-hdf-test-corpus/v1.0.0/scripts/fetch_corpus.py
-python fetch_corpus.py --tag v1.0.0 --profile core --dest .corpus --expected
-# optional, best effort: python fetch_corpus.py --tag v1.0.0 --profile legacy --dest .corpus
+curl -fsSLO https://raw.githubusercontent.com/gpt-cmdr/ras-hdf-test-corpus/v1.0.1/scripts/fetch_corpus.py
+python fetch_corpus.py --tag v1.0.1 --profile core --dest .corpus --expected
+# optional, best effort: python fetch_corpus.py --tag v1.0.1 --profile legacy --dest .corpus
 ```
 
 The files land in `.corpus/fixtures/<id>.hdf`; `.corpus/manifest.json` gives
