@@ -46,6 +46,17 @@ closed")` and is never reopened; any argument that is neither a session nor a pa
 the path conversion's `TypeError`. The module attribute `SESSION_SOURCES` is `True` when
 the extension supports this (additive; `API_VERSION` 11).
 
+## Sessions from bytes (Rust)
+
+`ReadOnlyHdfSession::from_bytes(data, name, threads, parallel)` opens an HDF5 file held
+in memory instead of a path: a download, an upload, or a file in WebAssembly, where there
+is no file system. `name` stands in for the path in identities and error messages and is
+never opened. Reads are exactly those of the same file opened by path, with the same
+budgets and refusals. The session owns the bytes, so the whole file stays in memory while
+it is open. Where the platform cannot start threads (WebAssembly without threads), a
+one-thread session runs its work on the calling thread. The Python extension does not
+expose it.
+
 ## Session cache in ras-commander
 
 `fast_hdf.read_dataset()` and `read_datasets()` reuse at most four sessions in an LRU

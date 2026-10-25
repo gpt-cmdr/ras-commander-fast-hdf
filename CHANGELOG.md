@@ -13,6 +13,17 @@
   with the Faces cross-check against the same output block's `Reference Lines/Name` axis.
   Additive; the Python extension's `geometry_locations` for reference lines changes from
   empty to the linked rows.
+- `ReadOnlyHdfSession::from_bytes(data, name, threads, parallel)` opens an HDF5
+  file held in memory (a download or an upload). Reads are the same as for the
+  file opened by path, with the same byte budgets and refusals; `name` stands in
+  for the path in identities and error messages. The session owns the bytes, so
+  the whole file stays in memory while it is open. This makes the engine usable
+  in WebAssembly (terrio's JavaScript package), where there is no file system.
+- Where the platform cannot start threads (WebAssembly without threads), a
+  one-thread session runs its work on the calling thread instead of failing to
+  build its worker pool. Results are unchanged; native builds are unaffected.
+- Additive: engine `API_VERSION` stays 10 and extension `API_VERSION` stays 11.
+  The Python extension and ras-commander do not call `from_bytes`.
 
 ## 0.2.1 (2026-10-24)
 
