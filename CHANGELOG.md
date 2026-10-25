@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 (2026-10-25)
 
 - Reference-line results are linked to their geometry rows:
   `FamilyDataset::geometry_locations` is now filled for `ReadFamily::ReferenceLines`,
@@ -24,6 +24,9 @@
   build its worker pool. Results are unchanged; native builds are unaffected.
 - Additive: engine `API_VERSION` stays 10 and extension `API_VERSION` stays 11.
   The Python extension and ras-commander do not call `from_bytes`.
+- Qualified with the ras-commander equivalence gate (consumer 0.108.1, current
+  manifests plus new HEC-RAS 7.0.1 reference-line/point fixtures): every result
+  record is identical to 0.2.1's.
 
 ## 0.2.1 (2026-10-24)
 
