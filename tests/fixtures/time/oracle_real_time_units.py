@@ -1,6 +1,8 @@
 """h5py oracle for real-fixture time axes and units. Run on the machine holding the immutable
 fixtures:  python -I oracle_real_time_units.py FIXTURE_DIR OUT.json [name-substring ...]
-Defaults select p07 / p18 / Davis result HDF files. Never modifies the inputs. The Rust test
+Defaults select the BaldEagleDamBrk p07 / p18 result HDF files, the public FEMA eBFE
+AustinOyster.p03 (HEC-RAS 5.0.7 2D) plan and the eBFE-derived Stream248.p02 (HEC-RAS 7.0.1
+1D unsteady) plan. Never modifies the inputs. The Rust test
 (tests/time_units_conformance.rs, ignored) reads OUT.json via RAS_TIME_ORACLE."""
 import calendar, datetime, hashlib, json, sys
 from pathlib import Path
@@ -176,7 +178,7 @@ def units(f):
               for s in ['/', '/Geometry'] if s in f]
     return {'variables': vars_, 'unit_system': system, 'unlisted_2d_datasets': other}
 
-REQUIRED = ['.p07.', '.p18.', 'JUL2020_D100RAS.p04']
+REQUIRED = ['.p07.', '.p18.', 'AustinOyster.p03', 'Stream248.p02']
 
 def main():
     root = Path(sys.argv[1])
@@ -185,24 +187,27 @@ def main():
     for p in sorted(root.rglob('*.hdf')):
         if not any(w in p.name for w in wanted):
             continue
-        data = p.read_bytes()
+        digest = hashlib.sha256()
+        with open(p, 'rb') as fh:
+            for block in iter(lambda: fh.read(1 << 22), b''):
+                digest.update(block)
         with h5py.File(p, 'r') as f:
             if BASE not in f:
                 continue
             cases.append({'path': str(p.relative_to(root)).replace(chr(92), '/'),
-                          'sha256': hashlib.sha256(data).hexdigest(),
+                          'sha256': digest.hexdigest(),
                           'axis': axis(f), 'units': units(f),
                           'h5py': h5py.__version__})
     for token in wanted:
         if not any(token in c['path'] for c in cases):
             sys.exit('oracle: no file matched required token ' + token)
     for c in cases:
-        if 'D100RAS.p04' in c['path']:
+        if 'Stream248.p02' in c['path']:
             xs = [v for v in c['units']['variables'] if v['family'] == 'CrossSectionUnsteady']
-            assert xs, 'D100RAS.p04: expected 1D unsteady XS result datasets'
+            assert xs, 'Stream248.p02: expected 1D unsteady XS result datasets'
             for v in xs:
                 if v['variable'] in ('Water Surface', 'Flow'):
-                    assert v['expected']['status'] == 'declared', 'D100RAS.p04: ' + v['dataset']
+                    assert v['expected']['status'] == 'declared', 'Stream248.p02: ' + v['dataset']
             assert any('Cross Sections' in k for k in c['axis']['result_rows']), 'no XS row count'
     Path(sys.argv[2]).write_text(json.dumps(cases, indent=1) + '\n')
     print(len(cases), 'files')

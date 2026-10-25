@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 const REQUIRED: [&str; 4] = [
     "BaldEagleDamBrk.p07",
     "DavisStormSystem.p02",
-    "JUL2020_D100RAS.p04",
+    "AustinOyster.p03",
     "AustinOyster.p01",
 ];
 

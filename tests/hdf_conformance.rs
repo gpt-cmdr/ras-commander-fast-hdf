@@ -33,39 +33,54 @@ fn fixture(name: &str, expected: &str) -> PathBuf {
             .expect("set RAS_NATIVE_FIXTURES to immutable5/6/7 fixture directory"),
     )
     .join(name);
-    assert_eq!(
-        hex(&std::fs::read(&p).expect("real fixture required")),
-        expected
-    );
+    assert_eq!(file_sha256(&p), expected);
     p
+}
+/// Streamed SHA-256, so multi-GB fixtures are not read into memory.
+fn file_sha256(path: &std::path::Path) -> String {
+    use std::io::Read;
+    let mut file = std::fs::File::open(path).expect("real fixture required");
+    let mut hash = Sha256::new();
+    let mut buffer = vec![0u8; 1 << 22];
+    loop {
+        let n = file.read(&mut buffer).unwrap();
+        if n == 0 {
+            break;
+        }
+        hash.update(&buffer[..n]);
+    }
+    format!("{:x}", hash.finalize())
 }
 
 #[test]
 #[ignore = "requires real5/6/7 fixture directory; run with RAS_NATIVE_FIXTURES"]
 fn real_hdf_0() {
     let p = fixture(
-        "JUL2020_D100RAS.p04.hdf",
-        "37d91b9f957f78067cb0a8ae5db7cf3355f9c5d7172cb40e7931c35be78b9683",
+        "AustinOyster.p03.hdf",
+        "fdaff5045ad36bf5d424489ff64b3d86a1e0e3ef92a628554488f009047cad92",
     );
     for threads in [1, 4] {
         let s = ReadOnlyHdfSession::with_options(&p, threads, true).unwrap();
-        let path="Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/D601/Water Surface";
+        let path="Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/Perimeter 1/Water Surface";
         let cap = s.numeric_capability(path).unwrap();
-        assert_eq!(cap.shape, vec![193, 352141]);
+        assert_eq!(cap.shape, vec![73, 1882841]);
         let a = s
             .read_numeric(path, Some(&[Slice::new(0, 13, 3), Slice::new(0, 19, 2)]))
             .unwrap();
         assert_eq!(a.shape, vec![5, 10]);
         assert_eq!(
             hex(&bytes(&a.values)),
-            "1c249a28a57d24ecf570c1bd1277d6baa3c8fd07707f108875ea06a605408367"
+            "de7fe9152836b58d102d81226a0631931ec6b0ad68ba74b67a1bda9638181786"
         );
         let a = s
-            .read_numeric("Geometry/2D Flow Areas/D601/FacePoints Coordinate", None)
+            .read_numeric(
+                "Geometry/2D Flow Areas/Perimeter 1/FacePoints Coordinate",
+                None,
+            )
             .unwrap();
         assert_eq!(
             hex(&bytes(&a.values)),
-            "8fcccf29bcaeda1ec3bc0eca820c3991631375fce5523d2cb5c178740efc8f16"
+            "5171f06a386c5acbe430bc51b4c58d6dba4b4e4901cde9abcded3dd8992eecc2"
         );
         let reduced = s
             .reduce_temporal(
@@ -85,12 +100,12 @@ fn real_hdf_0() {
         }
         assert_eq!(
             hex(&out),
-            "f52a24cd7e105fea49e266a27c4ef421a13abd22f3aa75f93a804264b1891d2b"
+            "deb83a336ca4c26b973c24a352566c14ba11e0cbd8be63eac8ad12473653777a"
         );
     }
     assert_eq!(
-        hex(&std::fs::read(&p).unwrap()),
-        "37d91b9f957f78067cb0a8ae5db7cf3355f9c5d7172cb40e7931c35be78b9683"
+        file_sha256(&p),
+        "fdaff5045ad36bf5d424489ff64b3d86a1e0e3ef92a628554488f009047cad92"
     );
 }
 
@@ -146,7 +161,7 @@ fn real_hdf_1() {
         );
     }
     assert_eq!(
-        hex(&std::fs::read(&p).unwrap()),
+        file_sha256(&p),
         "07cad3930a679891f87bbface1ab749b82fd7d7eae6aaac3b5ff041c44280984"
     );
 }
@@ -244,7 +259,7 @@ fn real_hdf_2() {
         );
     }
     assert_eq!(
-        hex(&std::fs::read(&p).unwrap()),
+        file_sha256(&p),
         "1d0063a84fd131ac95ffaa2b3f6647f2ef51c7f38f23c43e8ae6c698bfc95f0b"
     );
 }
@@ -393,21 +408,24 @@ fn raw_metadata_retains_payload_and_capability_encoding() {
 #[test]
 #[ignore = "requires immutable real5/6/7 fixtures"]
 fn real_version_and_time_string_metadata() {
-    for (name, sha, version) in [
+    for (name, sha, version, rows) in [
         (
-            "JUL2020_D100RAS.p04.hdf",
-            "37d91b9f957f78067cb0a8ae5db7cf3355f9c5d7172cb40e7931c35be78b9683",
+            "AustinOyster.p03.hdf",
+            "fdaff5045ad36bf5d424489ff64b3d86a1e0e3ef92a628554488f009047cad92",
             "5.0.7",
+            73,
         ),
         (
             "BaldEagleDamBrk.p07.hdf",
             "07cad3930a679891f87bbface1ab749b82fd7d7eae6aaac3b5ff041c44280984",
             "6.6",
+            865,
         ),
         (
             "BaldEagleDamBrk.p18.hdf",
             "1d0063a84fd131ac95ffaa2b3f6647f2ef51c7f38f23c43e8ae6c698bfc95f0b",
             "7.0",
+            865,
         ),
     ] {
         let p = fixture(name, sha);
@@ -420,7 +438,7 @@ fn real_version_and_time_string_metadata() {
         let strings = ver.strings.as_ref().expect("fixedstring decoded");
         assert!(strings[0].contains(version));
         let times=s.read_strings("Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Time Date Stamp").unwrap();
-        assert!(times.len() >= 193);
+        assert_eq!(times.len(), rows, "{name}");
         assert!(times.iter().all(|t| !t.is_empty()));
     }
 }

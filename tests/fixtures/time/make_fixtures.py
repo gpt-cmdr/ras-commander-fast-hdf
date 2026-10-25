@@ -95,7 +95,7 @@ def units_real_layouts(f):
         d = xs.create_dataset(name, data=np.zeros((3, 2), dtype='<f4'))
         text_attr(d, attr, val)
     xs.create_dataset('Cross Section Only', data=np.zeros((2, 2), dtype='<f4'))
-    area = f.create_group(BASE + '/2D Flow Areas/D601')
+    area = f.create_group(BASE + '/2D Flow Areas/Perimeter 1')
     d = area.create_dataset('Water Surface', data=np.zeros((3, 4), dtype='<f4'))
     text_attr(d, 'WSEL', b'Feet')
     minmax(d)

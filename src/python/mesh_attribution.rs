@@ -284,7 +284,7 @@ fn assembly_boundary_attribution() -> PyResult<()> {
         }
         if let Ok(root) = std::env::var("RAS_NATIVE_FIXTURES") {
             for (name, mesh) in [
-                ("JUL2020_D100RAS.p04.hdf", "D601"),
+                ("AustinOyster.p03.hdf", "Perimeter 1"),
                 ("BaldEagleDamBrk.p07.hdf", "BaldEagleCr"),
                 ("BaldEagleDamBrk.p18.hdf", "BaldEagleCr"),
                 ("BaldEagleDamBrk.p18.hdf", "Upper 2D Area"),

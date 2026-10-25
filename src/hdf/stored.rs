@@ -255,7 +255,7 @@ pub(super) fn read(
             Ok(StoredValues::Strings {
                 shape: d.shape.clone(),
                 // NumPy fixed-S scalars omit trailing NULs, including unwritten
-                // fill values in a source declared SPACEPAD (real JUL Computation Block).
+                // fill values in a source declared SPACEPAD (a real 5.0.7 Computation Block).
                 values: s
                     .read_strings(&d.path)?
                     .into_iter()

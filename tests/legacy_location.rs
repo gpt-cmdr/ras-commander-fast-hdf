@@ -1,6 +1,7 @@
 #![cfg(feature = "hdf")]
-//! Absent-Location legacy mesh-series rule on real JUL2020_D100RAS.p04 (HEC-RAS 5.0.7) D601
-//! excerpts (`generate_legacy_location_excerpts.py`).
+//! Absent-Location legacy mesh-series rule on real HEC-RAS 5.0.7 excerpts of the public FEMA eBFE
+//! AustinOyster.p03 plan, 2D area "Perimeter 1" (`generate_legacy_location_excerpts.py`).
+//! Source: FEMA estimated Base Flood Elevation (eBFE) program.
 use ras_commander_fast_hdf::{
     hdf::{
         mesh_results::{DomainRule, ElementDomain, MeshResultVariable},
@@ -8,9 +9,9 @@ use ras_commander_fast_hdf::{
     },
     Capability, ErrorKind, UnsupportedCode,
 };
-const AREA: &str = "D601";
+const AREA: &str = "Perimeter 1";
 const ROOT: &str =
-    "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/D601";
+    "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/Perimeter 1";
 fn fixture(name: &str) -> ReadOnlyHdfSession {
     ReadOnlyHdfSession::open(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -152,7 +153,7 @@ fn a_present_location_stays_authoritative_and_never_falls_back_to_the_name() {
 
 #[test]
 fn legacy_cell_series_refuse_a_physical_cell_count_above_the_stored_rows() {
-    // PR #565 parity: real JUL Attributes Cell Count 340248 exceeds the 3 excerpt cell rows.
+    // PR #565 parity: the real Attributes Cell Count 1872746 exceeds the 3 excerpt cell rows.
     let s = fixture("physical_count.h5");
     for name in ["Depth", "Water Surface"] {
         let v = variable(&s, name);
@@ -181,7 +182,7 @@ fn legacy_cell_series_refuse_a_physical_cell_count_above_the_stored_rows() {
 #[test]
 fn stored_location_cell_series_share_the_physical_cell_count_bound() {
     // PR #565 applies the bound on both domain paths. `Stored Cells` carries Location=Cells
-    // over the same 3 cell rows, with the real JUL Cell Count 340248.
+    // over the same 3 cell rows, with the real Cell Count 1872746.
     let s = fixture("physical_count.h5");
     let stored = variable(&s, "Stored Cells");
     assert_eq!(
@@ -209,7 +210,7 @@ fn stored_location_cell_series_share_the_physical_cell_count_bound() {
 
 #[test]
 fn series_need_the_base_output_time_dataset_not_only_date_stamps() {
-    // ras-commander PR #565 parity: `time_missing.h5` keeps the real JUL date stamps but drops
+    // ras-commander PR #565 parity: `time_missing.h5` keeps the real date stamps but drops
     // `.../Unsteady Time Series/Time`. Both domain paths refuse; literal reads remain.
     let s = fixture("time_missing.h5");
     for (name, rule) in [

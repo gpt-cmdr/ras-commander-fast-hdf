@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.1 (2026-10-24)
+
+- Test fixtures replaced with public sources; no API or behaviour change.
+  The absent-Location legacy excerpts (`tests/fixtures/legacy_location`) are
+  regenerated from the public FEMA eBFE Austin-Oyster plan `AustinOyster.p03`
+  (HEC-RAS 5.0.7, area `Perimeter 1`). Source: FEMA estimated Base Flood
+  Elevation (eBFE) program. The opt-in real-file tests now name
+  `AustinOyster.p03` for 5.0.7 2D output and the eBFE-derived
+  `Stream248.p02` (HEC-RAS 7.0.1) for 1D unsteady cross sections.
+- Extension `API_VERSION` stays 11 and engine `API_VERSION` stays 10.
+
 ## 0.2.0 (2026-10-24)
 
 - One Rust crate, `ras-commander-fast-hdf` (Rust import

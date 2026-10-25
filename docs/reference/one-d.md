@@ -124,7 +124,8 @@ Unsupported with a typed code, contradictory storage is Corrupt. `metadata_max_b
   `Reported` text) with `Table Info` `X (Index)`/`X (Count)` pairs validated as ranges into
   `Profile Data` (centerline, US/DS XS, bridge deck/weir/lid profiles, Manning's n, rating
   curves), the Attributes compound with raw bytes and the exact group dump. 5.0.7 files
-  without `Table Info` (JUL2020: `Profiles` compound instead) keep empty ranges.
+  without `Table Info` (for example eBFE AustinOyster.p03: `Profiles` compound instead) keep
+  empty ranges.
 - `one_d_geometry_group(group, max_bytes)` for `Structures`, `PumpStations`,
   `StorageAreas`: every compound (bridge coefficients, piers, abutments, gate groups and
   openings, culvert groups and barrels, weir connectivity, pump groups, pumps, advanced

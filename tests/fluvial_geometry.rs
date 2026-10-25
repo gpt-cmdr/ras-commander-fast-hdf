@@ -347,21 +347,22 @@ fn cell_validator_keeps_global_and_structural_errors_fatal() {
 }
 
 #[test]
-fn source_507_curved_face_crossings_remain_rejected_by_shared_validator() {
-    // Exact source FacePoint/perimeter coordinates for D601 cells 317422 and
-    // 339176. Both source curved faces properly cross another cell boundary
-    // segment; accepting them would silently change model geometry.
+fn curved_face_crossings_remain_rejected_by_shared_validator() {
+    // Synthetic cells whose curved face (an extra perimeter point) properly crosses
+    // another boundary segment of the same cell, as HEC-RAS 5.0.7 meshes can store;
+    // accepting them would silently change model geometry. Cell 0 crosses the
+    // opposite edge, cell 1 an adjacent edge.
     let points = vec![
-        [3119942.6683242363, 13831959.888107771],
-        [3120015.9436983857, 13831869.3247041],
-        [3119977.789256263, 13831808.352194661],
-        [3119902.7878298927, 13831828.278811347],
-        [3119904.24810791, 13831827.3101196],
-        [3054599.6673751683, 13831219.464754138],
-        [3054454.7385322736, 13831214.444909181],
-        [3054452.080226666, 13831311.404645696],
-        [3054554.4245963595, 13831314.100435475],
-        [3054559.29730225, 13831217.8817139],
+        [0.0, 0.0],
+        [10.0, 0.0],
+        [10.0, 10.0],
+        [0.0, 10.0],
+        [12.0, 5.0],
+        [20.0, 0.0],
+        [30.0, 0.0],
+        [30.0, 10.0],
+        [20.0, 10.0],
+        [25.0, -2.0],
     ];
     let rings = vec![vec![0, 1, 2, 3, 4], vec![5, 6, 7, 8, 9]];
     assert_eq!(

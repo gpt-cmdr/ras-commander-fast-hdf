@@ -37,7 +37,7 @@ pub(super) fn mesh(attributes: &[TypedAttribute]) -> Result<ElementDomain> {
         other => Err(missing(format!("unqualified mesh Location: {other}"))),
     }
 }
-/// HEC-RAS 5.0.7 stable-core names observed without Location (JUL2020_D100RAS.p04 D601),
+/// HEC-RAS 5.0.7 stable-core names observed stored without Location in 5.0.7 plan output,
 /// compatible with 6.x/7.x output. Exact spelling only: no prefix, substring or case folding.
 /// Mirrors ras-commander `_LEGACY_MESH_SERIES_DOMAINS` (PR #565).
 const LEGACY_MESH_SERIES: [(&str, ElementDomain); 6] = [

@@ -1,15 +1,16 @@
 #![cfg(feature = "hdf")]
-//! Typed per-dataset attributes and exact HDF5 bitfield attributes on the real JUL2020_D100RAS.p04
-//! excerpt (`generate_legacy_location_excerpts.py`). The h5py bitfield bytes are recorded below.
+//! Typed per-dataset attributes and exact HDF5 bitfield attributes on the real HEC-RAS 5.0.7 excerpt
+//! of the public FEMA eBFE AustinOyster.p03 plan (`generate_legacy_location_excerpts.py`). The h5py
+//! bitfield bytes are recorded below. Source: FEMA estimated Base Flood Elevation (eBFE) program.
 use ras_commander_fast_hdf::{
     hdf::{metadata::MetadataValue, AttributeType, ByteOrder, ReadOnlyHdfSession},
     ErrorKind, UnsupportedCode,
 };
-const AREA: &str = "D601";
+const AREA: &str = "Perimeter 1";
 const ROOT: &str =
-    "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/D601";
-/// h5py `attrs['Property Tables LC Hash'][:8]` (uint8) on the JUL2020 source.
-const LC_HASH_HEAD: [u8; 8] = [250, 233, 126, 113, 139, 15, 201, 186];
+    "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/2D Flow Areas/Perimeter 1";
+/// h5py `attrs['Property Tables LC Hash'][:8]` (uint8) on the AustinOyster.p03 source.
+const LC_HASH_HEAD: [u8; 8] = [15, 103, 31, 128, 186, 78, 102, 210];
 fn fixture(name: &str) -> ReadOnlyHdfSession {
     ReadOnlyHdfSession::open(
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -135,7 +136,7 @@ fn raw_fixed_strings_return_the_exact_stored_bytes_and_declared_padding() {
         (vec![2], 64, StringPadding::SpacePad, StringCharset::Ascii)
     );
     let mut stored = vec![0u8; 64];
-    stored.extend(b"D601");
+    stored.extend(b"Perimeter 1");
     stored.resize(128, b' ');
     assert_eq!(areas.raw_bytes, stored);
     // h5py `d[()].tobytes()` reads into NULLPAD memory: HDF5 strips the trailing spaces of a
@@ -151,7 +152,7 @@ fn raw_fixed_strings_return_the_exact_stored_bytes_and_declared_padding() {
         })
         .collect();
     let mut expected = vec![0u8; 128];
-    expected[64..68].copy_from_slice(b"D601");
+    expected[64..75].copy_from_slice(b"Perimeter 1");
     assert_eq!(h5py, expected);
     // h5py-written NULLPAD S19 keeps its trailing NUL byte.
     let stamps = s
@@ -165,7 +166,7 @@ fn raw_fixed_strings_return_the_exact_stored_bytes_and_declared_padding() {
     assert_eq!((stamps.width, stamps.padding), (19, StringPadding::NullPad));
     assert_eq!(
         stamps.raw_bytes,
-        unhex("30344a554c323032302030303a30303a30300030344a554c323032302030303a31353a303000")
+        unhex("30334a414e323030302032323a30303a30300030334a414e323030302032333a30303a303000")
     );
     // The decoded reader trims what the raw payload retains.
     assert_eq!(
@@ -174,7 +175,7 @@ fn raw_fixed_strings_return_the_exact_stored_bytes_and_declared_padding() {
         )
         .unwrap()[0]
             .trim_end_matches('\0'),
-        "04JUL2020 00:00:00"
+        "03JAN2000 22:00:00"
     );
 }
 #[test]
@@ -348,11 +349,11 @@ fn space_padded_nul_fill_decodes_like_h5py() {
         .unwrap();
     assert_eq!(transport.value, MetadataValue::Strings(vec![String::new()]));
     assert!(transport.raw_bytes.iter().all(|b| *b == 0));
-    // read_strings applies the same rule: JUL 2D Area(s) row 0 is unwritten NUL fill.
+    // read_strings applies the same rule: the 5.0.7 2D Area(s) row 0 is unwritten NUL fill.
     let v = fixture("valid.h5");
     assert_eq!(
         v.read_strings("Results/Unsteady/Geometry Info/2D Area(s)")
             .unwrap(),
-        vec!["".to_string(), "D601".to_string()]
+        vec!["".to_string(), "Perimeter 1".to_string()]
     );
 }
