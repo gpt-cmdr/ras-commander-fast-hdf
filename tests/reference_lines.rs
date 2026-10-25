@@ -1,5 +1,6 @@
 //! Reference-line result columns linked to their geometry rows (`FamilyDataset::geometry_link`),
-//! on excerpts of HEC's public Chippewa_2D p02 plan (`generate_reference_line_excerpts.py`) and,
+//! on excerpts of HEC's public Chippewa_2D p02 plan (`generate_reference_line_excerpts.py`) and of a
+//! HEC-RAS 7.0.1 Weise_2D run (`generate_per_area_reference_line_excerpts.py`) and,
 //! opt-in, on whole real plans against an independent h5py oracle.
 #![cfg(feature = "hdf")]
 use ras_commander_fast_hdf::{
@@ -10,6 +11,7 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
+const BASE: &str = "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series";
 const ROOT: &str =
     "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Reference Lines";
 const TABLE: &str = "Geometry/Reference Lines/Attributes";
@@ -137,6 +139,80 @@ fn unprovable_identities_refuse_the_link_and_keep_the_read() {
             "{path}: {link:?}"
         );
         assert!(rows.is_empty());
+    }
+}
+
+/// HEC-RAS 7.0.1 per-area series (`2D Flow Areas/<area>/Reference Lines`): bare names, linked
+/// through the path's area; the Faces cross-check uses the block's `Reference Lines/Name` axis.
+/// Excerpts of a 7.0.1 run of HEC's Weise_2D (`generate_per_area_reference_line_excerpts.py`).
+#[test]
+fn per_area_series_link_through_the_path_area() {
+    let per_area = |path: &str| path.contains("/2D Flow Areas/");
+    for (name, want_block, want_area) in [
+        (
+            "per_area_valid.h5",
+            vec![0, 1, 2, 3, 4],
+            vec![0, 1, 2, 3, 4],
+        ),
+        (
+            "per_area_reordered.h5",
+            vec![0, 1, 2, 3, 4],
+            vec![2, 0, 1, 3, 4],
+        ),
+    ] {
+        let all = links(&local(name));
+        assert_eq!(
+            all.iter().filter(|(p, ..)| per_area(p)).count(),
+            2,
+            "{name}"
+        );
+        for (path, link, rows) in all {
+            assert_eq!(link, Capability::Supported, "{name} {path}");
+            let want = if per_area(&path) {
+                &want_area
+            } else {
+                &want_block
+            };
+            assert_eq!(&rows, want, "{name} {path}");
+        }
+    }
+    let area_flow = |s: &ReadOnlyHdfSession| {
+        let StoredValues::Numeric(a) = s
+            .read_family_dataset(
+                ReadFamily::ReferenceLines,
+                &format!("{BASE}/2D Flow Areas/2DArea/Reference Lines/Flow"),
+                None,
+                1 << 20,
+                1 << 20,
+            )
+            .unwrap()
+        else {
+            panic!("numeric")
+        };
+        a.values
+    };
+    let valid = area_flow(&local("per_area_valid.h5"));
+    for (name, kind) in [
+        ("per_area_bad_name.h5", ErrorKind::Unsupported),
+        ("per_area_no_block_name.h5", ErrorKind::Unsupported),
+        ("per_area_bad_faces.h5", ErrorKind::Corrupt),
+    ] {
+        let s = local(name);
+        for (path, link, rows) in links(&s) {
+            if !per_area(&path) && name == "per_area_bad_name.h5" {
+                assert_eq!(link, Capability::Supported, "{name} {path}");
+                continue;
+            }
+            assert!(rows.is_empty(), "{name} {path}");
+            match (&link, kind) {
+                (Capability::Unsupported { code, .. }, ErrorKind::Unsupported) => {
+                    assert_eq!(*code, UnsupportedCode::IdentityLayout, "{name} {path}")
+                }
+                (Capability::Corrupt { .. }, ErrorKind::Corrupt) => {}
+                other => panic!("{name} {path}: {other:?}"),
+            }
+        }
+        assert_eq!(area_flow(&s), valid, "{name}");
     }
 }
 

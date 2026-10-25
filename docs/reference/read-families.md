@@ -139,8 +139,15 @@ stored, must name the same areas. `geometry_link` is Supported exactly when
 `geometry_locations` is populated (in column order, including reordered Name axes);
 Unavailable when the plan stores no reference-line geometry; Unsupported(identity_layout)
 for an unmatched, duplicate or incomplete identity layout; Corrupt when stored Faces or
-area ordinals contradict the named geometry. Reference points report `geometry_link`
-Supported whenever their (mandatory) link succeeds; other families report Unavailable.
+area ordinals contradict the named geometry. HEC-RAS 7.0.1 also writes each area's series
+under `Unsteady Time Series/2D Flow Areas/<area>/Reference Lines`, with bare `<name>`
+entries and no Faces attributes; those link to the geometry row with that Name and the
+path's area, with the Faces cross-check made against the same output block's
+`Reference Lines/Name` axis (Unsupported(identity_layout) when that axis is absent).
+HEC-RAS 7.0.1 does not write one line name in two areas: it renames the second line
+(`RL_Shared` becomes `RL_Shared 1`) in the geometry and the results. Reference points report
+`geometry_link` Supported whenever their (mandatory) link succeeds; other families report
+Unavailable.
 
 Direction is present in the 7.0.1 fixture and absent in 6.6; its absence does not
 refuse the remaining point series or invent a derived angle. Direction is a stored degree-angle series (`Units=deg`, role `direction_series`),

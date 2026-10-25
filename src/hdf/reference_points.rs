@@ -399,6 +399,11 @@ impl ReadOnlyHdfSession {
     /// `Name` axis must equal, in order, the geometry `Internal Faces` of the linked row (both
     /// required), and `2D Areas` ordinals, when the series stores them, must name the same
     /// areas through `2D Flow Areas/Attributes`. Column order is linked by name, never assumed.
+    ///
+    /// Per-area series (`<block>/Unsteady Time Series/2D Flow Areas/<area>/Reference Lines/*`,
+    /// written by HEC-RAS 7.0.1) store bare `<name>` entries and no Faces attributes: the area
+    /// is the path's, each entry must match exactly one geometry row with that Name and SA-2D,
+    /// and the Faces cross-check uses the same block's `Reference Lines/Name` axis (required).
     fn reference_line_geometry_locations(
         &self,
         name_path: &str,
@@ -449,6 +454,20 @@ impl ReadOnlyHdfSession {
                 })?,
             max,
         )?;
+        // (area, block Name axis carrying the Faces attributes) for a per-area series.
+        let per_area = match name_path.split_once("/Unsteady Time Series/2D Flow Areas/") {
+            Some((block, rest)) => {
+                let area = rest
+                    .strip_suffix("/Reference Lines/Name")
+                    .filter(|a| !a.is_empty() && !a.contains('/'))
+                    .ok_or_else(|| identity("reference-line area path"))?;
+                Some((
+                    area,
+                    format!("{block}/Unsteady Time Series/Reference Lines/Name"),
+                ))
+            }
+            None => None,
+        };
         let mut seen = std::collections::BTreeSet::new();
         let mut linked = Vec::with_capacity(names.len());
         let mut linked_areas = Vec::with_capacity(names.len());
@@ -462,7 +481,10 @@ impl ReadOnlyHdfSession {
                 .iter()
                 .zip(areas)
                 .enumerate()
-                .filter(|(_, (f, area))| format!("{}|{}", f.name, area) == *name)
+                .filter(|(_, (f, area))| match per_area {
+                    Some((a, _)) => area.as_str() == a && f.name == *name,
+                    None => format!("{}|{}", f.name, area) == *name,
+                })
                 .map(|(i, _)| i)
                 .collect();
             let [i] = matches[..] else {
@@ -474,7 +496,14 @@ impl ReadOnlyHdfSession {
             linked_areas.push(areas[i].as_str());
             linked_rows.push(i);
         }
-        let name_attributes = stored::attributes(self, name_path, false, max)?;
+        let faces_path = per_area.as_ref().map_or(name_path, |(_, p)| p.as_str());
+        let name_attributes =
+            stored::attributes(self, faces_path, false, max).map_err(|e| match e.kind {
+                ErrorKind::NotFound => {
+                    identity("per-area line results require the block Name axis")
+                }
+                _ => e,
+            })?;
         let internal = exact_compound(self, "Geometry/Reference Lines/Internal Faces", max)
             .map_err(|e| match e.kind {
                 ErrorKind::NotFound => identity("reference-line Internal Faces required"),
