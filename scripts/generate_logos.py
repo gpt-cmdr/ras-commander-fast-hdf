@@ -3,9 +3,9 @@
 Usage: python scripts/generate_logos.py
 
 Writes the chosen logo (Option C, "Engine Inside") and its link-preview cards
-to docs/images/logo/ in three variants: Fast-HDF (this repository), Native
-Rust Engines (HDF and flood mapping) and the Mapping Engine, and the five review concepts and two icons to
-docs/images/logo/concepts/. Render the PNGs with scripts/render_logo_png.ps1.
+to docs/images/logo/ for each engine (FAST-HDF, FAST-MAP, FAST-DSS) and for the
+Native Rust Engines family, with FAST-DSS either "Coming Soon" or released. The
+five review concepts and two icons go to docs/images/logo/concepts/. Render the PNGs with scripts/render_logo_png.ps1.
 """
 import math
 from pathlib import Path
@@ -133,21 +133,33 @@ def concept_b():
 """
 
 
-# Product variants of Option C: (pill labels, tagline, file stem).
-MAP_GREEN = "#1E8E62"  # flood-mapping pill and cog rim
+# Product variants of Option C. Each pill is (label, fill, note); a pill with a
+# note is drawn greyed out with the note beside its label ("Coming Soon").
+# Cogs are the small engines meshed with the main rust cog.
+MAP_GREEN = "#1E8E62"  # FAST-MAP pill and cog
+DSS_AMBER = "#B7791F"  # FAST-DSS pill and cog
+GREY = "#5D6B78"       # an engine that is not released yet
+
+HDF_PILL = ("FAST-HDF", RUST, None)
+MAP_PILL = ("FAST-MAP", MAP_GREEN, None)
+DSS_PILL = ("FAST-DSS", DSS_AMBER, None)
+DSS_SOON = ("FAST-DSS", GREY, "(Coming Soon)")
 
 VARIANTS = {
-    "fast-hdf": ((("FAST-HDF", RUST),), "Native Rust HDF Engine"),
-    "mapping": ((("FLOOD MAPPING", MAP_GREEN),), "Native Rust Mapping Engine"),
-    "engines": ((("HDF", RUST), ("FLOOD MAPPING", MAP_GREEN)), "Native Rust Engines"),
+    # variant: (pills, tagline, cogs)
+    "fast-hdf": ((HDF_PILL,), "Native Rust HDF Engine", ()),
+    "fast-map": ((MAP_PILL,), "Native Rust Mapping Engine", ("map",)),
+    "fast-dss": ((DSS_PILL,), "Native Rust DSS Engine", ("dss",)),
+    "engines": ((HDF_PILL, MAP_PILL, DSS_SOON), "Native Rust Engines", ("map", "dss-soon")),
+    "engines-dss": ((HDF_PILL, MAP_PILL, DSS_PILL), "Native Rust Engines", ("map", "dss")),
 }
 
-# Depth classes for the mapping cog's raster, shallow to deep.
+# Depth classes for the FAST-MAP cog's raster, shallow to deep.
 DEPTH = ("#C6E9F7", "#86CBEC", "#3FA3D9", "#1668AE", "#0B3F7A")
 
 
 def mapping_cog(cx=335, cy=57):
-    """A small cog meshed with the main one, holding a depth raster (flood map)."""
+    """FAST-MAP: a small cog meshed with the main one, holding a depth raster."""
     cells, size = [], 9
     for row in range(7):
         for col in range(7):
@@ -166,7 +178,23 @@ def mapping_cog(cx=335, cy=57):
   <circle cx="{cx}" cy="{cy}" r="4" fill="#05386B" stroke="#5CDB95" stroke-width="1.5" />"""
 
 
-def _text_width(text, size, bold=False, italic=False):
+def dss_cog(cx=115, cy=57, soon=False):
+    """FAST-DSS: the mirror cog, holding a hydrograph (DSS time series).
+
+    soon=True greys it out with a dashed rim for an engine not released yet.
+    """
+    fill, rim, line = (GREY, "#9AA5B1", "#B8C2CC") if soon else (DSS_AMBER, "#F2C46D", "#F2C46D")
+    dash = ' stroke-dasharray="4 3"' if soon else ""
+    group = ' opacity="0.8"' if soon else ""
+    return f"""<g{group}>
+  <path d="{gear_path(cx, cy, 33, 42, 12, rot=-0.13)}" fill="{fill}" stroke="{rim}" stroke-width="2" stroke-linejoin="round"{dash} />
+  <circle cx="{cx}" cy="{cy}" r="27" fill="#05386B" stroke="#05386B" stroke-width="2" />
+  <path d="M{cx - 18},{cy + 15} L{cx + 19},{cy + 15} M{cx - 18},{cy + 15} L{cx - 18},{cy - 17}" fill="none" stroke="{rim}" stroke-width="1.5" />
+  <path d="M{cx - 17},{cy + 12} C{cx - 9},{cy + 11} {cx - 7},{cy - 15} {cx - 2},{cy - 15} C{cx + 4},{cy - 15} {cx + 6},{cy + 5} {cx + 18},{cy + 9}" fill="none" stroke="{line}" stroke-width="2.5" stroke-linecap="round" />
+  </g>"""
+
+
+def _text_width(text, size, bold=False):
     """Rough Arial advance width; enough to centre a row of pills and a tagline."""
     per_char = 0.64 if bold else 0.50
     if not bold and text.upper() != text:
@@ -175,26 +203,48 @@ def _text_width(text, size, bold=False, italic=False):
 
 
 def _pill_row(pills, tagline, y=263):
-    """Centred row: coloured pills followed by an italic tagline."""
-    pill_fs, tag_fs, gap = 14, 17, 8
-    widths = [_text_width(label, pill_fs, bold=True) + 24 for label, _ in pills]
-    tag_w = _text_width(tagline, tag_fs, italic=True)
-    total = sum(widths) + gap * len(pills) + 4 + tag_w
+    """Pills centred under the band; the tagline follows them, or gets its own
+    centred row below when there are several pills."""
+    pill_fs, note_fs, tag_fs, gap = 14, 12, 17, 8
+    widths = []
+    for label, _, note in pills:
+        w = _text_width(label, pill_fs, bold=True) + 24
+        if note:
+            w += _text_width(note, note_fs) + 6
+        widths.append(w)
+    tag_w = _text_width(tagline, tag_fs)
+    own_row = len(pills) > 1
+    total = sum(widths) + gap * (len(pills) - 1) + (0 if own_row else gap + 4 + tag_w)
     x = 225 - total / 2
     out = []
-    for (label, colour), w in zip(pills, widths):
-        out.append(f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="24" rx="12" ry="12" fill="{colour}" />')
-        out.append(f'<text x="{x + w / 2:.1f}" y="{y + 17}" font-family="Arial, sans-serif" font-size="{pill_fs}" font-weight="bold" text-anchor="middle" fill="#FFFFFF">{label}</text>')
+    for (label, colour, note), w in zip(pills, widths):
+        if note:
+            lw = _text_width(label, pill_fs, bold=True)
+            out.append(f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="24" rx="12" ry="12" fill="{colour}" fill-opacity="0.55" stroke="#9AA5B1" stroke-width="1.5" stroke-dasharray="4 3" />')
+            out.append(f'<text x="{x + 12:.1f}" y="{y + 17}" font-family="Arial, sans-serif" font-size="{pill_fs}" font-weight="bold" fill="#C9D1D9">{label}</text>')
+            out.append(f'<text x="{x + 18 + lw:.1f}" y="{y + 16.5}" font-family="Arial, sans-serif" font-size="{note_fs}" font-style="italic" fill="#C9D1D9">{note}</text>')
+        else:
+            out.append(f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="24" rx="12" ry="12" fill="{colour}" />')
+            out.append(f'<text x="{x + w / 2:.1f}" y="{y + 17}" font-family="Arial, sans-serif" font-size="{pill_fs}" font-weight="bold" text-anchor="middle" fill="#FFFFFF">{label}</text>')
         x += w + gap
-    out.append(f'<text x="{x + 4:.1f}" y="{y + 18}" font-family="Arial, sans-serif" font-size="{tag_fs}" font-style="italic" fill="#8EE4AF">{tagline}</text>')
+    if own_row:
+        out.append(f'<text x="225" y="{y + 47}" font-family="Arial, sans-serif" font-size="{tag_fs}" font-style="italic" text-anchor="middle" fill="#8EE4AF">{tagline}</text>')
+    else:
+        out.append(f'<text x="{x + 4:.1f}" y="{y + 18}" font-family="Arial, sans-serif" font-size="{tag_fs}" font-style="italic" fill="#8EE4AF">{tagline}</text>')
     return "\n  ".join(out)
 
 
+def body_height(variant):
+    """Logo height: 300 like the original, 320 when the tagline needs its own row."""
+    return 320 if len(VARIANTS[variant][0]) > 1 else 300
+
+
 def engine_inside_body(variant="fast-hdf"):
-    """Option C artwork in the original 450 x 300 logo coordinates, without background."""
-    pills, tagline = VARIANTS[variant]
-    cog2 = mapping_cog() if variant != "fast-hdf" else ""
-    return f"""{cog2}
+    """Option C artwork in the original 450-wide logo coordinates, without background."""
+    pills, tagline, cogs = VARIANTS[variant]
+    small = {"map": mapping_cog(), "dss": dss_cog(), "dss-soon": dss_cog(soon=True)}
+    cog_svg = "\n  ".join(small[c] for c in cogs)
+    return f"""{cog_svg}
   <path d="{gear_path(225, 150, 104, 114, 36)}" fill="{RUST_DEEP}" stroke="{RUST}" stroke-width="2" stroke-linejoin="round" />
   <circle cx="225" cy="150" r="100" fill="#05386B" stroke="#5CDB95" stroke-width="2" />
   <rect x="55" y="185" width="340" height="50" fill="#05386B" stroke="#5CDB95" stroke-width="2" rx="2" ry="2" />
@@ -208,17 +258,19 @@ def engine_inside_body(variant="fast-hdf"):
   {_pill_row(pills, tagline)}"""
 
 
-def concept_c(width=450, height=300, variant="fast-hdf"):
+def concept_c(width=450, height=None, variant="fast-hdf"):
     """Engine Inside: original blue/green kept, a rust cog wraps the green circle.
 
-    At 450 x 300 this is the logo. Other sizes (link-preview cards) extend the
-    background and centre the logo, scaled to fill the height.
+    With no size this is the logo (450 wide). Other sizes (link-preview cards)
+    extend the background and centre the logo, scaled to fill the height.
     """
+    bh = body_height(variant)
+    height = height or bh
     body = engine_inside_body(variant)
-    if (width, height) != (450, 300):
-        scale = min(width / 450, (height - 12) / 300)
+    if (width, height) != (450, bh):
+        scale = min(width / 450, (height - 12) / bh)
         tx = (width - 450 * scale) / 2
-        ty = (height - 300 * scale) / 2
+        ty = (height - bh * scale) / 2
         body = f'<g transform="translate({tx:g},{ty:g}) scale({scale:g})">\n  {body}\n  </g>'
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}">
   <!-- RAS Commander {VARIANTS[variant][1]}, Option C "Engine Inside": the original green emblem is kept and a rust cog drives it from outside -->
@@ -363,12 +415,14 @@ def main():
     }
     # The chosen logo (Option C) and its link-preview cards live one folder up.
     final = {}
-    # fast-hdf: this repository's logo. engines: the ras-commander "Native Rust
-    # Engines" overview page. mapping: the ras-commander Mapping Engine page.
+    # One logo per engine, and the "Native Rust Engines" family logo with
+    # FAST-DSS greyed out (engines) or released (engines-dss).
     for variant, stem in (
         ("fast-hdf", "ras-commander-fast-hdf"),
+        ("fast-map", "ras-commander-fast-map"),
+        ("fast-dss", "ras-commander-fast-dss"),
         ("engines", "ras-commander-rust-engines"),
-        ("mapping", "ras-commander-mapping-engine"),
+        ("engines-dss", "ras-commander-rust-engines-dss"),
     ):
         final[f"{stem}_logo.svg"] = concept_c(variant=variant)
         final[f"{stem}_social.svg"] = concept_c(1200, 627, variant)         # LinkedIn / Open Graph
