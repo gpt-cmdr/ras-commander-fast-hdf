@@ -189,6 +189,21 @@ Each worker decodes at most 256 MiB per chunk, and each call may use up to
 in-flight decode budget would bound memory under parallel reads of hostile or
 unusual files.
 
+### Faster DEFLATE decoding for whole chunks
+
+**Status:** planned (evaluate before switching).
+
+Chunks are decoded with flate2's `zlib-rs` backend, a pure-Rust zlib about as
+fast as zlib-ng, in parallel across chunks. Each HDF5 chunk is a complete zlib
+stream with a known decoded size, which suits whole-buffer decoders that
+typically run 1.3–2× faster than streaming zlib: `zune-inflate` (pure Rust,
+keeps WebAssembly builds working) or `libdeflate` (C, via `libdeflater`).
+Decompression is a small part of ras-commander's whole-array summary calls
+(geometry building dominates them), so the gain would show mainly in large
+compressed time-series reads. **Done when** a quiet-machine benchmark on the
+corpus shows a gain, results stay byte-identical, and malformed-input
+refusals (output limits, corrupt streams) are unchanged.
+
 ## Upstream and ecosystem
 
 ### Publish the engine on crates.io as one crate
