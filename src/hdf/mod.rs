@@ -695,6 +695,7 @@ pub mod reference_points;
 pub mod mesh_results;
 
 pub mod catalogue_results;
+pub mod corner_elevations;
 
 mod memo;
 

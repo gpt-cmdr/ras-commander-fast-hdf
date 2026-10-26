@@ -702,6 +702,14 @@ stored compounds (see
 `ReadFamily` is `#[non_exhaustive]`; consumers that iterate `READ_FAMILIES` pick the family
 up without code changes.
 
+`ReadFamily::MeshCornerElevations` (`mesh_corner_elevations`, API 10) lists 2D mesh corner
+ground elevations: `Geometry/2D Flow Areas/<mesh>/FacePoints Elevation` and the RASMapper
+mapping-cache `.../Processed Data/Profile (Horizontal)/FacePoint Elevation` in
+`PostProcessing.hdf`. `ReadOnlyHdfSession::mesh_corner_elevations(mesh,
+CornerElevationLayout, expected_corners, max_bytes) -> Result<Reported<CornerElevations>>`
+reads one mesh in one layout with its provenance (module `hdf::corner_elevations`; see
+[read-families.md](read-families.md#mesh-corner-elevations-mesh_corner_elevations-api-10)).
+
 ## Typed attributes, fixed strings and dataspaces
 
 - `typed_dataset_attributes(path, max_bytes) -> Result<Reported<Vec<TypedAttribute>>>`:
@@ -781,4 +789,4 @@ inference are not implemented. Other gaps are listed per family on the linked pa
 | 7 | Additive: 1D cross-section geometry, line families and topology, XS result variables, 1D Summary Output, 1D structure series and structure/pump/storage-area geometry groups, and their layer-catalogue entries ([one-d.md](one-d.md)). `layer_inventory` returns additional layers. |
 | 8 | Additive: `output_block_inventory`, `read_output_block`, `read_family_inventory`, `read_family_dataset`, `classification_catalogue` and `reference_point_geometry` ([read-families.md](read-families.md)): stored family and byte-bitfield envelopes, environmental classifications, explicit per-object capabilities and source identities. Plan/run metadata remain raw attribute/text/table envelopes. Pipe and mesh domains require stored `Location` plus matching geometry cardinality, so missing `Location` may refuse previously inferred typed results. |
 | 9 | Additive: `typed_dataset_attributes`, `raw_fixed_strings`, `AttributeType::Bitfield`/`MetadataValue::Bitfield`, `hdf::Dataspace`, `mesh_results::DomainRule` and `MeshResultVariable.domain_rule`. Behaviour: the absent-Location legacy exact-name rule for six Base Output 2D series names, with the physical `Cell Count` bound applied to both domain paths (mirroring ras-commander PR #565); mesh series require the Base Output `Time` dataset; text decoding matches h5py; soft links are followed in old-style groups; NULL dataspaces are distinguished. |
-| 10 | Behaviour: mesh ring order is a contract (clockwise, first listed face, duplicates dropped, fewer than three faces omitted). Additive within API 10: whole-read budgets (`DEFAULT_READ_MAX_BYTES`, `read_numeric_bounded`, `read_numeric_batch_bounded`, `read_topology_bounded`), the `terrain_modifications` read family, and `Topology::face_lines` / `read_mesh_perimeter`. Behaviour within API 10: HEC-RAS 5.0 row-label water-surface summaries qualify as cell summaries (`DomainRule::LegacyRowLabels`, see [mesh-results.md](mesh-results.md)). Additive within API 10: `ReadOnlyHdfSession::from_bytes` (in-memory sessions, see [sessions.md](sessions.md)). |
+| 10 | Behaviour: mesh ring order is a contract (clockwise, first listed face, duplicates dropped, fewer than three faces omitted). Additive within API 10: whole-read budgets (`DEFAULT_READ_MAX_BYTES`, `read_numeric_bounded`, `read_numeric_batch_bounded`, `read_topology_bounded`), the `terrain_modifications` read family, and `Topology::face_lines` / `read_mesh_perimeter`. Behaviour within API 10: HEC-RAS 5.0 row-label water-surface summaries qualify as cell summaries (`DomainRule::LegacyRowLabels`, see [mesh-results.md](mesh-results.md)). Additive within API 10: `ReadOnlyHdfSession::from_bytes` (in-memory sessions, see [sessions.md](sessions.md)). Additive within API 10: the `mesh_corner_elevations` read family and `ReadOnlyHdfSession::mesh_corner_elevations`. |

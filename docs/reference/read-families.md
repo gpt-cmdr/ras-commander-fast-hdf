@@ -5,9 +5,10 @@ networks, reference lines, breach progression or sediment output) that the engin
 list and read with typed identities and an explicit capability per dataset. This page
 describes the generic family inventory and read calls, the stored output-block reader,
 time and budget rules, and each qualified family: pipes, environmental and terrain data,
-sediment, encroachments, reference points and terrain modifications. It also states what
-remains unqualified. The family surface was added in engine API 8 and extended in API 9
-(bitfield attributes) and API 10 (terrain modifications).
+sediment, encroachments, reference points, terrain modifications and 2D mesh corner
+elevations. It also states what remains unqualified. The family surface was added in engine
+API 8 and extended in API 9 (bitfield attributes) and API 10 (terrain modifications, mesh
+corner elevations).
 
 ## Inventory and reads
 
@@ -247,3 +248,55 @@ notebook output (1,851 Attributes tables, all qualified and read byte-equal to h
 files are not shipped). Nothing else was observed outside unit-test scratch output (whose
 invented layouts and vlen `Type` stay refused); any other `Type` or layout stays
 Unsupported(schema) until a real file shows it.
+
+## Mesh corner elevations (`mesh_corner_elevations`, API 10)
+
+`ReadFamily::MeshCornerElevations` lists the static ground elevation of every 2D mesh
+corner (face point). RASMapper's depth-weighted sloping interpolation uses these terrain
+values. They are not results: corner water surfaces, face water surfaces and node
+velocities are different data. HEC-RAS stores them in two layouts:
+
+| layout | role | dataset | written by |
+|---|---|---|---|
+| geometry | `geometry_corner_elevation` | `Geometry/2D Flow Areas/<mesh>/FacePoints Elevation` in a geometry or plan HDF | 2D hydraulic-table preprocessing, from the terrain face-profile endpoints |
+| mapping cache | `mapping_cache_corner_elevation` | `Results/Unsteady/Output/Output Blocks/Base Output/Summary Output/2D Flow Areas/<mesh>/Processed Data/Profile (Horizontal)/FacePoint Elevation` in the result's `PostProcessing.hdf` | RASMapper, when it renders depth-weighted sloping maps |
+
+Note the spellings: `FacePoints Elevation` (geometry) and `FacePoint Elevation` (cache).
+
+An array is qualified only when it is a rank-one little-endian `f4` array with exactly
+one value per mesh corner. Values come back exactly as stored, in `FacePoints Coordinate`
+row order: NaN payloads, signed zero, infinities, subnormals and sentinels such as -9999
+are not altered. Another dtype or byte order is Unsupported(encoding); another rank
+(scalar included) is Unsupported(schema); a length that differs from the corner count is
+Corrupt. Numeric selections are allowed. A file without either layout is Unavailable.
+
+The corner count of a geometry-layout array is the row count of the same mesh's
+`FacePoints Coordinate` (shape `(corners, 2)`), which is its `identity_table`; missing
+coordinates or coordinates of another width are Corrupt. A cache file stores no
+coordinates, so its inventory row is Unsupported(identity_layout): only the typed reader,
+given the corner count of the plan or geometry HDF the cache belongs to, qualifies it.
+
+`ReadOnlyHdfSession::mesh_corner_elevations(mesh, layout, expected_corners, max_bytes)`
+reads one mesh in one layout and returns `Reported<CornerElevations>`: the values, the
+source dataset (file identity, path, shape, every attribute), the corner count and where
+that count came from (`CornerCountSource::Coordinates` or `Caller`). An absent dataset or
+mesh is Unavailable; a refused layout is Unsupported; a disagreement with
+`expected_corners` or with the stored coordinates is Corrupt. The Python extension
+exposes it as `mesh_corner_elevations(path, mesh, layout, expected_corners=None,
+max_bytes=...)`. The engine never chooses between the two layouts, compares them,
+interpolates or generates elevations: a caller that holds both decides (ras-commander's
+`HdfMesh.get_mesh_corner_elevations` does).
+
+Evidence: synthetic fixtures with invented values reproduce the observed stored schema
+(`tests/generate_corner_elevation_fixtures.py`, `tests/corner_elevations.rs`: qualified
+arrays compared byte for byte with h5py bytes, eight refused defects, cache count rules,
+absent data, budgets and path validation). The geometry layout was taken from a survey
+of the release fixture corpus: 41 mesh arrays in 35 HEC-RAS 7.0 and 7.0.1 geometry and
+plan HDFs, all rank-one gzip-chunked little-endian `f4` with a `Can Plot = False`
+attribute and one value per corner, all read natively bit-identical to h5py. None of the
+HEC-RAS 5.x and 6.x files in the corpus has the dataset. The cache layout was taken from
+two `PostProcessing.hdf` files that native HEC-RAS 7.0.1 RASMapper wrote for
+depth-weighted sloping maps (rank-one gzip-chunked `<f4` with `Terrain Filename` and
+`Terrain File Date` attributes, no geometry), both read bit-identical to h5py and to the
+plan's `FacePoints Elevation`. Check further files with `tests/corner_elevation_oracle.py`
+and the ignored test `real_files_match_the_h5py_oracle`; those files are not shipped.
