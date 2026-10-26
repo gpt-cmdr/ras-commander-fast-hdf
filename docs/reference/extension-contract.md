@@ -49,8 +49,8 @@ asks Git only when the package directory is itself a Git checkout, and rejects a
 `default_max_bytes`, and `bindings`: the sorted set of actually registered functions and
 classes (including the `NativeAnalysis` class, excluding exception classes), so optional
 feature builds report only what was registered. ras-commander's tests check this set
-against an explicit expected list (78 entry points at API 11, including the
-`_panic_for_test` hook).
+against an explicit expected list (79 entry points at API 11 from engine 0.2.3, 78
+before; including the `_panic_for_test` hook).
 
 ## Core numeric, mesh and tile functions
 
@@ -353,13 +353,14 @@ Implemented in `src/python/wave3.rs`:
 
 | Binding | Engine API | Returns |
 |---|---|---|
-| `read_families()` | `READ_FAMILIES` | family names (`pipe_geometry`, `pipe_results`, `reference_line_results`, `reference_point_results`, `breach`, `plan_metadata`, `land_cover`, `infiltration`, `sediment`, `encroachments`, `terrain`, `event_conditions`, `steady_output`, `terrain_modifications`, ...) |
+| `read_families()` | `READ_FAMILIES` | family names (`pipe_geometry`, `pipe_results`, `reference_line_results`, `reference_point_results`, `breach`, `plan_metadata`, `land_cover`, `infiltration`, `sediment`, `encroachments`, `terrain`, `event_conditions`, `steady_output`, `terrain_modifications`, `mesh_corner_elevations`, ...) |
 | `read_family_inventory(path, family, metadata_max_bytes)` | `read_family_inventory` | `{family, capability, datasets, groups}`; each dataset has path, identity, shape, kind/dtype, storage, capability, typed attributes, role, domain, time_group, identity_table, locations, names, geometry_locations, `stored_location_ids` (stored-dtype array or None), time_of_extreme_row |
 | `read_family_dataset(path, family, dataset, slices=None, metadata_max_bytes, max_bytes)` | `read_family_dataset` | stored values (below) |
 | `output_block_inventory(path, max_bytes)` | `output_block_inventory` | non-Base blocks with stored descriptors |
 | `read_output_block(path, block, relative, slices=None, max_bytes)` | `read_output_block` | stored values |
 | `reference_point_geometry(path, max_bytes)` | `reference_point_geometry` | `Reported`: Attributes compound, Points array, features (identity, name, area, stored i32 cell_index, point_row) |
 | `classification_catalogue(path, family, max_bytes)` | `classification_catalogue` | `Reported`: layout, entries (pixel_id as stored int, name, variable_rows, capability), unmatched_variables |
+| `mesh_corner_elevations(path, mesh, layout, expected_corners=None, max_bytes)` | `mesh_corner_elevations` | `Reported`: mesh, layout (`geometry` or `mapping_cache`), dataset descriptor (path, identity, shape, attributes), corner_count, corner_count_source (`{kind: coordinates, path}` or `{kind: caller}`), values (`float32` ndarray as stored). Additive within API 11 (engine 0.2.3); check with `hasattr`. |
 | `stored_family_index(path, metadata_max_bytes)` | all family inventories + output blocks | compact routing index: `{datasets: [{owner, path, storage, shape, dtype, status, code}], failures, output_blocks}` |
 
 Stored values are `{"storage": "numeric", "values": ndarray}` (stored dtype),
@@ -480,4 +481,4 @@ Tested datasets, measured timings and limitations are in [validation.md](validat
 | 7, 8 | 6 | Sessions (`HdfSession`, NumPy element/index outputs), cache controls (`cache_bytes`, `cache_slots`, `cache_stats()`), `read_mesh_summary_values` and `read_mesh_boundary_batch`; see [sessions.md](sessions.md). |
 | 9 | 7 | 1D bindings (`src/python/one_d.rs`) and the mesh-geometry tables, geometry family capability and boundary links (67 entry points). |
 | 10 | 8 | Read family bindings (`src/python/wave3.rs`) and `stored_family_index` (75 entry points). |
-| 11 | 9, then 10 | `typed_dataset_attributes`, `raw_fixed_strings`, `dataspace` and bitfield attribute types, `domain_rule`; panic containment and `_panic_for_test` (78 entry points). Built against engine API 10: ring-order contract, malformed-input hardening and the 2 GiB default read budget; bindings unchanged. |
+| 11 | 9, then 10 | `typed_dataset_attributes`, `raw_fixed_strings`, `dataspace` and bitfield attribute types, `domain_rule`; panic containment and `_panic_for_test` (78 entry points). Built against engine API 10: ring-order contract, malformed-input hardening and the 2 GiB default read budget; bindings unchanged. Additive within API 11 (engine 0.2.3): `mesh_corner_elevations` (79 entry points). |

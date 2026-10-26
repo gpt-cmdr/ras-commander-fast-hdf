@@ -149,6 +149,7 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "read_family_inventory", "hdf"),
     e("ReadOnlyHdfSession", "read_family_dataset", "hdf"),
     e("ReadOnlyHdfSession", "reference_point_geometry", "hdf"),
+    e("ReadOnlyHdfSession", "mesh_corner_elevations", "hdf"),
 ];
 
 /// What this build of the engine offers.

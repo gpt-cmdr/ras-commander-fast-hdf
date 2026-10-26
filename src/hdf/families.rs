@@ -31,6 +31,10 @@ pub enum ReadFamily {
     TerrainModifications,
     EventConditions,
     SteadyOutput,
+    /// Static 2D mesh corner ground elevations: `Geometry/2D Flow Areas/<mesh>/FacePoints
+    /// Elevation` and the RASMapper mapping-cache `.../Processed Data/Profile (Horizontal)/
+    /// FacePoint Elevation`.
+    MeshCornerElevations,
 }
 pub const READ_FAMILIES: &[ReadFamily] = &[
     ReadFamily::PipeGeometry,
@@ -49,6 +53,7 @@ pub const READ_FAMILIES: &[ReadFamily] = &[
     ReadFamily::TerrainModifications,
     ReadFamily::EventConditions,
     ReadFamily::SteadyOutput,
+    ReadFamily::MeshCornerElevations,
 ];
 impl ReadFamily {
     pub fn as_str(self) -> &'static str {
@@ -69,6 +74,7 @@ impl ReadFamily {
             Self::TerrainModifications => "terrain_modifications",
             Self::EventConditions => "event_conditions",
             Self::SteadyOutput => "steady_output",
+            Self::MeshCornerElevations => "mesh_corner_elevations",
         }
     }
 }
@@ -239,6 +245,9 @@ impl ReadOnlyHdfSession {
         if family == ReadFamily::TerrainModifications {
             return self.terrain_modification_inventory(max_bytes);
         }
+        if family == ReadFamily::MeshCornerElevations {
+            return self.corner_elevation_inventory(max_bytes);
+        }
         let mut out = FamilyInventory {
             family,
             capability: Capability::Supported,
@@ -354,6 +363,9 @@ impl ReadOnlyHdfSession {
         }
         if family == ReadFamily::TerrainModifications {
             return self.terrain_modification_read(path, slices, metadata_max_bytes, max_bytes);
+        }
+        if family == ReadFamily::MeshCornerElevations {
+            return self.corner_elevation_read(path, slices, metadata_max_bytes, max_bytes);
         }
         if (family == ReadFamily::PipeGeometry && path.starts_with("Geometry/Pipe Inlets/"))
             || (family == ReadFamily::PipeResults

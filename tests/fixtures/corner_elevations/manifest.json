@@ -1,0 +1,89 @@
+[
+ {
+  "name": "geometry.h5",
+  "sha256": "4ff7aaf0cf5eedcec5decfb724cafafff7a0f7e8b4002553c7a775d54fa6d94a",
+  "datasets": [
+   {
+    "path": "Geometry/2D Flow Areas/Mesh A/FacePoints Elevation",
+    "status": "supported",
+    "code": null,
+    "corners": 8,
+    "h5py_dtype": "<f4",
+    "h5py_hex": "0100c07f000000800000807f000080ff01000000003c1cc60000c84200007a44"
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Mesh C/FacePoints Elevation",
+    "status": "supported",
+    "code": null,
+    "corners": 3,
+    "h5py_dtype": "<f4",
+    "h5py_hex": "000028410000344100004041"
+   }
+  ]
+ },
+ {
+  "name": "cache.h5",
+  "sha256": "cb35970ccfef4f07de6c9b972af575ec07cbe19848ce025cd385c116e59eb095",
+  "datasets": [
+   {
+    "path": "Results/Unsteady/Output/Output Blocks/Base Output/Summary Output/2D Flow Areas/Mesh A/Processed Data/Profile (Horizontal)/FacePoint Elevation",
+    "status": "unsupported",
+    "code": "identity_layout"
+   }
+  ]
+ },
+ {
+  "name": "refusals.h5",
+  "sha256": "48fdbec2df48b5bb2d81f817251fe467fda0d27bd7f0d67d0d7b034ddba82789",
+  "datasets": [
+   {
+    "path": "Geometry/2D Flow Areas/Big Endian/FacePoints Elevation",
+    "status": "unsupported",
+    "code": "encoding"
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Integer/FacePoints Elevation",
+    "status": "unsupported",
+    "code": "encoding"
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Length Mismatch/FacePoints Elevation",
+    "status": "corrupt",
+    "code": null
+   },
+   {
+    "path": "Geometry/2D Flow Areas/No Coordinates/FacePoints Elevation",
+    "status": "corrupt",
+    "code": null
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Rank Two/FacePoints Elevation",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Scalar/FacePoints Elevation",
+    "status": "unsupported",
+    "code": "schema"
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Valid/FacePoints Elevation",
+    "status": "supported",
+    "code": null,
+    "corners": 3,
+    "h5py_dtype": "<f4",
+    "h5py_hex": "000028410000344100004041"
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Wide Coordinates/FacePoints Elevation",
+    "status": "corrupt",
+    "code": null
+   },
+   {
+    "path": "Geometry/2D Flow Areas/Wide Float/FacePoints Elevation",
+    "status": "unsupported",
+    "code": "encoding"
+   }
+  ]
+ }
+]

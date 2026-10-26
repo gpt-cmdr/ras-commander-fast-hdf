@@ -4,6 +4,7 @@
 //! membership, Location-domain qualification and refusals; this module only converts.
 //! Numeric values keep their stored dtype, compounds keep exact raw bytes, bitfields
 //! keep exact bytes, and strings are the engine's decoded fixed text.
+use crate::hdf::corner_elevations::{CornerCountSource, CornerElevationLayout, CornerElevations};
 use crate::hdf::environment::{ClassId, ClassificationCatalogue};
 use crate::hdf::families::{
     FamilyDataset, FamilyInventory, OutputBlock, ReadFamily, READ_FAMILIES,
@@ -284,6 +285,56 @@ fn classification_catalogue<'py>(
         })
     })
 }
+/// One mesh's corner ground elevations in one stored layout (`geometry` or `mapping_cache`),
+/// exactly as stored, with provenance: `{"capability", "value"}` where `value` is `None`
+/// unless supported, else `{"mesh", "layout", "dataset", "corner_count",
+/// "corner_count_source", "values"}`. `expected_corners` is the plan's corner count; a
+/// cache file needs it, and it must agree with stored coordinates when present.
+#[pyfunction]
+#[pyo3(signature=(path,mesh,layout,expected_corners=None,max_bytes=DEFAULT))]
+fn mesh_corner_elevations<'py>(
+    py: Python<'py>,
+    path: crate::python::session::Source,
+    mesh: &str,
+    layout: &str,
+    expected_corners: Option<u64>,
+    max_bytes: usize,
+) -> PyResult<Bound<'py, PyDict>> {
+    crate::python::panic_guard::guard(|| {
+        let layout = match layout {
+            "geometry" => CornerElevationLayout::Geometry,
+            "mapping_cache" => CornerElevationLayout::MappingCache,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "layout must be 'geometry' or 'mapping_cache'",
+                ))
+            }
+        };
+        let r: Reported<CornerElevations> = path.run(py, |engine_session| {
+            engine_session.mesh_corner_elevations(mesh, layout, expected_corners, max_bytes)
+        })?;
+        reported(py, r, |c| {
+            let source = match &c.corner_count_source {
+                CornerCountSource::Coordinates { path } => {
+                    dict!(py,"kind"=>"coordinates","path"=>path)
+                }
+                _ => dict!(py,"kind"=>"caller","path"=>py.None()),
+            };
+            let n = c.values.len() as u64;
+            let values = crate::python::reader::array(
+                py,
+                crate::hdf::NumericArray {
+                    shape: vec![n],
+                    values: crate::hdf::NumericValues::F32(c.values),
+                },
+            )?;
+            Ok(dict!(py,"mesh"=>&c.mesh,"layout"=>c.layout.as_str(),
+                "dataset"=>stored_dict(py,&c.dataset)?,"corner_count"=>c.corner_count,
+                "corner_count_source"=>source,"values"=>values)
+            .into_any())
+        })
+    })
+}
 /// Compact membership index for routing: every dataset of every read family and of
 /// every non-Base output block, with storage, shape, dtype and capability only (no
 /// attributes). Family-level failures are reported per family, never hidden.
@@ -380,5 +431,6 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(reference_point_geometry, m)?)?;
     m.add_function(wrap_pyfunction!(classification_catalogue, m)?)?;
     m.add_function(wrap_pyfunction!(stored_family_index, m)?)?;
+    m.add_function(wrap_pyfunction!(mesh_corner_elevations, m)?)?;
     Ok(())
 }

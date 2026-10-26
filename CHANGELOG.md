@@ -1,5 +1,25 @@
 # Changelog
 
+## Unreleased
+
+- New read family `mesh_corner_elevations` (`ReadFamily::MeshCornerElevations`): the
+  static ground elevation of every 2D mesh corner (face point), which RASMapper's
+  depth-weighted sloping interpolation uses. Two stored layouts are read exactly, as
+  rank-one little-endian `f4` arrays with one value per `FacePoints Coordinate` row:
+  `Geometry/2D Flow Areas/<mesh>/FacePoints Elevation` (geometry or plan HDF) and the
+  RASMapper mapping cache `.../Processed Data/Profile (Horizontal)/FacePoint Elevation`
+  (`PostProcessing.hdf`). Values are returned bit for bit, NaN payloads and sentinels
+  included. A cache stores no coordinates, so it is qualified only by the typed reader
+  with the plan's corner count. Evidence: 41 geometry arrays in 35 HEC-RAS 7.0/7.0.1
+  files and two native RASMapper 7.0.1 caches, all bit-identical to h5py.
+- `ReadOnlyHdfSession::mesh_corner_elevations(mesh, layout, expected_corners, max_bytes)`
+  reads one mesh in one layout with its provenance (file identity, dataset path, shape,
+  attributes, corner count and its source). Absent data is Unavailable, never an empty
+  array; a corner-count disagreement is Corrupt.
+- The Python extension gains one entry point, `mesh_corner_elevations` (additive).
+  Engine `API_VERSION` stays 10 and extension `API_VERSION` stays 11; consumers detect
+  the entry point with `hasattr`.
+
 ## 0.2.2 (2026-10-25)
 
 - Reference-line results are linked to their geometry rows:
