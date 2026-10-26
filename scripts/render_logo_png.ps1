@@ -1,4 +1,4 @@
-# Render the fast-hdf logo SVGs to PNG with headless Microsoft Edge.
+# Render the logo SVGs (Fast-HDF, Native Rust Engines, Mapping Engine) to PNG with headless Microsoft Edge.
 #
 # Usage (from the repository root):
 #   python scripts/generate_logos.py
@@ -15,11 +15,11 @@ $edge = @(
 if (-not $edge) { throw 'Microsoft Edge not found.' }
 
 # svg, png, width, height (PNG pixels)
-$jobs = @(
-    @('ras-commander-fast-hdf_logo.svg',          'ras-commander-fast-hdf_logo.png',          1800, 1200),
-    @('ras-commander-fast-hdf_social.svg',        'ras-commander-fast-hdf_social.png',        1200, 627),
-    @('ras-commander-fast-hdf_github-social.svg', 'ras-commander-fast-hdf_github-social.png', 1280, 640)
-)
+$jobs = foreach ($stem in 'ras-commander-fast-hdf', 'ras-commander-rust-engines', 'ras-commander-mapping-engine') {
+    ,@("${stem}_logo.svg",          "${stem}_logo.png",          1800, 1200)
+    ,@("${stem}_social.svg",        "${stem}_social.png",        1200, 627)
+    ,@("${stem}_github-social.svg", "${stem}_github-social.png", 1280, 640)
+}
 
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("fasthdf-logo-" + [guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null

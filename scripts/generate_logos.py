@@ -3,7 +3,8 @@
 Usage: python scripts/generate_logos.py
 
 Writes the chosen logo (Option C, "Engine Inside") and its link-preview cards
-to docs/images/logo/, and the five review concepts and two icons to
+to docs/images/logo/ in three variants: Fast-HDF (this repository), Native
+Rust Engines (HDF and flood mapping) and the Mapping Engine, and the five review concepts and two icons to
 docs/images/logo/concepts/. Render the PNGs with scripts/render_logo_png.ps1.
 """
 import math
@@ -132,9 +133,69 @@ def concept_b():
 """
 
 
-def engine_inside_body():
+# Product variants of Option C: (pill labels, tagline, file stem).
+MAP_GREEN = "#1E8E62"  # flood-mapping pill and cog rim
+
+VARIANTS = {
+    "fast-hdf": ((("FAST-HDF", RUST),), "Native Rust HDF Engine"),
+    "mapping": ((("FLOOD MAPPING", MAP_GREEN),), "Native Rust Mapping Engine"),
+    "engines": ((("HDF", RUST), ("FLOOD MAPPING", MAP_GREEN)), "Native Rust Engines"),
+}
+
+# Depth classes for the mapping cog's raster, shallow to deep.
+DEPTH = ("#C6E9F7", "#86CBEC", "#3FA3D9", "#1668AE", "#0B3F7A")
+
+
+def mapping_cog(cx=335, cy=57):
+    """A small cog meshed with the main one, holding a depth raster (flood map)."""
+    cells, size = [], 9
+    for row in range(7):
+        for col in range(7):
+            # Depth grows toward a channel running diagonally through the raster.
+            d = abs((col - row) * 0.9 + 0.5)
+            k = max(0, min(4, 4 - int(d)))
+            x, y = cx - 31.5 + col * size, cy - 31.5 + row * size
+            cells.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" fill="{DEPTH[k]}" />')
+    grid = "\n    ".join(cells)
+    return f"""<path d="{gear_path(cx, cy, 33, 42, 12, rot=0.13)}" fill="{MAP_GREEN}" stroke="#5CDB95" stroke-width="2" stroke-linejoin="round" />
+  <clipPath id="map-face"><circle cx="{cx}" cy="{cy}" r="27" /></clipPath>
+  <g clip-path="url(#map-face)">
+    {grid}
+  </g>
+  <circle cx="{cx}" cy="{cy}" r="27" fill="none" stroke="#05386B" stroke-width="2" />
+  <circle cx="{cx}" cy="{cy}" r="4" fill="#05386B" stroke="#5CDB95" stroke-width="1.5" />"""
+
+
+def _text_width(text, size, bold=False, italic=False):
+    """Rough Arial advance width; enough to centre a row of pills and a tagline."""
+    per_char = 0.64 if bold else 0.50
+    if not bold and text.upper() != text:
+        per_char = 0.47
+    return len(text) * size * per_char
+
+
+def _pill_row(pills, tagline, y=263):
+    """Centred row: coloured pills followed by an italic tagline."""
+    pill_fs, tag_fs, gap = 14, 17, 8
+    widths = [_text_width(label, pill_fs, bold=True) + 24 for label, _ in pills]
+    tag_w = _text_width(tagline, tag_fs, italic=True)
+    total = sum(widths) + gap * len(pills) + 4 + tag_w
+    x = 225 - total / 2
+    out = []
+    for (label, colour), w in zip(pills, widths):
+        out.append(f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="24" rx="12" ry="12" fill="{colour}" />')
+        out.append(f'<text x="{x + w / 2:.1f}" y="{y + 17}" font-family="Arial, sans-serif" font-size="{pill_fs}" font-weight="bold" text-anchor="middle" fill="#FFFFFF">{label}</text>')
+        x += w + gap
+    out.append(f'<text x="{x + 4:.1f}" y="{y + 18}" font-family="Arial, sans-serif" font-size="{tag_fs}" font-style="italic" fill="#8EE4AF">{tagline}</text>')
+    return "\n  ".join(out)
+
+
+def engine_inside_body(variant="fast-hdf"):
     """Option C artwork in the original 450 x 300 logo coordinates, without background."""
-    return f"""<path d="{gear_path(225, 150, 104, 114, 36)}" fill="{RUST_DEEP}" stroke="{RUST}" stroke-width="2" stroke-linejoin="round" />
+    pills, tagline = VARIANTS[variant]
+    cog2 = mapping_cog() if variant != "fast-hdf" else ""
+    return f"""{cog2}
+  <path d="{gear_path(225, 150, 104, 114, 36)}" fill="{RUST_DEEP}" stroke="{RUST}" stroke-width="2" stroke-linejoin="round" />
   <circle cx="225" cy="150" r="100" fill="#05386B" stroke="#5CDB95" stroke-width="2" />
   <rect x="55" y="185" width="340" height="50" fill="#05386B" stroke="#5CDB95" stroke-width="2" rx="2" ry="2" />
 
@@ -143,26 +204,24 @@ def engine_inside_body():
   {WAVES.format(c="#5CDB95", op=0.7)}
 
   <text x="225" y="222" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#EDF5E1">RAS-COMMANDER</text>
-  <!-- FAST-HDF pill and tagline -->
-  <rect x="62" y="263" width="96" height="24" rx="12" ry="12" fill="{RUST}" />
-  <text x="110" y="280" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#FFFFFF">FAST-HDF</text>
-  <text x="170" y="281" font-family="Arial, sans-serif" font-size="17" font-style="italic" fill="#8EE4AF">Native Rust HDF Engine</text>"""
+  <!-- product pills and tagline -->
+  {_pill_row(pills, tagline)}"""
 
 
-def concept_c(width=450, height=300):
+def concept_c(width=450, height=300, variant="fast-hdf"):
     """Engine Inside: original blue/green kept, a rust cog wraps the green circle.
 
     At 450 x 300 this is the logo. Other sizes (link-preview cards) extend the
     background and centre the logo, scaled to fill the height.
     """
-    body = engine_inside_body()
+    body = engine_inside_body(variant)
     if (width, height) != (450, 300):
         scale = min(width / 450, (height - 12) / 300)
         tx = (width - 450 * scale) / 2
         ty = (height - 300 * scale) / 2
         body = f'<g transform="translate({tx:g},{ty:g}) scale({scale:g})">\n  {body}\n  </g>'
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}">
-  <!-- RAS Commander Native Rust Engine (fast-hdf), Option C "Engine Inside": the original green emblem is kept and a rust cog drives it from outside -->
+  <!-- RAS Commander {VARIANTS[variant][1]}, Option C "Engine Inside": the original green emblem is kept and a rust cog drives it from outside -->
   <defs>
     <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#05386B" />
@@ -303,11 +362,17 @@ def main():
         "icon-cog-waves-oxidized.svg": icon("oxidized"),
     }
     # The chosen logo (Option C) and its link-preview cards live one folder up.
-    final = {
-        "ras-commander-fast-hdf_logo.svg": concept_c(),
-        "ras-commander-fast-hdf_social.svg": concept_c(1200, 627),         # LinkedIn / Open Graph
-        "ras-commander-fast-hdf_github-social.svg": concept_c(1280, 640),  # GitHub social preview
-    }
+    final = {}
+    # fast-hdf: this repository's logo. engines: the ras-commander "Native Rust
+    # Engines" overview page. mapping: the ras-commander Mapping Engine page.
+    for variant, stem in (
+        ("fast-hdf", "ras-commander-fast-hdf"),
+        ("engines", "ras-commander-rust-engines"),
+        ("mapping", "ras-commander-mapping-engine"),
+    ):
+        final[f"{stem}_logo.svg"] = concept_c(variant=variant)
+        final[f"{stem}_social.svg"] = concept_c(1200, 627, variant)         # LinkedIn / Open Graph
+        final[f"{stem}_github-social.svg"] = concept_c(1280, 640, variant)  # GitHub social preview
     for name, svg in files.items():
         (out / name).write_text(svg, encoding="utf-8", newline="\n")
         print(name)
