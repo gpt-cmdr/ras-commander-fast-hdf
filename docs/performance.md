@@ -120,8 +120,13 @@ default `auto` mode: median of 7 repeat calls, and the peak memory of one call.
   used to do in Python: assembling 2D cell polygons from face topology, and
   selecting rows or cells from compressed time-series chunks without
   decompressing more than needed.
-- **No gain** for whole-array summaries: both paths decompress the same chunks
-  with zlib, and that dominates.
+- **No gain** for whole-array summaries such as `get_mesh_max_ws` and
+  `get_mesh_max_face_v` with the default GeoDataFrame result: most of the call
+  is spent building a Shapely point or line for every row, which
+  ras-commander does the same way in both modes. Reading and decompressing the
+  values is a small part of it: the same values as a table take about 34 ms,
+  against 1,642 ms for the default `get_mesh_max_face_v` call on 177,301 faces. Use [tables without geometry](#tables-without-geometry)
+  when you don't need the geometry.
 - **Small losses** on small reads come from a fixed cost per native read
   (proving the layout and encoding of each dataset read). Since 0.2.0 a public
   call opens each HDF once and shares that session across its reads, which
