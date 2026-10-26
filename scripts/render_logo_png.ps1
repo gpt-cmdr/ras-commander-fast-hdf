@@ -1,4 +1,4 @@
-# Render the fast-hdf logo SVGs to PNG with headless Microsoft Edge.
+# Render the logo SVGs (FAST-HDF, FAST-MAP, FAST-DSS and the Native Rust Engines family) to PNG with headless Microsoft Edge.
 #
 # Usage (from the repository root):
 #   python scripts/generate_logos.py
@@ -15,11 +15,15 @@ $edge = @(
 if (-not $edge) { throw 'Microsoft Edge not found.' }
 
 # svg, png, width, height (PNG pixels)
-$jobs = @(
-    @('ras-commander-fast-hdf_logo.svg',          'ras-commander-fast-hdf_logo.png',          1800, 1200),
-    @('ras-commander-fast-hdf_social.svg',        'ras-commander-fast-hdf_social.png',        1200, 627),
-    @('ras-commander-fast-hdf_github-social.svg', 'ras-commander-fast-hdf_github-social.png', 1280, 640)
-)
+# The logos render at 4x their viewBox (the family logos are 450 x 320).
+$stems = 'ras-commander-fast-hdf', 'ras-commander-fast-map', 'ras-commander-fast-dss',
+         'ras-commander-rust-engines', 'ras-commander-rust-engines-dss'
+$jobs = foreach ($stem in $stems) {
+    $vb = [regex]::Match((Get-Content -Raw (Join-Path $here "${stem}_logo.svg")), 'viewBox="0 0 (\d+) (\d+)"')
+    ,@("${stem}_logo.svg",          "${stem}_logo.png",          (4 * [int]$vb.Groups[1].Value), (4 * [int]$vb.Groups[2].Value))
+    ,@("${stem}_social.svg",        "${stem}_social.png",        1200, 627)
+    ,@("${stem}_github-social.svg", "${stem}_github-social.png", 1280, 640)
+}
 
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ("fasthdf-logo-" + [guid]::NewGuid())
 New-Item -ItemType Directory $tmp | Out-Null

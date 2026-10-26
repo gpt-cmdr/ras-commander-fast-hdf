@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 300" width="450" height="300">
-  <!-- RAS Commander Native Rust Engine (fast-hdf), Option C "Engine Inside": the original green emblem is kept and a rust cog drives it from outside -->
+  <!-- RAS Commander Native Rust HDF Engine, Option C "Engine Inside": the original green emblem is kept and a rust cog drives it from outside -->
   <defs>
     <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#05386B" />
@@ -30,8 +30,8 @@
   </g>
 
   <text x="225" y="222" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#EDF5E1">RAS-COMMANDER</text>
-  <!-- FAST-HDF pill and tagline -->
-  <rect x="62" y="263" width="96" height="24" rx="12" ry="12" fill="#E5652E" />
-  <text x="110" y="280" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#FFFFFF">FAST-HDF</text>
-  <text x="170" y="281" font-family="Arial, sans-serif" font-size="17" font-style="italic" fill="#8EE4AF">Native Rust HDF Engine</text>
+  <!-- product pills and tagline -->
+  <rect x="83.3" y="263" width="95.7" height="24" rx="12" ry="12" fill="#E5652E" />
+  <text x="131.1" y="280" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#FFFFFF">FAST-HDF</text>
+  <text x="190.9" y="281" font-family="Arial, sans-serif" font-size="17" font-style="italic" fill="#8EE4AF">Native Rust HDF Engine</text>
 </svg>

@@ -3,8 +3,9 @@
 Usage: python scripts/generate_logos.py
 
 Writes the chosen logo (Option C, "Engine Inside") and its link-preview cards
-to docs/images/logo/, and the five review concepts and two icons to
-docs/images/logo/concepts/. Render the PNGs with scripts/render_logo_png.ps1.
+to docs/images/logo/ for each engine (FAST-HDF, FAST-MAP, FAST-DSS) and for the
+Native Rust Engines family, with FAST-DSS either "Coming Soon" or released. The
+five review concepts and two icons go to docs/images/logo/concepts/. Render the PNGs with scripts/render_logo_png.ps1.
 """
 import math
 from pathlib import Path
@@ -132,8 +133,74 @@ def concept_b():
 """
 
 
-def engine_inside_body():
-    """Option C artwork in the original 450 x 300 logo coordinates, without background."""
+# Product variants of Option C. Each pill is (label, fill, note); a pill with a
+# note is drawn greyed out with the note beside its label ("Coming Soon").
+MAP_GREEN = "#1E8E62"  # FAST-MAP pill
+DSS_AMBER = "#B7791F"  # FAST-DSS pill
+GREY = "#5D6B78"       # an engine that is not released yet
+
+HDF_PILL = ("FAST-HDF", RUST, None)
+MAP_PILL = ("FAST-MAP", MAP_GREEN, None)
+DSS_PILL = ("FAST-DSS", DSS_AMBER, None)
+DSS_SOON = ("FAST-DSS", GREY, "(Coming Soon)")
+
+VARIANTS = {
+    # variant: (pills, tagline)
+    "fast-hdf": ((HDF_PILL,), "Native Rust HDF Engine"),
+    "fast-map": ((MAP_PILL,), "Native Rust Mapping Engine"),
+    "fast-dss": ((DSS_PILL,), "Native Rust DSS Engine"),
+    "engines": ((HDF_PILL, MAP_PILL, DSS_SOON), "Native Rust Engines"),
+    "engines-dss": ((HDF_PILL, MAP_PILL, DSS_PILL), "Native Rust Engines"),
+}
+
+def _text_width(text, size, bold=False):
+    """Rough Arial advance width; enough to centre a row of pills and a tagline."""
+    per_char = 0.64 if bold else 0.50
+    if not bold and text.upper() != text:
+        per_char = 0.47
+    return len(text) * size * per_char
+
+
+def _pill_row(pills, tagline, y=263):
+    """Pills centred under the band; the tagline follows them, or gets its own
+    centred row below when there are several pills."""
+    pill_fs, note_fs, tag_fs, gap = 14, 12, 17, 8
+    widths = []
+    for label, _, note in pills:
+        w = _text_width(label, pill_fs, bold=True) + 24
+        if note:
+            w += _text_width(note, note_fs) + 6
+        widths.append(w)
+    tag_w = _text_width(tagline, tag_fs)
+    own_row = len(pills) > 1
+    total = sum(widths) + gap * (len(pills) - 1) + (0 if own_row else gap + 4 + tag_w)
+    x = 225 - total / 2
+    out = []
+    for (label, colour, note), w in zip(pills, widths):
+        if note:
+            lw = _text_width(label, pill_fs, bold=True)
+            out.append(f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="24" rx="12" ry="12" fill="{colour}" fill-opacity="0.55" stroke="#9AA5B1" stroke-width="1.5" stroke-dasharray="4 3" />')
+            out.append(f'<text x="{x + 12:.1f}" y="{y + 17}" font-family="Arial, sans-serif" font-size="{pill_fs}" font-weight="bold" fill="#C9D1D9">{label}</text>')
+            out.append(f'<text x="{x + 18 + lw:.1f}" y="{y + 16.5}" font-family="Arial, sans-serif" font-size="{note_fs}" font-style="italic" fill="#C9D1D9">{note}</text>')
+        else:
+            out.append(f'<rect x="{x:.1f}" y="{y}" width="{w:.1f}" height="24" rx="12" ry="12" fill="{colour}" />')
+            out.append(f'<text x="{x + w / 2:.1f}" y="{y + 17}" font-family="Arial, sans-serif" font-size="{pill_fs}" font-weight="bold" text-anchor="middle" fill="#FFFFFF">{label}</text>')
+        x += w + gap
+    if own_row:
+        out.append(f'<text x="225" y="{y + 47}" font-family="Arial, sans-serif" font-size="{tag_fs}" font-style="italic" text-anchor="middle" fill="#8EE4AF">{tagline}</text>')
+    else:
+        out.append(f'<text x="{x + 4:.1f}" y="{y + 18}" font-family="Arial, sans-serif" font-size="{tag_fs}" font-style="italic" fill="#8EE4AF">{tagline}</text>')
+    return "\n  ".join(out)
+
+
+def body_height(variant):
+    """Logo height: 300 like the original, 320 when the tagline needs its own row."""
+    return 320 if len(VARIANTS[variant][0]) > 1 else 300
+
+
+def engine_inside_body(variant="fast-hdf"):
+    """Option C artwork in the original 450-wide logo coordinates, without background."""
+    pills, tagline = VARIANTS[variant]
     return f"""<path d="{gear_path(225, 150, 104, 114, 36)}" fill="{RUST_DEEP}" stroke="{RUST}" stroke-width="2" stroke-linejoin="round" />
   <circle cx="225" cy="150" r="100" fill="#05386B" stroke="#5CDB95" stroke-width="2" />
   <rect x="55" y="185" width="340" height="50" fill="#05386B" stroke="#5CDB95" stroke-width="2" rx="2" ry="2" />
@@ -143,26 +210,26 @@ def engine_inside_body():
   {WAVES.format(c="#5CDB95", op=0.7)}
 
   <text x="225" y="222" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#EDF5E1">RAS-COMMANDER</text>
-  <!-- FAST-HDF pill and tagline -->
-  <rect x="62" y="263" width="96" height="24" rx="12" ry="12" fill="{RUST}" />
-  <text x="110" y="280" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#FFFFFF">FAST-HDF</text>
-  <text x="170" y="281" font-family="Arial, sans-serif" font-size="17" font-style="italic" fill="#8EE4AF">Native Rust HDF Engine</text>"""
+  <!-- product pills and tagline -->
+  {_pill_row(pills, tagline)}"""
 
 
-def concept_c(width=450, height=300):
+def concept_c(width=450, height=None, variant="fast-hdf"):
     """Engine Inside: original blue/green kept, a rust cog wraps the green circle.
 
-    At 450 x 300 this is the logo. Other sizes (link-preview cards) extend the
-    background and centre the logo, scaled to fill the height.
+    With no size this is the logo (450 wide). Other sizes (link-preview cards)
+    extend the background and centre the logo, scaled to fill the height.
     """
-    body = engine_inside_body()
-    if (width, height) != (450, 300):
-        scale = min(width / 450, (height - 12) / 300)
+    bh = body_height(variant)
+    height = height or bh
+    body = engine_inside_body(variant)
+    if (width, height) != (450, bh):
+        scale = min(width / 450, (height - 12) / bh)
         tx = (width - 450 * scale) / 2
-        ty = (height - 300 * scale) / 2
+        ty = (height - bh * scale) / 2
         body = f'<g transform="translate({tx:g},{ty:g}) scale({scale:g})">\n  {body}\n  </g>'
     return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" width="{width}" height="{height}">
-  <!-- RAS Commander Native Rust Engine (fast-hdf), Option C "Engine Inside": the original green emblem is kept and a rust cog drives it from outside -->
+  <!-- RAS Commander {VARIANTS[variant][1]}, Option C "Engine Inside": the original green emblem is kept and a rust cog drives it from outside -->
   <defs>
     <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#05386B" />
@@ -303,11 +370,19 @@ def main():
         "icon-cog-waves-oxidized.svg": icon("oxidized"),
     }
     # The chosen logo (Option C) and its link-preview cards live one folder up.
-    final = {
-        "ras-commander-fast-hdf_logo.svg": concept_c(),
-        "ras-commander-fast-hdf_social.svg": concept_c(1200, 627),         # LinkedIn / Open Graph
-        "ras-commander-fast-hdf_github-social.svg": concept_c(1280, 640),  # GitHub social preview
-    }
+    final = {}
+    # One logo per engine, and the "Native Rust Engines" family logo with
+    # FAST-DSS greyed out (engines) or released (engines-dss).
+    for variant, stem in (
+        ("fast-hdf", "ras-commander-fast-hdf"),
+        ("fast-map", "ras-commander-fast-map"),
+        ("fast-dss", "ras-commander-fast-dss"),
+        ("engines", "ras-commander-rust-engines"),
+        ("engines-dss", "ras-commander-rust-engines-dss"),
+    ):
+        final[f"{stem}_logo.svg"] = concept_c(variant=variant)
+        final[f"{stem}_social.svg"] = concept_c(1200, 627, variant)         # LinkedIn / Open Graph
+        final[f"{stem}_github-social.svg"] = concept_c(1280, 640, variant)  # GitHub social preview
     for name, svg in files.items():
         (out / name).write_text(svg, encoding="utf-8", newline="\n")
         print(name)
