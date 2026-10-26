@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 300">
+  <!-- Concept E - Velocity: the cog emblem shifted left with speed streaks; name stacked to the right -->
+  <defs>
+    <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05386B" />
+      <stop offset="100%" stop-color="#0B93C7" />
+    </linearGradient>
+    <pattern id="circuit-pattern" patternUnits="userSpaceOnUse" width="50" height="50" patternTransform="rotate(45)">
+      <path d="M10,0 L10,50 M0,10 L50,10 M20,20 L30,20 L30,30 M40,10 L40,40 L30,40" fill="none" stroke="#5CDB95" stroke-width="0.5" stroke-opacity="0.3" />
+    </pattern>
+    <clipPath id="disc"><circle cx="160" cy="145" r="72" /></clipPath>
+  </defs>
+  <rect width="450" height="300" fill="url(#bg-gradient)" />
+  <rect width="450" height="300" fill="url(#circuit-pattern)" opacity="0.2" />
+
+  <line x1="15" y1="112" x2="83" y2="112" stroke="#E5652E" stroke-width="4" stroke-linecap="round" opacity="0.9" />
+  <line x1="35" y1="135" x2="89" y2="135" stroke="#E5652E" stroke-width="4" stroke-linecap="round" opacity="0.7" />
+  <line x1="5" y1="158" x2="85" y2="158" stroke="#E5652E" stroke-width="4" stroke-linecap="round" opacity="0.9" />
+  <line x1="45" y1="181" x2="93" y2="181" stroke="#E5652E" stroke-width="3" stroke-linecap="round" opacity="0.5" />
+
+  <path d="M159.48,65.00 L161.51,55.01 L169.27,55.48 L170.09,65.64 A80,80 0 0 1 178.64,67.20 L183.00,57.99 L190.43,60.30 L188.79,70.36 A80,80 0 0 1 196.72,73.92 L203.16,66.02 L209.81,70.04 L205.81,79.42 A80,80 0 0 1 212.66,84.78 L220.80,78.65 L226.30,84.14 L220.18,92.29 A80,80 0 0 1 225.54,99.13 L234.92,95.13 L238.94,101.78 L231.04,108.22 A80,80 0 0 1 234.62,116.15 L244.68,114.50 L246.99,121.92 L237.78,126.29 A80,80 0 0 1 239.35,134.84 L249.51,135.65 L249.99,143.41 L240.00,145.45 A80,80 0 0 1 239.48,154.13 L249.15,157.35 L247.75,164.99 L237.57,164.58 A80,80 0 0 1 234.98,172.88 L243.60,178.32 L240.42,185.41 L230.63,182.58 A80,80 0 0 1 226.13,190.02 L233.20,197.36 L228.41,203.48 L219.58,198.39 A80,80 0 0 1 213.44,204.54 L218.54,213.36 L212.42,218.16 L205.07,211.09 A80,80 0 0 1 197.63,215.59 L200.48,225.38 L193.39,228.58 L187.95,219.96 A80,80 0 0 1 179.65,222.55 L180.07,232.73 L172.42,234.14 L169.20,224.47 A80,80 0 0 1 160.52,225.00 L158.49,234.99 L150.73,234.52 L149.91,224.36 A80,80 0 0 1 141.36,222.80 L137.00,232.01 L129.57,229.70 L131.21,219.64 A80,80 0 0 1 123.28,216.08 L116.84,223.98 L110.19,219.96 L114.19,210.58 A80,80 0 0 1 107.34,205.22 L99.20,211.35 L93.70,205.86 L99.82,197.71 A80,80 0 0 1 94.46,190.87 L85.08,194.87 L81.06,188.22 L88.96,181.78 A80,80 0 0 1 85.38,173.85 L75.32,175.50 L73.01,168.08 L82.22,163.71 A80,80 0 0 1 80.65,155.16 L70.49,154.35 L70.01,146.59 L80.00,144.55 A80,80 0 0 1 80.52,135.87 L70.85,132.65 L72.25,125.01 L82.43,125.42 A80,80 0 0 1 85.02,117.12 L76.40,111.68 L79.58,104.59 L89.37,107.42 A80,80 0 0 1 93.87,99.98 L86.80,92.64 L91.59,86.52 L100.42,91.61 A80,80 0 0 1 106.56,85.46 L101.46,76.64 L107.58,71.84 L114.93,78.91 A80,80 0 0 1 122.37,74.41 L119.52,64.62 L126.61,61.42 L132.05,70.04 A80,80 0 0 1 140.35,67.45 L139.93,57.27 L147.58,55.86 L150.80,65.53 A80,80 0 0 1 159.48,65.00 Z" fill="#05386B" stroke="#E5652E" stroke-width="2.5" stroke-linejoin="round" />
+  <circle cx="160" cy="145" r="72" fill="none" stroke="#5CDB95" stroke-width="1.5" />
+  <g clip-path="url(#disc)" opacity="0.85">
+    <path d="M80,120 C100,110 120,130 140,120 C160,110 180,130 200,120 C220,110 240,130 260,120" fill="none" stroke="#5CDB95" stroke-width="4" />
+    <path d="M80,145 C100,135 120,155 140,145 C160,135 180,155 200,145 C220,135 240,155 260,145" fill="none" stroke="#5CDB95" stroke-width="4" />
+    <path d="M80,170 C100,160 120,180 140,170 C160,160 180,180 200,170 C220,160 240,180 260,170" fill="none" stroke="#5CDB95" stroke-width="4" />
+  </g>
+  <polygon points="221,138 237,145 221,152" fill="#E5652E" />
+
+  <text x="262" y="128" font-family="Arial, sans-serif" font-size="25" font-weight="bold" fill="#EDF5E1">RAS-</text>
+  <text x="262" y="156" font-family="Arial, sans-serif" font-size="25" font-weight="bold" fill="#EDF5E1">COMMANDER</text>
+  <text x="263" y="182" font-family="Arial, sans-serif" font-size="20" font-weight="bold" letter-spacing="2" fill="#E5652E">FAST-HDF</text>
+  <text x="225" y="268" font-family="Arial, sans-serif" font-size="18" font-style="italic" text-anchor="middle" fill="#8EE4AF">Native Rust • Read at Speed</text>
+</svg>
