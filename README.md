@@ -1,5 +1,7 @@
 # ras-commander-fast-hdf
 
+<p align="center"><img src="docs/images/logo/ras-commander-fast-hdf_logo.svg" alt="RAS Commander Fast-HDF: Native Rust HDF Engine" width="450"></p>
+
 ras-commander's default HDF engine: a native (Rust) HEC-RAS HDF reader and its Python extension for [ras-commander](https://github.com/gpt-cmdr/ras-commander).
 
 [![CI](https://github.com/gpt-cmdr/ras-commander-fast-hdf/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/gpt-cmdr/ras-commander-fast-hdf/actions/workflows/ci.yml)

@@ -9,6 +9,8 @@ theme:
   custom_dir: docs/overrides
 extra_css:
   - stylesheets/clb-branding.css
+hooks:
+  - scripts/mkdocs_social_meta.py
 markdown_extensions:
   - admonition
   - attr_list
