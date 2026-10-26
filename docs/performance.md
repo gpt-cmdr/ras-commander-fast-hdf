@@ -92,11 +92,31 @@ default `auto` mode: median of 7 repeat calls, and the peak memory of one call.
   single run, so treat small differences as noise.
 - **Default timings are before 0.2.3.** From engine 0.2.3 and ras-commander
   0.109.0 the default output builds each mesh's face lines in one vectorized
-  call (`HdfSession.read_mesh_face_lines`), so the default face-reader times
-  above are now lower. Indicative only, not yet the quiet release benchmark:
-  the BaldEagleDamBrk.p07 default `get_mesh_max_face_v` call took about
-  1,760 ms before and about 290 ms after, in `h5py`, `auto` and `native` mode
-  alike.
+  call (`HdfSession.read_mesh_face_lines`); see
+  [Face readers from 0.2.3](#face-readers-from-023).
+
+### Face readers from 0.2.3
+
+`HdfResultsMesh.get_mesh_max_face_v` before and after the vectorized face
+lines, measured on a quiet Windows workstation in October 2026. **Before**:
+ras-commander `main` 9817f9484 with engine 0.2.2. **After**: the published
+ras-commander 0.109.0 with engine 0.2.3. Both sides used NumPy 2.3.3,
+pandas 2.3.2, Shapely 2.1.2 and h5py 3.14.0. Repeat calls (warm) are the
+median of 6 calls in 3 fresh processes per mode, interleaved. Results were
+identical before and after, in every mode. This is a separate run from the
+table above, so its absolute times are not comparable with it.
+
+| Output | File (faces) | Before h5py | Before `auto` | Before `native` | After h5py | After `auto` | After `native` | `auto` speed-up |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| Default (GeoDataFrame) | BaldEagleDamBrk.p18 (9,581) | 138 ms | 140 ms | 140 ms | 41 ms | 44 ms | 45 ms | 3.2× |
+| Default (GeoDataFrame) | BaldEagleDamBrk.p07 (177,301) | 2,085 ms | 2,106 ms | 2,082 ms | 304 ms | 297 ms | 304 ms | 7.1× |
+| Default (GeoDataFrame) | Homewood.p02 (161,683) | 1,967 ms | 1,977 ms | 1,922 ms | 273 ms | 267 ms | 259 ms | 7.4× |
+| Table | BaldEagleDamBrk.p18 (9,581) | 9.1 ms | 11.6 ms | 10.6 ms | 9.7 ms | 10.6 ms | 11.8 ms | 1.1× |
+| Table | BaldEagleDamBrk.p07 (177,301) | 78 ms | 79 ms | 79 ms | 79 ms | 79 ms | 81 ms | 1.0× |
+| Table | Homewood.p02 (161,683) | 70 ms | 69 ms | 70 ms | 70 ms | 72 ms | 71 ms | 1.0× |
+
+The default output gains in all three modes, because the gain is in building
+the lines, not in reading the HDF. The table output is unchanged.
 
 ## Benchmark method
 
