@@ -19,6 +19,20 @@
 - The Python extension gains one entry point, `mesh_corner_elevations` (additive).
   Engine `API_VERSION` stays 10 and extension `API_VERSION` stays 11; consumers detect
   the entry point with `hasattr`.
+- `ReadOnlyHdfSession::read_mesh_face_lines(mesh, max_bytes)` and the Python
+  `HdfSession.read_mesh_face_lines(area, max_bytes=...)` return every face of a
+  2D mesh as packed polylines (GeoArrow linestring layout: float64 `(N, 2)`
+  coordinates, int64 offsets, face IDs). They read only the four face tables and
+  reuse `Topology::face_lines`, so each line is ras-commander's Python
+  `HdfMesh.get_mesh_cell_faces` line (start point, `Faces Perimeter Values` rows,
+  end point). Layouts the Python per-face loop reads differently are refused:
+  tables that are not `(rows, 2)` (Unsupported); unequal face tables, negative or
+  out-of-range indices and perimeter spans, nonfinite coordinates
+  (StructuralTopology). The packed output is budgeted before it is built.
+  ras-commander builds all lines of a mesh in one `shapely.from_ragged_array`
+  call from these buffers instead of one `LineString` per face.
+- Additive: extension `API_VERSION` stays 11 and engine `API_VERSION` stays 10.
+  ras-commander detects the method with `hasattr(HdfSession, "read_mesh_face_lines")`.
 
 ## 0.2.2 (2026-10-25)
 
