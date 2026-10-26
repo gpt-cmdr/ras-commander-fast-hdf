@@ -2,7 +2,7 @@
 
 This page compares the speed of ras-commander's public methods with the
 native engine and with h5py, measured for the 0.2.0 release (with ras-commander 0.108.0).
-Engine releases 0.2.1 and 0.2.2 add features and replace test fixtures but do not change read
+Engine releases 0.2.1 to 0.2.3 add features and replace test fixtures but do not change read
 performance, so these numbers still apply. [Tables without geometry](#tables-without-geometry)
 covers a ras-commander option that is faster still for per-cell and per-face results.
 
@@ -90,6 +90,13 @@ default `auto` mode: median of 7 repeat calls, and the peak memory of one call.
   test files.
 - **Measured** on the same workstation in one process per case. This is a
   single run, so treat small differences as noise.
+- **Default timings are before 0.2.3.** From engine 0.2.3 and ras-commander
+  0.109.0 the default output builds each mesh's face lines in one vectorized
+  call (`HdfSession.read_mesh_face_lines`), so the default face-reader times
+  above are now lower. Indicative only, not yet the quiet release benchmark:
+  the BaldEagleDamBrk.p07 default `get_mesh_max_face_v` call took about
+  1,760 ms before and about 290 ms after, in `h5py`, `auto` and `native` mode
+  alike.
 
 ## Benchmark method
 

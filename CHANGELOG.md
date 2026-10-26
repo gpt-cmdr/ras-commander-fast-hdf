@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.3 (2026-10-26)
 
 - New read family `mesh_corner_elevations` (`ReadFamily::MeshCornerElevations`): the
   static ground elevation of every 2D mesh corner (face point), which RASMapper's
