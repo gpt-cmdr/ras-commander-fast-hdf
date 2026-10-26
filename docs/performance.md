@@ -1,54 +1,80 @@
 # Performance
 
-This page compares the speed of ras-commander's public methods with the
-native engine and with h5py, measured for the 0.2.0 release (with ras-commander 0.108.0).
-Engine releases 0.2.1 to 0.2.3 add features and replace test fixtures but do not change read
-performance, so these numbers still apply. [Tables without geometry](#tables-without-geometry)
-covers a ras-commander option that is faster still for per-cell and per-face results.
+How fast ras-commander's public HDF methods are with the native engine, and
+where the time goes. The page puts **calls that take noticeable time on large
+models** first, because that is where the engine matters; calls that finish in
+a few tens of milliseconds are listed separately, with their absolute times.
 
-The first chart shows the native speed-up for each benchmarked method; the
-second shows how the cell-polygon gain changes with mesh size.
+!!! note "Interim page (October 26, 2026)"
+    ras-commander 0.110.1 (released October 26, 2026) removed most of the
+    Python overhead that kept whole-array summaries, cell points and the
+    native fluvial-pluvial path near 1.0×. A full re-run of the release
+    benchmark against the pre-engine release (ras-commander 0.106.1) is in
+    progress; this page will be replaced with its results. Until then every
+    number below is from one of two earlier measured runs, named in each table.
+    Rows whose method 0.110.1 changed say so instead of showing an old number.
 
-![Dot chart of the native speed-up for 19 public methods: cell polygons 18.0×, mesh time series 6.0× to 8.1×, fluvial-pluvial boundary 1.6×, most bulk summary reads about 1.0×, and small reads 0.6× to 1.1×.](images/speedup-by-method-light.svg)
+## Large-project calls
+
+**Threshold:** a call is listed here when it takes **100 ms or more** (warm,
+h5py) on the largest model it was measured on. Times are repeat calls (warm),
+medians of three fresh processes.
+
+| Method | Largest model measured (rows) | h5py | Native (`auto`) | Speed-up | Measured in |
+|---|---|---:|---:|---:|---|
+| `HdfMesh.get_mesh_cell_polygons` | JUL2020_D100RAS.p04 (340,246 cells) | 17,252 ms | 960 ms | 18.0× | 0.2.0 run |
+| `HdfResultsMesh.get_mesh_cells_timeseries` (water surface, one cell) | BaldEagleDamBrk.p07 (87,039 cells) | 1,405 ms | 173 ms | 8.1× | 0.2.0 run |
+| `HdfResultsMesh.get_mesh_timeseries` (water surface) | BaldEagleDamBrk.p07 (865 steps × 87,039 cells) | 1,433 ms | 193 ms | 7.4× | 0.2.0 run |
+| `HdfResultsMesh.get_mesh_timeseries` (face velocity) | BaldEagleDamBrk.p07 (865 steps × 177,301 faces) | 1,516 ms | 253 ms | 6.0× | 0.2.0 run |
+| `HdfResultsMesh.get_mesh_max_face_v` (with face lines) | BaldEagleDamBrk.p07 (177,301 faces) | 2,085 ms → 304 ms | 2,106 ms → 297 ms | 7.1× | 0.2.3 run (before → after) |
+| `HdfResultsMesh.get_mesh_max_face_v` (with face lines) | Homewood.p02 (161,683 faces) | 1,967 ms → 273 ms | 1,977 ms → 267 ms | 7.4× | 0.2.3 run (before → after) |
+| `HdfFluvialPluvial.calculate_fluvial_pluvial_boundary` | BaldEagleDamBrk.p07 (87,039 cells) | 10,638 ms | changed in 0.110.1: pending re-run | – | 0.2.0 run (h5py) |
+| `HdfResultsMesh.get_mesh_max_ws`, `get_mesh_summary`, `get_mesh_max_depth`, `HdfMesh.get_mesh_cell_points`, `get_mesh_cell_faces` | – | changed in 0.110.1: pending re-run | | | |
+
+- **Speed-up** for the 0.2.0 rows is h5py ÷ native in the same release
+  (ras-commander 0.108.0 with engine 0.2.0). For the `get_mesh_max_face_v`
+  rows it is **before ÷ after in `auto` mode**: before is ras-commander `main`
+  9817f9484 with engine 0.2.2, after is ras-commander 0.109.0 with engine 0.2.3.
+  In that change h5py mode gained as much as `auto` (2,085 → 304 ms), because
+  the gain is in building the face lines in one vectorized call, not in the
+  read; in the same release native and h5py are within 3%.
+- The earlier headline rows that showed about 1.0× for `get_mesh_max_face_v`
+  (705,332 faces) and `get_mesh_summary` (maximum face velocity) are removed:
+  both calls build the same face lines and are now about 7× faster than those
+  rows showed. Their new times come with the re-run.
+- **Fluvial-pluvial boundary:** 0.2.0 measured 6,856 ms natively. ras-commander
+  0.110.1 builds the native snapshot with NumPy instead of per-face Python
+  loops; its measured time will replace this row.
 
 ![Bar chart: HdfMesh.get_mesh_cell_polygons takes 17.3 s with h5py and 0.90 s natively on a 340,246-cell mesh, 4.32 s and 0.26 s on 87,039 cells, 0.28 s and 0.06 s on 4,425 cells, 0.23 s and 0.06 s on 3,314 cells.](images/mesh-polygons-light.svg)
 
-## Results
+*Cell polygons by mesh size, 0.2.0 run.*
 
-Repeat calls (warm) on the heaviest test file for each method, medians of
-three fresh processes. *Native* is the default `auto` mode; `native` mode gave
-the same timings within noise. Speed-up is h5py time divided by native time.
+## Small calls (under 100 ms)
 
-| Method | Result rows | h5py | Native | Speed-up |
-|---|---:|---:|---:|---:|
-| `HdfMesh.get_mesh_cell_polygons` | 340,246 | 17,252 ms | 960 ms | 18.0× |
-| `HdfResultsMesh.get_mesh_cells_timeseries` (water surface) | 1 | 1,405 ms | 173 ms | 8.1× |
-| `HdfResultsMesh.get_mesh_timeseries` (water surface) | 865 | 1,433 ms | 193 ms | 7.4× |
-| `HdfResultsMesh.get_mesh_timeseries` (face velocity) | 865 | 1,516 ms | 253 ms | 6.0× |
-| `HdfFluvialPluvial.calculate_fluvial_pluvial_boundary` | 4,569 | 10,638 ms | 6,856 ms | 1.6× |
-| `HdfStruc.get_structures` | 835 | 36 ms | 34 ms | 1.1× |
-| `HdfXsec.get_cross_sections` | 1,769 | 82 ms | 79 ms | 1.0× |
-| `HdfMesh.get_mesh_cell_points` | 352,141 | 260 ms | 255 ms | 1.0× |
-| `HdfResultsMesh.get_mesh_max_face_v` | 705,332 | 7,101 ms | 6,977 ms | 1.0× |
-| `HdfResultsMesh.get_mesh_summary` (maximum face velocity) | 177,301 | 1,743 ms | 1,718 ms | 1.0× |
-| `HdfResultsMesh.get_mesh_max_ws` | 340,248 | 506 ms | 506 ms | 1.0× |
-| `HdfBndry.get_bc_lines` | 2 | 12 ms | 13 ms | 1.0× |
-| `HdfResultsPlan.get_runtime_data` | 1 | 2.8 ms | 3.0 ms | 1.0× |
-| `HdfMesh.get_mesh_area_attributes` | 0 | 1.4 ms | 1.5 ms | 0.9× |
-| `HdfResultsPlan.get_volume_accounting` | 1 | 1.1 ms | 1.2 ms | 0.9× |
-| `HdfResultsMesh.get_boundary_conditions_timeseries` | 4 | 16 ms | 18 ms | 0.9× |
-| `HdfBase.get_unsteady_timestamps` | 865 | 5.4 ms | 6.2 ms | 0.9× |
-| `HdfResultsXsec.get_ref_lines_timeseries` | 11 | 13 ms | 19 ms | 0.7× |
-| `HdfResultsXsec.get_xsec_timeseries` | 5 | 8.8 ms | 15 ms | 0.6× |
+These calls take tens of milliseconds or less even on the largest test
+models. Most of that is opening the file, resolving the CRS and building the
+pandas result, which are the same in both modes, so there is little for the
+engine to win and a multiplier would only show noise. Absolute times, 0.2.0
+run, repeat calls on the heaviest test file for each method:
 
-- Across all 50 method × file cases (geometric mean), the native engine is
-  **1.17×** faster on the first call in a process and **1.41×** faster on
-  repeat calls (0.1.1 on the same machine and run: 1.07× and 1.27×).
-- Every case returned identical data in `h5py`, `auto` and `native` mode: the
-  benchmark hashed the normalized result (values, dtypes, columns, index, CRS
-  and geometry) of every run. There were 0 errors in 1,200 runs.
-- Results with few rows can still be expensive: `get_mesh_cells_timeseries`
-  returns one cell's series but must locate it in a large compressed dataset.
+| Method | File (rows) | h5py | Native (`auto`) |
+|---|---|---:|---:|
+| `HdfXsec.get_cross_sections` | JUL2020_D100RAS.p04 (1,769) | 82 ms | 79 ms |
+| `HdfStruc.get_structures` | JUL2020_D100RAS.p04 (835) | 36 ms | 34 ms |
+| `HdfResultsMesh.get_boundary_conditions_timeseries` | BaldEagleDamBrk.p07 (4) | 16 ms | 18 ms |
+| `HdfResultsXsec.get_ref_lines_timeseries` | Homewood.p02 (11) | 13 ms | 19 ms |
+| `HdfBndry.get_bc_lines` | AustinOyster.p01 (2) | 12 ms | 13 ms |
+| `HdfResultsXsec.get_xsec_timeseries` | OrleansEx.p02 (5) | 8.8 ms | 15 ms |
+| `HdfBase.get_unsteady_timestamps` | BaldEagleDamBrk.p07 (865) | 5.4 ms | 6.2 ms |
+| `HdfResultsPlan.get_runtime_data` | BaldEagle.p01 (1) | 2.8 ms | 3.0 ms |
+| `HdfMesh.get_mesh_area_attributes` | BaldEagleDamBrk.p18 (0) | 1.4 ms | 1.5 ms |
+| `HdfResultsPlan.get_volume_accounting` | BaldEagleDamBrk.p07 (1) | 1.1 ms | 1.2 ms |
+
+Native small reads carry a fixed cost per read (proving each dataset's layout
+and encoding): at most about 7 ms on repeat calls and 37 ms on the first call
+in a process (`get_cross_sections` on the largest cross-section model). Every
+case returned identical data in `h5py`, `auto` and `native` mode.
 
 ## Tables without geometry
 
@@ -58,7 +84,7 @@ by default, building a Shapely point or line for every row. With
 rows, order, values, dtypes and `attrs`, keyed by `mesh_name` and `cell_id` or
 `face_id` (point readers return `x` and `y` columns). Use it when you join the
 values to geometry you already have, or when you only need the numbers. The
-option is on `main` and ships in the next ras-commander release after 0.108.1.
+option is available from ras-commander 0.109.0.
 
 ```python
 from ras_commander import HdfResultsMesh
@@ -143,20 +169,18 @@ the lines, not in reading the HDF. The table output is unchanged.
 
 ## Reading the numbers
 
-- **Large gains** come from work the engine does in Rust that ras-commander
+- **Large gains from Rust** come from work the engine does that ras-commander
   used to do in Python: assembling 2D cell polygons from face topology, and
   selecting rows or cells from compressed time-series chunks without
-  decompressing more than needed.
-- **No gain** for whole-array summaries such as `get_mesh_max_ws` and
-  `get_mesh_max_face_v` with the default GeoDataFrame result: most of the call
-  is spent building a Shapely point or line for every row, which
-  ras-commander does the same way in both modes. Reading and decompressing the
-  values is a small part of it: the same values as a table take about 34 ms,
-  against 1,642 ms for the default `get_mesh_max_face_v` call on 177,301 faces. Use [tables without geometry](#tables-without-geometry)
-  when you don't need the geometry.
-- **Small losses** on small reads come from a fixed cost per native read
-  (proving the layout and encoding of each dataset read). Since 0.2.0 a public
-  call opens each HDF once and shares that session across its reads, which
-  removed most of this cost; what remains is up to about 7 ms on repeat calls
-  and 37 ms on the first call in a process (`get_cross_sections` on the
-  largest cross-section model).
+  decompressing more than needed. These gains appear only in `auto`/`native`
+  mode.
+- **Large gains in every mode** come from vectorizing ras-commander itself:
+  face lines built in one Shapely call (0.109.0) and, in 0.110.1, positional
+  geometry joins, per-distinct-value time conversion and a NumPy-built native
+  fluvial snapshot. h5py mode gains as much as `auto` from these, so a
+  native-vs-h5py ratio near 1.0× on such a call does not mean it did not get
+  faster.
+- **About 1.0× native vs h5py** remains where the HDF read is a small share of
+  the call (most of a whole-array summary with geometry is building the
+  Shapely objects) or where the call is tiny (see
+  [small calls](#small-calls-under-100-ms)).
