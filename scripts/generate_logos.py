@@ -135,9 +135,8 @@ def concept_b():
 
 # Product variants of Option C. Each pill is (label, fill, note); a pill with a
 # note is drawn greyed out with the note beside its label ("Coming Soon").
-# Cogs are the small engines meshed with the main rust cog.
-MAP_GREEN = "#1E8E62"  # FAST-MAP pill and cog
-DSS_AMBER = "#B7791F"  # FAST-DSS pill and cog
+MAP_GREEN = "#1E8E62"  # FAST-MAP pill
+DSS_AMBER = "#B7791F"  # FAST-DSS pill
 GREY = "#5D6B78"       # an engine that is not released yet
 
 HDF_PILL = ("FAST-HDF", RUST, None)
@@ -146,53 +145,13 @@ DSS_PILL = ("FAST-DSS", DSS_AMBER, None)
 DSS_SOON = ("FAST-DSS", GREY, "(Coming Soon)")
 
 VARIANTS = {
-    # variant: (pills, tagline, cogs)
-    "fast-hdf": ((HDF_PILL,), "Native Rust HDF Engine", ()),
-    "fast-map": ((MAP_PILL,), "Native Rust Mapping Engine", ("map",)),
-    "fast-dss": ((DSS_PILL,), "Native Rust DSS Engine", ("dss",)),
-    "engines": ((HDF_PILL, MAP_PILL, DSS_SOON), "Native Rust Engines", ("map", "dss-soon")),
-    "engines-dss": ((HDF_PILL, MAP_PILL, DSS_PILL), "Native Rust Engines", ("map", "dss")),
+    # variant: (pills, tagline)
+    "fast-hdf": ((HDF_PILL,), "Native Rust HDF Engine"),
+    "fast-map": ((MAP_PILL,), "Native Rust Mapping Engine"),
+    "fast-dss": ((DSS_PILL,), "Native Rust DSS Engine"),
+    "engines": ((HDF_PILL, MAP_PILL, DSS_SOON), "Native Rust Engines"),
+    "engines-dss": ((HDF_PILL, MAP_PILL, DSS_PILL), "Native Rust Engines"),
 }
-
-# Depth classes for the FAST-MAP cog's raster, shallow to deep.
-DEPTH = ("#C6E9F7", "#86CBEC", "#3FA3D9", "#1668AE", "#0B3F7A")
-
-
-def mapping_cog(cx=335, cy=57):
-    """FAST-MAP: a small cog meshed with the main one, holding a depth raster."""
-    cells, size = [], 9
-    for row in range(7):
-        for col in range(7):
-            # Depth grows toward a channel running diagonally through the raster.
-            d = abs((col - row) * 0.9 + 0.5)
-            k = max(0, min(4, 4 - int(d)))
-            x, y = cx - 31.5 + col * size, cy - 31.5 + row * size
-            cells.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{size}" height="{size}" fill="{DEPTH[k]}" />')
-    grid = "\n    ".join(cells)
-    return f"""<path d="{gear_path(cx, cy, 33, 42, 12, rot=0.13)}" fill="{MAP_GREEN}" stroke="#5CDB95" stroke-width="2" stroke-linejoin="round" />
-  <clipPath id="map-face"><circle cx="{cx}" cy="{cy}" r="27" /></clipPath>
-  <g clip-path="url(#map-face)">
-    {grid}
-  </g>
-  <circle cx="{cx}" cy="{cy}" r="27" fill="none" stroke="#05386B" stroke-width="2" />
-  <circle cx="{cx}" cy="{cy}" r="4" fill="#05386B" stroke="#5CDB95" stroke-width="1.5" />"""
-
-
-def dss_cog(cx=115, cy=57, soon=False):
-    """FAST-DSS: the mirror cog, holding a hydrograph (DSS time series).
-
-    soon=True greys it out with a dashed rim for an engine not released yet.
-    """
-    fill, rim, line = (GREY, "#9AA5B1", "#B8C2CC") if soon else (DSS_AMBER, "#F2C46D", "#F2C46D")
-    dash = ' stroke-dasharray="4 3"' if soon else ""
-    group = ' opacity="0.8"' if soon else ""
-    return f"""<g{group}>
-  <path d="{gear_path(cx, cy, 33, 42, 12, rot=-0.13)}" fill="{fill}" stroke="{rim}" stroke-width="2" stroke-linejoin="round"{dash} />
-  <circle cx="{cx}" cy="{cy}" r="27" fill="#05386B" stroke="#05386B" stroke-width="2" />
-  <path d="M{cx - 18},{cy + 15} L{cx + 19},{cy + 15} M{cx - 18},{cy + 15} L{cx - 18},{cy - 17}" fill="none" stroke="{rim}" stroke-width="1.5" />
-  <path d="M{cx - 17},{cy + 12} C{cx - 9},{cy + 11} {cx - 7},{cy - 15} {cx - 2},{cy - 15} C{cx + 4},{cy - 15} {cx + 6},{cy + 5} {cx + 18},{cy + 9}" fill="none" stroke="{line}" stroke-width="2.5" stroke-linecap="round" />
-  </g>"""
-
 
 def _text_width(text, size, bold=False):
     """Rough Arial advance width; enough to centre a row of pills and a tagline."""
@@ -241,11 +200,8 @@ def body_height(variant):
 
 def engine_inside_body(variant="fast-hdf"):
     """Option C artwork in the original 450-wide logo coordinates, without background."""
-    pills, tagline, cogs = VARIANTS[variant]
-    small = {"map": mapping_cog(), "dss": dss_cog(), "dss-soon": dss_cog(soon=True)}
-    cog_svg = "\n  ".join(small[c] for c in cogs)
-    return f"""{cog_svg}
-  <path d="{gear_path(225, 150, 104, 114, 36)}" fill="{RUST_DEEP}" stroke="{RUST}" stroke-width="2" stroke-linejoin="round" />
+    pills, tagline = VARIANTS[variant]
+    return f"""<path d="{gear_path(225, 150, 104, 114, 36)}" fill="{RUST_DEEP}" stroke="{RUST}" stroke-width="2" stroke-linejoin="round" />
   <circle cx="225" cy="150" r="100" fill="#05386B" stroke="#5CDB95" stroke-width="2" />
   <rect x="55" y="185" width="340" height="50" fill="#05386B" stroke="#5CDB95" stroke-width="2" rx="2" ry="2" />
 
