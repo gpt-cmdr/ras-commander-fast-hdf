@@ -63,7 +63,9 @@ session per public call and closes it when the call returns; see
 Session methods include `read_numeric`, `read_numeric_batch`, mesh summary,
 series and boundary-condition reads (`read_mesh_summary`,
 `read_mesh_summary_values`, `read_mesh_series`, `read_mesh_boundary_series`,
-`read_mesh_boundary_batch`), their inventories and `reduce_mesh_series`.
+`read_mesh_boundary_batch`), their inventories and `reduce_mesh_series`, and
+`read_mesh_face_lines` (every face of a mesh as packed polylines; see
+[reference/sessions.md](reference/sessions.md#mesh-face-lines)).
 Sizes are bounded by `max_bytes` and `metadata_max_bytes` (64 MiB default per
 call for these typed reads).
 

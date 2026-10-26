@@ -105,6 +105,26 @@ ownership. Sparse reads enter the supplied thread pool only when their bucket ne
 decoding. Returned NumPy buffers are always owned, and the error and budget contracts are
 unchanged.
 
+## Mesh face lines
+
+`read_mesh_face_lines(area, max_bytes=2 GiB)` returns every face of mesh `area` as packed
+polylines in the GeoArrow linestring layout: a dictionary of `coordinates` (float64,
+`(N, 2)`), `offsets` (int64, one more than the face count) and `face_ids` (int64, `0..faces`
+in stored order). Face `i` is `coordinates[offsets[i]:offsets[i + 1]]`: its start point, its
+`Faces Perimeter Values` rows in stored order, then its end point. That is exactly the line
+ras-commander's Python `HdfMesh.get_mesh_cell_faces` builds, so
+`shapely.from_ragged_array(GeometryType.LINESTRING, coordinates, (offsets,))` gives the
+same geometry (WKB) in one call.
+
+Only the four face tables are read; cell tables are not, so a mesh whose cells cannot be
+assembled still has its face lines. Layouts that the Python per-face loop reads differently
+are refused rather than approximated: a table that is not `(rows, 2)` raises
+`UnsupportedError`; unequal endpoint and perimeter tables, a negative or out-of-range index or
+perimeter span, a negative count and a nonfinite coordinate raise `TopologyError`. A missing
+table raises `KeyError`. The packed output (16 bytes per coordinate and per face) counts
+against `max_bytes`; above it the call raises `UnsupportedError` with code `resource_limit`.
+ras-commander falls back to its Python builder on any of these in `auto` mode.
+
 ## Mesh summary and boundary batches
 
 `read_mesh_summary_values` returns the same numeric array as the summary read without

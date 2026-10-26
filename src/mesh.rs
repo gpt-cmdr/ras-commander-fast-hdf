@@ -898,6 +898,92 @@ impl Topology {
         Ok(out)
     }
 }
+impl crate::hdf::ReadOnlyHdfSession {
+    /// Every face of a named mesh as a polyline ([`Topology::face_lines`]), reading only the
+    /// four face tables (`FacePoints Coordinate`, `Faces FacePoint Indexes`,
+    /// `Faces Perimeter Info`, `Faces Perimeter Values`) within `max_bytes`.
+    ///
+    /// The output is ras-commander's Python `HdfMesh.get_mesh_cell_faces` for that mesh only
+    /// where its per-face loop is unambiguous, so every other layout is refused rather than
+    /// approximated: each table must be `(rows, 2)` (Unsupported otherwise; Python would
+    /// unpack, truncate or build 3D lines), endpoint and perimeter tables must have one row per
+    /// face, and every endpoint index and perimeter span must lie inside its table (Python
+    /// wraps negative indices and truncates long slices). Nonfinite coordinates are refused
+    /// too. Those refusals are StructuralTopology. A missing table is NotFound. The packed
+    /// output (`16 * coordinates + 16 * faces` bytes) must also fit within `max_bytes`.
+    pub fn read_mesh_face_lines(
+        &self,
+        mesh_name: &str,
+        max_bytes: usize,
+    ) -> crate::Result<PackedLines> {
+        if mesh_name.is_empty() || mesh_name.contains('/') || mesh_name.contains('\\') {
+            return Err(Error::new(
+                ErrorKind::InvalidRequest,
+                "mesh name must be one group component",
+            ));
+        }
+        let names = [
+            "FacePoints Coordinate",
+            "Faces FacePoint Indexes",
+            "Faces Perimeter Info",
+            "Faces Perimeter Values",
+        ];
+        let paths = names
+            .iter()
+            .map(|n| format!("Geometry/2D Flow Areas/{mesh_name}/{n}"))
+            .collect::<Vec<_>>();
+        let refs = paths.iter().map(String::as_str).collect::<Vec<_>>();
+        let arrays = self
+            .read_numeric_batch_bounded(&refs, max_bytes)?
+            .into_iter()
+            .map(|(_, array)| array)
+            .collect::<Vec<_>>();
+        for (path, array) in paths.iter().zip(&arrays) {
+            if array.shape.len() != 2 || array.shape[1] != 2 {
+                return Err(Error::new(
+                    ErrorKind::Unsupported,
+                    format!("{path}: face line tables must be (rows, 2)"),
+                ));
+            }
+        }
+        let mut arrays = arrays.into_iter();
+        let points = as_f64(arrays.next().unwrap())?;
+        let ends = as_i64(arrays.next().unwrap())?;
+        let perim_info = as_i64(arrays.next().unwrap())?;
+        let perim = as_f64(arrays.next().unwrap())?;
+        // Output budget before building: start and end point of every face plus each
+        // in-range perimeter span (spans are proven in range by face_lines' validation).
+        let faces = ends.nrows();
+        let interior = perim_info.rows().into_iter().try_fold(0usize, |sum, row| {
+            usize::try_from(row[1].max(0))
+                .ok()
+                .and_then(|n| sum.checked_add(n))
+        });
+        let out_bytes = interior
+            .and_then(|n| n.checked_add(faces.checked_mul(2)?))
+            .and_then(|n| n.checked_add(faces))
+            .and_then(|n| n.checked_mul(16));
+        match out_bytes {
+            Some(bytes) if bytes <= max_bytes => {}
+            _ => {
+                return Err(Error::new(
+                    ErrorKind::Unsupported,
+                    format!("{mesh_name}: face lines exceed the {max_bytes}-byte read budget"),
+                )
+                .with_code(crate::UnsupportedCode::ResourceLimit))
+            }
+        }
+        let top = Topology {
+            points,
+            ends,
+            perim_info,
+            perim,
+            cell_info: Array2::zeros((0, 2)),
+            cell_faces: Array2::zeros((0, 1)),
+        };
+        top.face_lines()
+    }
+}
 /// A 2D flow area's stored perimeter as a closed ring.
 #[derive(Debug, Clone, PartialEq)]
 #[non_exhaustive]

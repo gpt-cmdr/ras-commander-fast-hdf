@@ -91,6 +91,7 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "read_topology", "mesh"),
     e("ReadOnlyHdfSession", "read_topology_bounded", "mesh"),
     e("ReadOnlyHdfSession", "read_mesh_perimeter", "mesh"),
+    e("ReadOnlyHdfSession", "read_mesh_face_lines", "mesh"),
     e("ReadOnlyHdfSession", "reduce_temporal", "results"),
     e("Topology", "assemble", "mesh"),
     e("Topology", "assemble_with_session", "mesh"),

@@ -126,3 +126,93 @@ fn real_face_lines_and_perimeters_match_ras_commander() {
         }
     }
 }
+
+#[test]
+fn session_face_lines_read_only_the_face_tables_and_match_topology() {
+    let s = ReadOnlyHdfSession::with_options(fixture("coverage_mesh.h5"), 1, true).unwrap();
+    for name in ["Good", "F32Coords", "U16Conn"] {
+        let want = s
+            .read_topology(name)
+            .unwrap()
+            .topology
+            .face_lines()
+            .unwrap();
+        let got = s
+            .read_mesh_face_lines(name, DEFAULT_READ_MAX_BYTES)
+            .unwrap();
+        assert_eq!(got, want, "{name}");
+    }
+    // Cell topology is not read, so a mesh whose cells cannot be assembled (a bowtie), whose
+    // cell tables are malformed or whose cell values are absent still has exact face lines.
+    for name in [
+        "Bowtie",
+        "OverrunCellInfo",
+        "NegativeOffset",
+        "FaceIndexOutOfRange",
+        "MissingValues",
+    ] {
+        let got = s
+            .read_mesh_face_lines(name, DEFAULT_READ_MAX_BYTES)
+            .unwrap();
+        assert_eq!(got.face_ids.len(), 7, "{name}");
+    }
+    let empty = s
+        .read_mesh_face_lines("Empty", DEFAULT_READ_MAX_BYTES)
+        .unwrap();
+    assert!(empty.face_ids.is_empty() && empty.coordinates.is_empty());
+    assert_eq!(empty.offsets, vec![0]);
+}
+
+#[test]
+fn session_face_lines_refuse_layouts_the_python_loop_reads_differently() {
+    let s = ReadOnlyHdfSession::with_options(fixture("coverage_mesh.h5"), 1, true).unwrap();
+    // Python would unpack, build 3D lines or fail differently: not (rows, 2).
+    for name in ["ThreeColumnCoords", "OneColumnEnds", "OneDimCoords"] {
+        let e = s
+            .read_mesh_face_lines(name, DEFAULT_READ_MAX_BYTES)
+            .unwrap_err();
+        assert_eq!(e.kind, ErrorKind::Unsupported, "{name}: {e}");
+    }
+    // Python would wrap a negative index, truncate a slice or zip unequal tables.
+    for name in [
+        "PerimInfoMismatch",
+        "PointIndexOutOfRange",
+        "PerimOverrun",
+        "NaNCoord",
+        "FloatConn",
+        "IntCoords",
+        "U64Huge",
+    ] {
+        let e = s
+            .read_mesh_face_lines(name, DEFAULT_READ_MAX_BYTES)
+            .unwrap_err();
+        assert_eq!(e.kind, ErrorKind::StructuralTopology, "{name}: {e}");
+    }
+    assert_eq!(
+        s.read_mesh_face_lines("NoSuchMesh", DEFAULT_READ_MAX_BYTES)
+            .unwrap_err()
+            .kind,
+        ErrorKind::NotFound
+    );
+    for bad in ["", "Good/Sub", r"Good\Sub"] {
+        assert_eq!(
+            s.read_mesh_face_lines(bad, DEFAULT_READ_MAX_BYTES)
+                .unwrap_err()
+                .kind,
+            ErrorKind::InvalidRequest
+        );
+    }
+}
+
+#[test]
+fn session_face_lines_budget_the_packed_output() {
+    let s = ReadOnlyHdfSession::with_options(fixture("coverage_mesh.h5"), 1, true).unwrap();
+    // "Good": 208 bytes of face tables, 7 faces of 2 points each: 14 * 16 + 7 * 16 = 336.
+    s.read_mesh_face_lines("Good", 336).unwrap();
+    let e = s.read_mesh_face_lines("Good", 335).unwrap_err();
+    assert_eq!(e.kind, ErrorKind::Unsupported, "{e}");
+    assert_eq!(
+        e.code,
+        Some(ras_commander_fast_hdf::UnsupportedCode::ResourceLimit)
+    );
+}

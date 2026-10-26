@@ -134,6 +134,35 @@ impl HdfSession {
             Ok(d)
         })
     }
+    /// Every face of mesh `area` as packed polylines (GeoArrow linestring layout):
+    /// `coordinates` float64 `(N, 2)`, `offsets` int64 `(faces + 1,)` and `face_ids`
+    /// int64; line `i` is `coordinates[offsets[i]:offsets[i + 1]]`.
+    #[pyo3(signature=(area,max_bytes=crate::hdf::DEFAULT_READ_MAX_BYTES))]
+    fn read_mesh_face_lines<'py>(
+        &self,
+        py: Python<'py>,
+        area: &str,
+        max_bytes: usize,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        crate::python::panic_guard::guard(|| {
+            let lines = self.with(py, |s| s.read_mesh_face_lines(area, max_bytes))?;
+            let rows = lines.coordinates.len();
+            let coordinates =
+                ndarray::Array2::from_shape_vec((rows, 2), lines.coordinates.into_flattened())
+                    .map_err(|e| PyValueError::new_err(e.to_string()))?;
+            let offsets = lines
+                .offsets
+                .into_iter()
+                .map(|n| {
+                    i64::try_from(n).map_err(|_| PyValueError::new_err("coordinate count overflow"))
+                })
+                .collect::<PyResult<Vec<_>>>()?;
+            Ok(dict!(py,
+                "coordinates"=>coordinates.into_pyarray(py),
+                "offsets"=>offsets.into_pyarray(py),
+                "face_ids"=>lines.face_ids.into_pyarray(py)))
+        })
+    }
     /// Test hook: panic inside an engine call while the session lock is held.
     fn _panic_for_test(&self, py: Python<'_>) -> PyResult<()> {
         crate::python::panic_guard::guard(|| {
