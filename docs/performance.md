@@ -2,6 +2,9 @@
 
 This page compares the speed of ras-commander's public methods with the
 native engine and with h5py, measured for the 0.2.0 release (with ras-commander 0.108.0).
+Engine releases 0.2.1 and 0.2.2 add features and replace test fixtures but do not change read
+performance, so these numbers still apply. [Tables without geometry](#tables-without-geometry)
+covers a ras-commander option that is faster still for per-cell and per-face results.
 
 The first chart shows the native speed-up for each benchmarked method; the
 second shows how the cell-polygon gain changes with mesh size.
@@ -46,6 +49,47 @@ the same timings within noise. Speed-up is h5py time divided by native time.
   and geometry) of every run. There were 0 errors in 1,200 runs.
 - Results with few rows can still be expensive: `get_mesh_cells_timeseries`
   returns one cell's series but must locate it in a large compressed dataset.
+
+## Tables without geometry
+
+ras-commander's per-cell and per-face result readers return a GeoDataFrame
+by default, building a Shapely point or line for every row. With
+`include_geometry=False` they return a plain pandas DataFrame with the same
+rows, order, values, dtypes and `attrs`, keyed by `mesh_name` and `cell_id` or
+`face_id` (point readers return `x` and `y` columns). Use it when you join the
+values to geometry you already have, or when you only need the numbers. The
+option is on `main` and ships in the next ras-commander release after 0.108.1.
+
+```python
+from ras_commander import HdfResultsMesh
+
+max_ws = HdfResultsMesh.get_mesh_max_ws(plan_hdf, include_geometry=False)
+max_v = HdfResultsMesh.get_mesh_max_face_v(plan_hdf, include_geometry=False)
+```
+
+Default call against `include_geometry=False` on the same reader, in the
+default `auto` mode: median of 7 repeat calls, and the peak memory of one call.
+
+| Reader | File (rows) | Default | Table | Speed-up | Peak memory |
+|---|---|---:|---:|---:|---:|
+| `get_mesh_max_face_v` | BaldEagleDamBrk.p07 (177,301 faces) | 1,642 ms | 34 ms | 48× | 37.0 → 14.2 MiB |
+| `get_mesh_max_face_v` | Homewood.p02 (161,683 faces) | 1,709 ms | 35 ms | 50× | 34.5 → 13.0 MiB |
+| `get_mesh_max_depth` | Homewood.p02 (68,743 cells) | 473 ms | 24 ms | 20× | 10.0 → 4.7 MiB |
+| `get_mesh_max_iter` | BaldEagleDamBrk.p07 (87,039 cells) | 104 ms | 17 ms | 6.1× | 17.7 → 5.7 MiB |
+| `get_mesh_cell_points` | BaldEagleDamBrk.p07 (89,879 cells) | 60 ms | 12 ms | 5.2× | 16.7 → 6.9 MiB |
+| `get_mesh_max_ws` | BaldEagleDamBrk.p07 (87,039 cells) | 114 ms | 25 ms | 4.6× | 18.4 → 7.2 MiB |
+| `get_mesh_max_depth` | BaldEagleDamBrk.p07 (87,039 cells) | 770 ms | 252 ms | 3.0× | 13.0 → 6.0 MiB |
+| `get_cell_bed_change` (sediment) | Weise.p01 (2,702 cells) | 175 ms | 158 ms | 1.1× | 0.69 → 0.64 MiB |
+
+- **Face readers gain most:** the default builds a Shapely line for every face.
+- **Some readers gain less:** `get_mesh_max_depth` on BaldEagleDamBrk.p07 is
+  dominated by the reduction over time steps, and the sediment readers by
+  their time-series read.
+- **Results are identical:** the table matches the default call with its
+  geometry column removed, in `h5py`, `auto` and `native` mode, on all 137
+  test files.
+- **Measured** on the same workstation in one process per case. This is a
+  single run, so treat small differences as noise.
 
 ## Benchmark method
 
