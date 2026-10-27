@@ -68,7 +68,7 @@ No code changes are needed. To choose the engine, set
 | Version | **0.2.3** (on PyPI and crates.io), Python extension `API_VERSION` 11. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
 | Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 are qualified; Linux wheels cover glibc 2.17 or later (`manylinux2014`) and musl (`musllinux_1_2`, Alpine). macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. ras-commander 0.107.1 and later install the engine on these three platforms; elsewhere they use h5py. |
 | Equivalence with h5py | Identical results to h5py on 201 public ras-commander method cases across 137 HEC-RAS 5.x–7.x result and geometry files: 3,800 method × file pairs in three modes, plus 1,428 calls replayed from the example notebooks. Methods the corpus has not exercised natively stay on h5py in `auto` mode. |
-| Speed | On the largest test models, against the last release before the engine (ras-commander 0.106.1): cell polygons 45× faster, mesh time series 7–8×, per-cell and per-face summaries 11–18×, fluvial-pluvial boundary 227× on a 4,425-cell mesh (ras-commander 0.110.1 with engine 0.2.3). Small calls stay within a few milliseconds. See [Performance](#performance). |
+| Speed | On the largest test models, against the last release before the engine (ras-commander 0.106.1): cell polygons 34× faster, mesh time series 7–8×, per-cell and per-face summaries 9–16×, fluvial-pluvial boundary 227× on a 4,425-cell mesh (ras-commander 0.110.1 with engine 0.2.3). Small calls stay within a few milliseconds. See [Performance](#performance). |
 | Not supported natively | Cross-section tables written before HEC-RAS 5.0.7, and names containing non-ASCII characters. ras-commander uses h5py for these in `auto` mode. |
 
 ## Performance
@@ -81,20 +81,20 @@ Calls that take 100 ms or more with 0.106.1 on the largest test model:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/large-project-calls-dark.svg">
-  <img alt="Bar chart, log time axis, repeat-call time on each call's largest test model, 0.106.1 against 0.110.1 in auto mode: fluvial-pluvial boundary 21,557 ms to 94.9 ms (227.1x); cell polygons 20,592 ms to 460 ms (44.8x); maximum face velocity 8,459 ms to 564 ms (15.0x); maximum water surface 2,733 ms to 238 ms (11.5x); cell points 2,459 ms to 139 ms (17.7x); mesh summary 2,094 ms to 172 ms (12.1x); mesh time series 1,400 to 1,505 ms down to 181 to 192 ms (7.4x to 8.3x)." src="docs/images/large-project-calls-light.svg" width="760">
+  <img alt="Bar chart, log time axis, repeat-call time on each call's largest test model, 0.106.1 against 0.110.1 in auto mode: fluvial-pluvial boundary 21,557 ms to 94.9 ms (227.1x); cell polygons 5,190 ms to 153 ms (34.0x); mesh summary 2,094 ms to 172 ms (12.1x); maximum face velocity 2,090 ms to 175 ms (12.0x); mesh time series 1,400 to 1,505 ms down to 181 to 192 ms (7.4x to 8.3x); maximum water surface 708 ms to 78.4 ms (9.0x); cell points 662 ms to 40.3 ms (16.4x)." src="docs/images/large-project-calls-light.svg" width="760">
 </picture>
 
 | Method | Largest test model | 0.106.1 | 0.110.1 `auto` | Speed-up | Native vs h5py (0.110.1) |
 |---|---|---:|---:|---:|---:|
 | `calculate_fluvial_pluvial_boundary` | 4,425 cells | 21,557 ms | 94.9 ms | 227× | 4.7× |
-| `get_mesh_cell_polygons` | 340,246 cells | 20,592 ms | 460 ms | 44.8× | 29.0× |
-| `get_mesh_max_face_v` | 705,332 faces | 8,459 ms | 564 ms | 15.0× | 1.1× |
-| `get_mesh_max_ws` | 340,248 cells | 2,733 ms | 238 ms | 11.5× | 1.0× |
-| `get_mesh_cell_points` | 352,141 cells | 2,459 ms | 139 ms | 17.7× | 1.1× |
+| `get_mesh_cell_polygons` | 87,039 cells | 5,190 ms | 153 ms | 34.0× | 21.2× |
 | `get_mesh_summary` (maximum face velocity) | 177,301 faces | 2,094 ms | 172 ms | 12.1× | 1.0× |
+| `get_mesh_max_face_v` | 177,301 faces | 2,090 ms | 175 ms | 12.0× | 1.0× |
 | `get_mesh_timeseries` (face velocity) | 865 × 177,301 | 1,505 ms | 181 ms | 8.3× | 8.0× |
 | `get_mesh_timeseries` (water surface) | 865 × 87,039 | 1,426 ms | 192 ms | 7.4× | 7.1× |
 | `get_mesh_cells_timeseries` (one cell) | 87,039 cells | 1,400 ms | 182 ms | 7.7× | 7.5× |
+| `get_mesh_max_ws` | 87,039 cells | 708 ms | 78 ms | 9.0× | 1.0× |
+| `get_mesh_cell_points` | 89,879 cells | 662 ms | 40 ms | 16.4× | 1.1× |
 
 - **Native vs h5py** shows the Rust engine's share. Where it is about 1.0× the
   gain came from vectorizing ras-commander, and h5py mode gets it too.
