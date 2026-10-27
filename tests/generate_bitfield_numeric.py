@@ -30,5 +30,3 @@ with h5py.File(root / 'bitfields.h5', 'w', libver='earliest') as f:
         d.write(h5py.h5s.ALL, h5py.h5s.ALL, np.array([0, 1, 127], dtype='u1'), mtype=t)
 (root/'manifest.json').write_text(json.dumps({'source': 'Synthetic H5T_BITFIELD datasets generated with h5py',
     'sha256': hashlib.sha256((root/'bitfields.h5').read_bytes()).hexdigest()}, indent=2)+'\n')
-
-
