@@ -288,7 +288,7 @@ impl ReadOnlyHdfSession {
                 if root == OUTPUT && !result_family(&path, family) {
                     continue;
                 }
-                let result = self.family_descriptor(family, &path, max_bytes);
+                let result = self.family_descriptor(family, &path, max_bytes, true);
                 let d = match result {
                     Ok(d) => d,
                     Err(e) => {
@@ -422,7 +422,9 @@ impl ReadOnlyHdfSession {
         {
             return Err(invalid("dataset path outside selected family"));
         }
-        let d = self.family_descriptor(family, path, metadata_max_bytes)?;
+        // A value read uses only the stored descriptor. The reference-line geometry link is
+        // reported as a capability and never refuses a read, so it is not proven here.
+        let d = self.family_descriptor(family, path, metadata_max_bytes, false)?;
         stored::read(self, &d.stored, slices, max_bytes)
     }
     pub(super) fn read_family_layers(
@@ -500,7 +502,14 @@ impl ReadOnlyHdfSession {
         }
         Ok(out)
     }
+    /// Validated row count of a block's time axis, proven once per session per block
+    /// (every series of the block repeats it). Errors are never memoized.
     pub(super) fn family_time_rows(&self, group: &str, max: usize) -> Result<u64> {
+        self.memo(format!("family_time_rows:{:?}", (group, max)), || {
+            self.family_time_rows_uncached(group, max)
+        })
+    }
+    fn family_time_rows_uncached(&self, group: &str, max: usize) -> Result<u64> {
         // DSS stores second-resolution strings in both stamp datasets in some versions.
         // Validate the raw axes without imposing Base Output's civil-string grammar.
         let time = stored::descriptor(self, &format!("{group}/Time"), max)?;
@@ -725,11 +734,14 @@ impl ReadOnlyHdfSession {
         }
         Ok(())
     }
+    /// `geometry_link` false leaves a reference-line descriptor's geometry link
+    /// unavailable instead of proving it; every other qualification is unchanged.
     fn family_descriptor(
         &self,
         family: ReadFamily,
         path: &str,
         max: usize,
+        geometry_link: bool,
     ) -> Result<FamilyDataset> {
         let stored = stored::descriptor(self, path, max)?;
         let mut d = FamilyDataset {
@@ -766,8 +778,10 @@ impl ReadOnlyHdfSession {
             if path.ends_with("/Name") && family == ReadFamily::ReferenceLines {
                 d.role = "name_axis".into();
                 let names = self.read_strings(path)?;
-                (d.geometry_locations, d.geometry_link) =
-                    self.reference_line_link(path, &names, &d.stored.attributes, max)?;
+                if geometry_link {
+                    (d.geometry_locations, d.geometry_link) =
+                        self.reference_line_link(path, &names, &d.stored.attributes, max)?;
+                }
                 return Ok(d);
             }
             return Err(Error::unsupported(
@@ -841,8 +855,10 @@ impl ReadOnlyHdfSession {
             if names_ds.shape() != [n] || d.names.len() as u64 != n {
                 return Err(corrupt("reference names and result columns disagree"));
             }
-            (d.geometry_locations, d.geometry_link) =
-                self.reference_line_link(&table, &d.names, &d.stored.attributes, max)?;
+            if geometry_link {
+                (d.geometry_locations, d.geometry_link) =
+                    self.reference_line_link(&table, &d.names, &d.stored.attributes, max)?;
+            }
             d.identity_table = Some(table);
             d.domain = "reference_line".into();
         } else {

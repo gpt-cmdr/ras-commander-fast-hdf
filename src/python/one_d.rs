@@ -9,7 +9,9 @@ use crate::hdf::xs_geometry::{
     XS_GEOMETRY_FIELDS,
 };
 use crate::hdf::ResultMode;
-use crate::python::domain::{capability, dataset_units, identity, typed_attribute_dict};
+use crate::python::domain::{
+    capability, dataset_units, identities, identity, typed_attribute_dict,
+};
 use crate::python::fim::{compound, slice};
 use crate::Reported;
 use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
@@ -86,11 +88,7 @@ fn reported<'py, T>(
     Ok(d)
 }
 fn points<'py>(py: Python<'py>, p: OneDPointData) -> PyResult<Bound<'py, PyAny>> {
-    let ids = p
-        .features
-        .iter()
-        .map(|i| identity(py, i))
-        .collect::<PyResult<Vec<_>>>()?;
+    let ids = identities(py, &p.features)?;
     let names = p
         .names
         .iter()
@@ -284,11 +282,7 @@ fn xs_result_inventory<'py>(
             engine_session.xs_result_inventory(m, max_bytes)
         })?;
         let vars=i.variables.iter().map(|v| Ok(dict!(py,"name"=>&v.name,"path"=>&v.path,"domain"=>v.domain.as_str(),"shape"=>&v.shape,"kind"=>v.kind.map(crate::python::reader::numeric_kind_name),"dtype"=>v.kind.and_then(crate::python::reader::numpy),"chunks"=>&v.chunks,"capability"=>capability(py,&v.capability)?,"attributes"=>attrs(py,&v.attributes)?,"units"=>dataset_units(py,&v.units.units,&v.units.source,&v.units.quantity_name)?,"labels"=>labels(py,&v.labels)?))).collect::<PyResult<Vec<_>>>()?;
-        let sections = i
-            .sections
-            .iter()
-            .map(|s| identity(py, s))
-            .collect::<PyResult<Vec<_>>>()?;
+        let sections = identities(py, &i.sections)?;
         Ok(
             dict!(py,"mode"=>i.mode.as_str(),"group"=>&i.group,"capability"=>capability(py,&i.capability)?,"rows"=>i.rows,"sections"=>sections,"variables"=>vars),
         )
@@ -320,11 +314,7 @@ fn read_xs_result<'py>(
                 max_bytes,
             )
         })?;
-        let ids = r
-            .section_ids
-            .iter()
-            .map(|s| identity(py, s))
-            .collect::<PyResult<Vec<_>>>()?;
+        let ids = identities(py, &r.section_ids)?;
         Ok(
             dict!(py,"identity"=>identity(py,&r.id)?,"mode"=>r.mode.as_str(),"variable"=>&r.variable,"rows"=>(r.rows.start,r.rows.end,r.rows.step),"sections"=>&r.sections,"section_ids"=>ids,"values"=>crate::python::reader::array(py,r.values)?),
         )
@@ -390,11 +380,7 @@ fn read_one_d_summary<'py>(
         let ids = r
             .element_ids
             .as_ref()
-            .map(|v| {
-                v.iter()
-                    .map(|i| identity(py, i))
-                    .collect::<PyResult<Vec<_>>>()
-            })
+            .map(|v| identities(py, v))
             .transpose()?;
         Ok(
             dict!(py,"identity"=>identity(py,&r.id)?,"family"=>&r.family,"name"=>&r.name,"elements"=>&r.elements,"element_ids"=>ids,"values"=>crate::python::reader::array(py,r.values)?),

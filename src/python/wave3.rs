@@ -12,7 +12,7 @@ use crate::hdf::families::{
 use crate::hdf::reference_points::ReferencePointGeometry;
 use crate::hdf::stored::{StoredDataset, StoredValues};
 use crate::hdf::Slice;
-use crate::python::domain::{capability, identity, typed_attribute_dict};
+use crate::python::domain::{capability, identities, identity, typed_attribute_dict};
 use crate::python::fim::{compound, slice};
 use crate::Reported;
 use pyo3::{
@@ -48,11 +48,7 @@ fn stored_dict<'py>(py: Python<'py>, d: &StoredDataset) -> PyResult<Bound<'py, P
 }
 fn family_dataset<'py>(py: Python<'py>, d: FamilyDataset) -> PyResult<Bound<'py, PyDict>> {
     let out = stored_dict(py, &d.stored)?;
-    let ids = |v: &[crate::hdf::Identity]| {
-        v.iter()
-            .map(|i| identity(py, i))
-            .collect::<PyResult<Vec<_>>>()
-    };
+    let ids = |v: &[crate::hdf::Identity]| identities(py, v);
     out.set_item("role", &d.role)?;
     out.set_item("domain", &d.domain)?;
     out.set_item("time_group", &d.time_group)?;
@@ -262,22 +258,14 @@ fn classification_catalogue<'py>(
                         Some(ClassId::Unsigned(v)) => Some(v.into_pyobject(py)?.into_any()),
                         _ => None,
                     };
-                    let rows = e
-                        .variable_rows
-                        .iter()
-                        .map(|i| identity(py, i))
-                        .collect::<PyResult<Vec<_>>>()?;
+                    let rows = identities(py, &e.variable_rows)?;
                     Ok(
                         dict!(py,"identity"=>identity(py,&e.id)?,"pixel_id"=>pixel,"name"=>&e.name,
                     "variable_rows"=>rows,"capability"=>capability(py,&e.capability)?),
                     )
                 })
                 .collect::<PyResult<Vec<_>>>()?;
-            let unmatched = c
-                .unmatched_variables
-                .iter()
-                .map(|i| identity(py, i))
-                .collect::<PyResult<Vec<_>>>()?;
+            let unmatched = identities(py, &c.unmatched_variables)?;
             Ok(
                 dict!(py,"layout"=>&c.layout,"entries"=>entries,"unmatched_variables"=>unmatched)
                     .into_any(),
