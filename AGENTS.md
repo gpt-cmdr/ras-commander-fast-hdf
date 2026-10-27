@@ -51,6 +51,41 @@ the PyPI wheel of the same name (`python/pyproject.toml`, maturin).
   station identities and time axes are carried explicitly, not by position.
 - **Read-only.** Nothing here writes HEC-RAS files or runs HEC-RAS.
 
+## The HDF5 reader is a general-purpose upstream library
+
+The HDF5 layer is `hdf5-reader`/`hdf5-core` from
+[roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust), a
+general-purpose reader for NetCDF and HDF5. It is not written for HEC-RAS.
+Its CI tests small synthetic h5py files. It does not test real HEC-RAS
+files, so an upstream change can pass there and still change what we read.
+Most of our local patches are now upstream (0.10.0 and later), and
+`roteiro-gis/netcdf-rust#111` (B-tree gathers) is pending.
+
+Before you update the vendored reader to a new upstream version, or replace
+it with the crates.io crate:
+
+- **Read the upstream changelog and diff** for chunk indexes (v1/v2 B-tree,
+  fixed and extensible arrays), filters, datatypes and strings, attributes,
+  old-style groups, link resolution, and limits and errors. HEC-RAS files
+  depend on all of them.
+- **Check each patch in `vendor/LOCAL_PATCHES.md`** against upstream. Drop a
+  patch only when upstream gives the same result. Keep the CLB policy patches
+  (refusals) or move them into the engine. Their refusals must not change.
+- **Test before you merge:**
+  - the reader tests;
+  - this crate's tests;
+  - ras-commander's equivalence suites and the release gate, in `h5py`,
+    `auto` and `native`, on the
+    [golden HEC-RAS corpus](docs/testing.md#golden-hdf-test-corpus) (`core`
+    profile, pinned tag).
+
+  Every value, refusal and error class must be identical to the current
+  engine. Compare per case, not only test counts.
+- **Measure performance on the same corpus** for read patterns that changed,
+  for example sparse row/column gathers on B-tree-indexed results. Speed
+  regressions count as findings.
+- **Never update the reader and change engine behaviour in the same PR.**
+
 ## Compatibility with ras-commander
 
 - `src/python/mod.rs` defines the extension's `API_VERSION`. ras-commander uses the extension
