@@ -304,7 +304,7 @@ pub(crate) fn encoding(file: &Hdf5File, ds: &Dataset) -> crate::Result<EncodingD
         bit_precision: None,
         float: None,
     };
-    if class == 0 || class == 1 {
+    if class == 0 || class == 1 || class == 4 {
         enc.bit_offset = Some(le(&payload, 8, 2)? as u16);
         enc.bit_precision = Some(le(&payload, 10, 2)? as u16);
     }
@@ -357,6 +357,26 @@ pub(super) fn native(dtype: &Datatype, enc: &EncodingDescriptor) -> Result<Nativ
                 (4, false) => Native::U32,
                 (8, false) => Native::U64,
                 _ => return Err("unsupported integer width".into()),
+            })
+        }
+        Datatype::Bitfield { size, byte_order } => {
+            if enc.class != TypeClass::from_code(4) || enc.size != u32::from(*size) {
+                return Err("datatype message disagrees with parsed bitfield type".into());
+            }
+            if !native_order(byte_order) {
+                return Err("non-native bitfield byte order".into());
+            }
+            if !full(u32::from(*size) * 8) {
+                return Err("bitfield offset/precision differs from full storage width".into());
+            }
+            // Full-width fields have no padding or bit shifting: preserve every
+            // stored bit in the corresponding unsigned numeric container.
+            Ok(match *size {
+                1 => Native::U8,
+                2 => Native::U16,
+                4 => Native::U32,
+                8 => Native::U64,
+                _ => return Err("unsupported bitfield width".into()),
             })
         }
         Datatype::FloatingPoint { size, byte_order } => {

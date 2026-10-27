@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Numeric full, batch and selected reads now accept full-width HDF bitfields
+  as unsigned 8-, 16-, 32- or 64-bit values. This includes byte-wide terrain
+  masks. Bitfield reads require native byte order; shifted or reduced-precision
+  fields are refused. Existing stored-family byte-bitfield envelopes are unchanged.
+
 ## 0.2.3 (2026-10-26)
 
 - New read family `mesh_corner_elevations` (`ReadFamily::MeshCornerElevations`): the

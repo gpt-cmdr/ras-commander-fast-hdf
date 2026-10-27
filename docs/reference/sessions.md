@@ -20,6 +20,16 @@ inventories, and series reduction. Typed element selections take contiguous
 module-level functions remain available and still accept list inputs; since API 7 their
 element and index outputs are NumPy arrays too.
 
+Development builds after the published 0.2.3 release also accept full-width HDF
+bitfields as unsigned arrays of the same storage width (`uint8`, `uint16`, `uint32` or `uint64`). Every stored bit is
+preserved; no mask bits are interpreted or shifted. Bitfields must use the host's
+native byte order. Non-native byte-wide bitfields are also refused: h5py cannot
+convert that stored layout to its unsigned byte array on the qualified host. Nonzero bit offsets,
+reduced precision and other widths are refused. Whole reads, batches and strided
+selections share this contract. Stored-family byte-bitfield envelopes retain their
+existing raw-byte representation. The extension API version remains 11; this
+adds support without changing signatures or existing successful numeric results.
+
 Numeric reads above 2 GiB of decoded values are refused by the engine (engine API 10).
 
 ## Sessions as the source of typed reads

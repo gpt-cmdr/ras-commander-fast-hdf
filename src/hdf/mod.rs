@@ -410,7 +410,9 @@ impl ReadOnlyHdfSession {
             })
         })
     }
-    /// Read a numeric dataset or selection, refusing more than
+    /// Read a numeric dataset or selection. Full-width native-endian bitfields
+    /// use unsigned containers of the same width, preserving all stored bits.
+    /// Refuses more than
     /// [`DEFAULT_READ_MAX_BYTES`] of values before allocating.
     pub fn read_numeric(&self, path: &str, selection: Option<&[Slice]>) -> Result<NumericArray> {
         self.read_numeric_bounded(path, selection, DEFAULT_READ_MAX_BYTES)

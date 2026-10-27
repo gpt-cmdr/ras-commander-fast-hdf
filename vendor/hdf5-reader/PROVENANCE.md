@@ -16,10 +16,12 @@ Corporation for ras-commander-fast-hdf and are offered under the same
 |---|---|
 | Upstream repository | https://github.com/roteiro-gis/netcdf-rust |
 | Base | tag `v0.9.3`, commit `3d708fd40c6809f5d215bd2d9f15e9a05de84bd0` ("Merge pull request #101 ... release-0.9.3"; crate version 0.9.3) |
-| Local patches | `vendor/patches/0001`-`0014`, applied in order with `git am` |
+| Local patches | `vendor/patches/0001`-`0015`, applied in order with `git am` |
 | Hashes | `vendor/PROVENANCE.json` (every vendored file); verify with `scripts/prepare-reader.ps1` or `python scripts/vendor_sources.py --check` |
 
 ## Modified files
+
+`hdf5-reader/src/datatype_api.rs` additionally has patch 0015 (unsigned bitfield decoding).
 
 Files changed by the patch series, with the patches that change them:
 
@@ -94,3 +96,7 @@ In short: 0001, 0007, 0009 and 0012 fix reads of valid HDF5 files; 0003, 0004, 0
 0006 and 0010 harden the reader against malformed files; 0002, 0011 and 0013 add the
 APIs the engine uses (raw encodings, cheap group listings, sparse gathers); 0008 and
 0014 are the engine's fail-closed qualification policies.
+
+Patch 0015 adds unsigned primitive bitfield decoding in `datatype_api.rs`, with
+scalar, bulk, native-copy and refusal tests. The engine independently checks
+bit offset and precision before accepting numeric bitfields.
