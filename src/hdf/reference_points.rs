@@ -411,6 +411,54 @@ impl ReadOnlyHdfSession {
         attributes: &[super::metadata::TypedAttribute],
         max: usize,
     ) -> Result<Vec<Identity>> {
+        // Every dataset of a reference-line block repeats the same Name-axis link; prove it
+        // once per session. The key holds every input, and errors are never memoized.
+        let (linked, linked_areas) = self.memo(
+            format!("reference_line_rows:{:?}", (name_path, names, max)),
+            || self.reference_line_rows(name_path, names, max),
+        )?;
+        let linked_areas: Vec<&str> = linked_areas.iter().map(String::as_str).collect();
+        if let Some(attr) = attributes.iter().find(|a| a.name == "2D Areas") {
+            let table = exact_compound(self, "Geometry/2D Flow Areas/Attributes", max)?;
+            let Some(MetadataValue::Strings(area_names)) = table
+                .table
+                .columns
+                .iter()
+                .find(|c| c.name == "Name")
+                .map(|c| &c.value)
+            else {
+                return Err(identity("area Attributes Name axis unqualified"));
+            };
+            let MetadataValue::Signed(indices) = &attr.value else {
+                return Err(identity("line area ordinals require signed integers"));
+            };
+            if attr.shape != [linked_areas.len() as u64] || indices.len() != linked_areas.len() {
+                return Err(corrupt("line area identity shape"));
+            }
+            for (&index, area) in indices.iter().zip(&linked_areas) {
+                if index < 0
+                    || usize::try_from(index)
+                        .ok()
+                        .and_then(|i| area_names.get(i))
+                        .map(String::as_str)
+                        != Some(*area)
+                {
+                    return Err(corrupt(
+                        "line area ordinal differs from named geometry area",
+                    ));
+                }
+            }
+        }
+        Ok(linked)
+    }
+    /// Geometry identities and `SA-2D` areas linked to a reference-line `Name` axis, with the
+    /// `<name>|Faces` cross-check (see [`Self::reference_line_geometry_locations`]).
+    fn reference_line_rows(
+        &self,
+        name_path: &str,
+        names: &[String],
+        max: usize,
+    ) -> Result<(Vec<Identity>, Vec<String>)> {
         use super::lines::GeometryFamily;
         let geometry = self.geometry_family(GeometryFamily::ReferenceLines, max)?;
         let g = geometry
@@ -549,37 +597,9 @@ impl ReadOnlyHdfSession {
                 ));
             }
         }
-        if let Some(attr) = attributes.iter().find(|a| a.name == "2D Areas") {
-            let table = exact_compound(self, "Geometry/2D Flow Areas/Attributes", max)?;
-            let Some(MetadataValue::Strings(area_names)) = table
-                .table
-                .columns
-                .iter()
-                .find(|c| c.name == "Name")
-                .map(|c| &c.value)
-            else {
-                return Err(identity("area Attributes Name axis unqualified"));
-            };
-            let MetadataValue::Signed(indices) = &attr.value else {
-                return Err(identity("line area ordinals require signed integers"));
-            };
-            if attr.shape != [linked_areas.len() as u64] || indices.len() != linked_areas.len() {
-                return Err(corrupt("line area identity shape"));
-            }
-            for (&index, area) in indices.iter().zip(&linked_areas) {
-                if index < 0
-                    || usize::try_from(index)
-                        .ok()
-                        .and_then(|i| area_names.get(i))
-                        .map(String::as_str)
-                        != Some(*area)
-                {
-                    return Err(corrupt(
-                        "line area ordinal differs from named geometry area",
-                    ));
-                }
-            }
-        }
-        Ok(linked)
+        Ok((
+            linked,
+            linked_areas.into_iter().map(str::to_owned).collect(),
+        ))
     }
 }

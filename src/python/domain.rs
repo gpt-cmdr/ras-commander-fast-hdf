@@ -31,6 +31,36 @@ pub(crate) fn identity<'py>(
 ) -> PyResult<Bound<'py, PyDict>> {
     Ok(dict!(py,"source"=>&id.source,"table"=>&id.table,"row"=>id.row))
 }
+/// [`identity`] of each element. Runs of equal `source`/`table` share one converted Python
+/// object (an equal, immutable `pathlib.Path`/`str`) instead of converting it per row.
+pub(crate) fn identities<'py>(
+    py: Python<'py>,
+    ids: &[crate::hdf::Identity],
+) -> PyResult<Vec<Bound<'py, PyDict>>> {
+    let mut source: Option<(&std::path::Path, Bound<'py, PyAny>)> = None;
+    let mut table: Option<(&str, Bound<'py, PyAny>)> = None;
+    let mut out = Vec::with_capacity(ids.len());
+    for id in ids {
+        let s = match &source {
+            Some((path, object)) if *path == id.source.as_path() => object.clone(),
+            _ => {
+                let object = id.source.as_path().into_pyobject(py)?.into_any();
+                source = Some((id.source.as_path(), object.clone()));
+                object
+            }
+        };
+        let t = match &table {
+            Some((name, object)) if *name == id.table => object.clone(),
+            _ => {
+                let object = id.table.as_str().into_pyobject(py)?.into_any();
+                table = Some((id.table.as_str(), object.clone()));
+                object
+            }
+        };
+        out.push(dict!(py,"source"=>s,"table"=>t,"row"=>id.row));
+    }
+    Ok(out)
+}
 const _: () = assert!(crate::API_VERSION == 10);
 const _: () = assert!(crate::hdf::DEFAULT_MAX_BYTES == 67108864);
 pub(crate) fn attribute_type<'py>(
