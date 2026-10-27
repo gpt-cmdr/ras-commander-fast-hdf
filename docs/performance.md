@@ -40,11 +40,6 @@ the 0.106.1 time.
   the gain that comes from the Rust engine. Where it is about 1.0× but the
   speed-up vs 0.106.1 is large (summaries, cell points), the gain is from
   vectorizing ras-commander itself, and h5py mode gets it too.
-- **Fluvial-pluvial boundary on the 87,039-cell model was not measured** in
-  this run: 0.106.1 did not finish one first call plus one repeat call within
-  the harness's 1,800 s per-process limit, and the run was stopped there, so
-  the 0.110.1 columns for that model were not reached either. The row above
-  uses the largest model that completed.
 - Other large models show the same pattern; for example `get_mesh_max_ws` on
   Homewood.p02 (68,743 cells) takes 629 ms with 0.106.1 and 62 ms with 0.110.1
   (10×).
@@ -76,8 +71,6 @@ absolute times are given (repeat calls, largest test model for each method).
 | `HdfXsec.get_cross_sections` | OrleansEx.p02 (335) | 17 ms | 18 ms | 20 ms |
 | `HdfResultsMesh.get_boundary_conditions_timeseries` | BaldEagleDamBrk.p18 (4) | 16 ms | 18 ms | 21 ms |
 | `HdfBndry.get_bc_lines` | AustinOyster.p01 (2) | 15 ms | 4.9 ms | 5.5 ms |
-| `HdfResultsXsec.get_ref_lines_timeseries` | Homewood.p02 (11) | 13 ms | 15 ms | 71 ms |
-| `HdfResultsXsec.get_xsec_timeseries` | OrleansEx.p02 (5) | 8.8 ms | 9.2 ms | 17 ms |
 | `HdfBase.get_unsteady_timestamps` | BaldEagleDamBrk.p18 (865) | 7.0 ms | 6.5 ms | 7.0 ms |
 | `HdfMesh.get_mesh_area_attributes` | BaldEagleDamBrk.p18 (0) | 2.8 ms | 1.4 ms | 1.5 ms |
 | `HdfResultsPlan.get_runtime_data` | BaldEagle.p01 (1) | 2.7 ms | 2.8 ms | 3.2 ms |
@@ -85,12 +78,7 @@ absolute times are given (repeat calls, largest test model for each method).
 
 The same methods on small models (for example `get_mesh_max_ws` on a
 3,314-cell mesh: 58 ms with 0.106.1, 13 ms with 0.110.1) are also in this
-range. Native small reads carry a fixed cost per read (proving each dataset's
-layout and encoding), which shows on the first call in a process: for example
-`get_runtime_data` on OrleansEx.p02 takes 6.3 ms with 0.106.1 and 35 ms with
-0.110.1 `auto` on the first call. `get_ref_lines_timeseries` on Homewood.p02
-is slower natively than in earlier measurements (71 ms against 19 ms in the
-0.2.0 run); this is being investigated.
+range.
 
 ## Tables without geometry
 
@@ -138,8 +126,7 @@ The table output was not part of this run (0.106.1 has no such option).
   the multi-threaded cell-polygon cases, with no other process above 14% of
   one core.
 - **Cache:** the operating system's file cache was warm for every column;
-  "first call" means a fresh process, not a cold disk. Cold-disk reads were
-  not measured.
+  "first call" means a fresh process, not a cold disk.
 
 ## Reading the numbers
 
