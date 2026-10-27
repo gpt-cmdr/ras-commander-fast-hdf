@@ -18,7 +18,8 @@ Returned values remain owned clones, preserving caller mutation/lifetime semanti
 Cached objects include numeric capability/encoding proof, group members, mesh inventory
 and diagnostics, cross sections/profiles, time axes, bounded units, mesh geometry
 descriptors, plan capabilities, internal structure inventories, mesh result inventories
-and run summary. Caching the internal structure inventory also serves plan capabilities
+and run summary, read-family output-block time rows, and each reference-line Name axis's
+geometry link (its per-dataset `2D Areas` check runs on every call). Caching the internal structure inventory also serves plan capabilities
 and the catalogue: those calls reuse the same validated inventory rather than repeating
 its identity and variable checks. This is still a semantic catalogue, not a structural
 h5py enumeration. Typed result reads still validate the complete family; requested-only

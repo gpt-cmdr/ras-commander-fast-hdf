@@ -142,6 +142,35 @@ fn unprovable_identities_refuse_the_link_and_keep_the_read() {
     }
 }
 
+/// The link is proven once per session (its per-dataset `2D Areas` check is not memoized), and
+/// value reads do not prove it: reads first, then repeated inventories, give the links of a
+/// fresh session, and the values are those of a fresh session.
+#[test]
+fn links_and_reads_repeat_identically_in_one_session() {
+    for name in [
+        "valid.h5",
+        "reordered.h5",
+        "bad_name.h5",
+        "bad_faces.h5",
+        "bad_areas.h5",
+        "no_geometry.h5",
+        "per_area_valid.h5",
+        "per_area_bad_faces.h5",
+    ] {
+        let fresh = links(&local(name));
+        let s = local(name);
+        let read = |s: &ReadOnlyHdfSession, path: &str| {
+            s.read_family_dataset(ReadFamily::ReferenceLines, path, None, 1 << 20, 1 << 20)
+                .unwrap()
+        };
+        for (path, ..) in &fresh {
+            assert_eq!(read(&s, path), read(&local(name), path), "{name} {path}");
+        }
+        assert_eq!(links(&s), fresh, "{name}");
+        assert_eq!(links(&s), fresh, "{name}, repeated");
+    }
+}
+
 /// HEC-RAS 7.0.1 per-area series (`2D Flow Areas/<area>/Reference Lines`): bare names, linked
 /// through the path's area; the Faces cross-check uses the block's `Reference Lines/Name` axis.
 /// Excerpts of a 7.0.1 run of HEC's Weise_2D (`generate_per_area_reference_line_excerpts.py`).

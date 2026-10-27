@@ -6,6 +6,19 @@
   as unsigned 8-, 16-, 32- or 64-bit values. This includes byte-wide terrain
   masks. Bitfield reads require native byte order; shifted or reduced-precision
   fields are refused. Existing stored-family byte-bitfield envelopes are unchanged.
+- Faster reference-line result reads. Since 0.2.2 every `read_family_dataset` of a
+  `ReadFamily::ReferenceLines` dataset proved the column-to-geometry link again (it read
+  the whole reference-line geometry family), although the link never changes what the
+  read returns. Value reads no longer prove it; inventories still report it, and each
+  Name axis's link is now proven once per session (the per-dataset `2D Areas` check
+  still runs on every call). Output-block time rows (`family_time_rows`) are also proven
+  once per session. On a 124-line plan a session read drops from about 4.5 ms to
+  0.1 ms. Values, errors and capabilities are unchanged; errors are never memoized.
+- Python extension: lists of identities (for example `read_xs_result`'s `section_ids`,
+  `xs_result_inventory`'s `sections`, family `locations`) convert each run of equal
+  `source`/`table` once and share the equal, immutable `pathlib.Path`/`str` object,
+  instead of building one `pathlib.Path` per row.
+- No API change: engine `API_VERSION` stays 10 and extension `API_VERSION` stays 11.
 
 ## 0.2.3 (2026-10-26)
 

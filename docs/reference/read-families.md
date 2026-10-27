@@ -133,7 +133,8 @@ aggregating per-entry failures; layer fields preserve per-dataset capabilities.
 
 `ReadFamily::ReferenceLines` results are linked to `Geometry/Reference Lines/Attributes`
 rows the same way, reported separately in `geometry_link` so that a failed link never
-changes a dataset's read capability. Each literal Name entry (`<name>|<SA-2D>`) must
+changes a dataset's read capability. Inventories report the link; a value read
+(`read_family_dataset`) does not prove it, since its outcome cannot change the values. Each literal Name entry (`<name>|<SA-2D>`) must
 uniquely match one geometry Name/SA-2D pair; the Name axis's `<name>|Faces` attribute must
 equal, in order, the geometry `Internal Faces` of that row; and `2D Areas` ordinals, where
 stored, must name the same areas. `geometry_link` is Supported exactly when
