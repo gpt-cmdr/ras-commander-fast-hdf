@@ -120,12 +120,30 @@ Since engine API 10, mesh cell polygon rings follow the ras-commander Python con
 
 * `name`: unique nonempty layer name.
 * `coordinates`: `float64` `(N, 2)` WGS84 longitude/latitude coordinates.
-* `offsets`: `int64` ring offsets, length `C+1`.
+* `offsets`: `int64` ring offsets, length `C+1`, one closed exterior ring per feature; or,
+  for holes and multipart features, all three of `ring_offsets` (coordinate spans),
+  `polygon_offsets` (ring spans: exterior first, then holes) and `feature_offsets`
+  (polygon spans), each starting at zero with a terminal sentinel. A feature with more
+  than one polygon is written as a MultiPolygon; holes and parts survive tiling.
 * `cell_ids`: `int64` nonnegative IDs unique within the layer.
-* `properties`: dictionary of column names to Python lists of length `C`.
+* `properties`: dictionary of column names to columns of length `C` (or of the source
+  length, with `property_rows`).
+* `property_rows` (optional): `int64`, one per feature: the row of every property column
+  that belongs to the feature, or `-1` for none (the value is null). Callers pass whole
+  source-indexed result arrays (ghost cells included) without building a per-feature copy.
 
-Property values are strings, signed 64-bit integers, floats, booleans or `None`.
-Non-finite property floats become null; out-of-range integers raise. Coordinates must be
+A column is one of:
+
+* a Python list of strings, signed 64-bit integers, floats, booleans or `None`;
+* a one-dimensional NumPy array of `float64`, `float32`, `int64`, `int32`, `uint64`,
+  `uint32` or `bool`, read in Rust without a Python object per value;
+* a `(values, valid)` pair of such an array and a `bool` array of the same length,
+  `False` meaning null;
+* a `{"codes": int64 array, "categories": list of str}` dictionary for strings, code `-1`
+  meaning null (for example a mesh name per cell).
+
+Every form gives the same tiles as the equivalent list. Non-finite property floats become
+null; `uint64` values above the signed 64-bit range and out-of-range codes or rows raise. Coordinates must be
 finite and within Web Mercator latitude limits. pyproj transforms the packed coordinate
 arrays outside this kernel; no GeoJSON, WKB or GeoDataFrame serialization is required for
 the native tile path.

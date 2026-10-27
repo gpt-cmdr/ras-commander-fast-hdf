@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- `write_pmtiles` property columns can be NumPy arrays (`float64/32`, `int64/32`,
+  `uint64/32`, `bool`), `(values, valid)` pairs with a boolean mask, or categorical
+  `{"codes", "categories"}` string columns, read in Rust with no Python object per value.
+  The optional `property_rows` (one source row per feature, `-1` for null) lets callers pass
+  whole source-indexed result arrays. The archive is byte-identical to the list form. On a
+  340,000-cell layer with 10 float columns plus `mesh_name`/`cell_id`, the Python
+  preparation drops from 2.9-3.4 s to 0.01 s, and peak working set by about 100 MiB.
+  Lists still work. Holes and multipart features (`ring_offsets`/`polygon_offsets`/
+  `feature_offsets`) now have a decoded-tile test: exterior, hole and island keep their
+  windings.
 - GeoParquet archive profile (`exports-geoparquet`): new
   `export_geoparquet_ipc_files(inputs, output, options)` writes one GeoParquet from one
   or more Arrow IPC layers, with ZSTD (level selectable), a row-group size, per-row bbox
