@@ -112,7 +112,14 @@ pub(super) fn descriptor(s: &ReadOnlyHdfSession, path: &str, max: usize) -> Resu
     let ds = s.file.dataset(path).map_err(map_error)?;
     let attributes = attributes(s, path, false, max)?;
     let numeric = s.numeric_capability(path)?;
-    let (storage, kind, capability) = if numeric.capability.is_supported() {
+    // Keep the established byte-wide stored envelope even though full-width
+    // bitfields can also be requested through the numeric selection APIs.
+    let (storage, kind, capability) = if matches!(
+        ds.dtype(),
+        crate::hdf5_reader::Datatype::Bitfield { size: 1, .. }
+    ) {
+        ("bitfield_bytes", None, Capability::Supported)
+    } else if numeric.capability.is_supported() {
         ("numeric", numeric.kind, Capability::Supported)
     } else {
         match ds.dtype() {

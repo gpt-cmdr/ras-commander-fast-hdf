@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Numeric full, batch and selected reads now accept full-width HDF bitfields
+  as unsigned 8-, 16-, 32- or 64-bit values. This includes byte-wide terrain
+  masks. Bitfield reads require native byte order; shifted or reduced-precision
+  fields are refused. Existing stored-family byte-bitfield envelopes are unchanged.
 - Faster reference-line result reads. Since 0.2.2 every `read_family_dataset` of a
   `ReadFamily::ReferenceLines` dataset proved the column-to-geometry link again (it read
   the whole reference-line geometry family), although the link never changes what the

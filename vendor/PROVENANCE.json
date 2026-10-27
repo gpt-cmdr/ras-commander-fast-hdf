@@ -72,6 +72,10 @@
         {
           "patch": "patches/0014-hdf5-reader-CLB-policy-refuse-non-inline-extensible-.patch",
           "sha256": "0442d98f37bdcc134415da3e720d2c73a96b85e18426c965be5c991cfcd32c18"
+        },
+        {
+          "patch": "patches/0015-unsigned-bitfield-values.patch",
+          "sha256": "a6ab32eace9a3090284843e9e3fa441a824a61327730467b2b268ac6d2a194c1"
         }
       ],
       "omitted": [],
@@ -153,7 +157,7 @@
     "reader-tests/src/lib.rs"
   ],
   "sha256_tree_definition": "SHA256 of sorted UTF-8 relative-path + space + file SHA256 + LF, excluding PROVENANCE.json",
-  "tree_sha256": "5480fbccf66c63600af3c3bfb8efd325491bbcc0c7aa6ac9b0c537c12434ad1f",
+  "tree_sha256": "f5b30d7878578220bc74092ae5ad6ae4933fc3b599d9c795b0c44fd0712a0efe",
   "files": {
     "freestiler-core/COPYRIGHTS": "18cd794fd1c7bc364404e907b074c1cad422d3201e0bdf386a50e70d49403f43",
     "freestiler-core/LICENSE": "fe9e5aa279ea3a8a1f3d09f3715658af5c86f0440c66bf4b565ff3cf10f893f7",
@@ -180,7 +184,7 @@
     "freestiler-core/src/tiler.rs": "f432f35e9e88368d9aa62eaefb8af6eb48742b9b4aee19a55e8b73b3fde15db3",
     "freestiler-core/tests/fixtures/supercluster-8.0.1.json.gz": "34dbc10fa5eae480c63286ffb2d634fd738f4cf19dd5bac39c3de9746c5f158f",
     "hdf5-core/src/lib.rs": "8384405ef39886079e31b00c006df511859ac765b5f3f56df2bfbd02abcc4452",
-    "hdf5-reader/PROVENANCE.md": "eaa9643b8d2f90788a7f83d7e3219d9341e0c0b504483f833fc3540ba121809a",
+    "hdf5-reader/PROVENANCE.md": "d12d675d11f7907dd8b7e36a0285f15e549183f65d550838055f4f442de20f50",
     "hdf5-reader/src/attribute_api.rs": "4ae6c532a187a027ca5bc0b940caea95ce17aee965c3c21dbe4e59cc2bf0240b",
     "hdf5-reader/src/btree_v1.rs": "0afac3846fde8212525eeffb5cfa065c52b1acf343a096d0f878751fc890112f",
     "hdf5-reader/src/btree_v2.rs": "f3e5a5b9c1a4f105b2e30f89535a7c3f006b249893ec4663814b7ce5ec1c5ebe",
@@ -188,7 +192,7 @@
     "hdf5-reader/src/checksum.rs": "8e59bdc8c828e542b27f437444650428b08ac45f9f24c73104212ade48340e1d",
     "hdf5-reader/src/chunk_index.rs": "bd9a9c32f4f9e01817bff1e06ff8bd02dd309ef1f5d33aa95808db33040c600d",
     "hdf5-reader/src/dataset.rs": "56e7c4da43a3ab524887bc414edbd3ed055954632dbb72cd0cdd703027896ec2",
-    "hdf5-reader/src/datatype_api.rs": "5c3edb76625e9601366c34b32dc72aaf57719deeeddedf2c72ee553d9c943c2c",
+    "hdf5-reader/src/datatype_api.rs": "d0b398c08222eb03a07f08735756ece3d4f2e4b8d1af4488b262e20895091959",
     "hdf5-reader/src/error.rs": "74b1b0aaaae081b07f73551c81136361153accdde90b8f5c70eae7c8fa39ba1b",
     "hdf5-reader/src/extensible_array.rs": "1ed016056138f887fcafcdba543b333cd07344c6aaf376dc3b04eb599bd7e193",
     "hdf5-reader/src/filters/deflate.rs": "64903a85c0cb5960d05027f80616db811a947d7b38b281e4ce60097508731f29",
@@ -239,7 +243,7 @@
     "hdf5-reader/tests/property_tests.rs": "5a002a71f7a08fc36fd77ab31a5a678bff5b6f7ca6aae20ef1e23109d0bb62fe",
     "LICENSE-APACHE": "7e1c4927d7c8765c73e234c2da19c423dfafc9c662e6d028277f9e77476445bb",
     "LICENSE-MIT": "24a4eeee33afc227bd3e796f772741250b2c93eae1cdba65e775ef8005dfb4b1",
-    "LOCAL_PATCHES.md": "389355b1dd0014f181213cf61be751bc9856a02b6b947a3eb3893a4892b7bdc3",
+    "LOCAL_PATCHES.md": "cf0a2592e21aa4f74fd3f6b4c0d0177c871192b3ec82fcaca127986a0649762a",
     "patches/0001-hdf5-reader-read-v2-v3-shared-message-locations-per-.patch": "977a980df24f4b9442a8f58b2c04293c5d61cc95a37785f43a828fd73f5f3ba2",
     "patches/0002-hdf5-reader-keep-exact-datatype-envelopes-and-expose.patch": "aca9cd5023944283a87afcb479ff155e4f86480103e603c4374f8c6eff2878b4",
     "patches/0003-hdf5-reader-check-attribute-element-counts-against-t.patch": "843ae3d0c8fa83ddaa245c14e2ec5a8864e69a2db8043ae1d1431b39309a7852",
@@ -254,6 +258,7 @@
     "patches/0012-hdf5-reader-follow-soft-links-in-old-style-symbol-ta.patch": "4250522c63d8c8a0319b647313993e3b7b3110ee542bff522ec99c6e23d74956",
     "patches/0013-hdf5-reader-sparse-row-column-gathers-and-uncached-f.patch": "1a41427c5e4bc2fe851cab4258d5f60423daf1e7d9ac39aa2f72d74ed3b72077",
     "patches/0014-hdf5-reader-CLB-policy-refuse-non-inline-extensible-.patch": "0442d98f37bdcc134415da3e720d2c73a96b85e18426c965be5c991cfcd32c18",
+    "patches/0015-unsigned-bitfield-values.patch": "a6ab32eace9a3090284843e9e3fa441a824a61327730467b2b268ac6d2a194c1",
     "reader-tests/Cargo.lock": "6b022977fcfcf9b534199e7e92a1a45f57133506137a139dd5bcb9b45c820eff",
     "reader-tests/Cargo.toml": "22368c3e812c59642df934130b5da4ff0d11b429c4faef09f76025e2d7ec7550",
     "reader-tests/src/lib.rs": "64ff01b13a5af88a21b0bc93abff4c0d8d943bca2608c85a44ed0625e950433d",
@@ -311,7 +316,7 @@
     "hdf5-reader/src/checksum.rs": "4697049349b0f9f1131e4bfa96b81dc45e9584158fc31432489491d04fbc9419",
     "hdf5-reader/src/chunk_index.rs": "10a777aae588702777aa15f68ce00c76de5ec0a089546b231d8d24b14a135bc9",
     "hdf5-reader/src/dataset.rs": "6bcc27e53fc4b6a97f4c6844131e38c5647c529a7869407ee8c6f1d560ace498",
-    "hdf5-reader/src/datatype_api.rs": "49fee0dd72f083644848eec5a768b0f6ca5ce742f088fdbb0b8cdc6efbfed06a",
+    "hdf5-reader/src/datatype_api.rs": "44403d20d7998e8398454d3a6b7f59c40700aa790279662fcc5388b495b33528",
     "hdf5-reader/src/error.rs": "b2c414cd5a47a8a0c49eff79e5d7a89088ba3c6a541aa9dc765f97fa5974232e",
     "hdf5-reader/src/extensible_array.rs": "339462c52e3cb61ca2c2a18566f1e61b65c19a0b8b8ee1841bb84318189bfdd5",
     "hdf5-reader/src/filters/deflate.rs": "49e14030b7d1656aa0c193d91be5a6cb670d4eaf94b652be3327ba5cde0cf045",

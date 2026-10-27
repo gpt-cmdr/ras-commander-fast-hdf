@@ -89,6 +89,11 @@ macro_rules! impl_h5type_int {
             }
 
             fn from_bytes(bytes: &[u8], dtype: &Datatype) -> Result<Self> {
+                if let Datatype::Bitfield { size, byte_order } = dtype {
+                    return Self::from_bytes(bytes, &Datatype::FixedPoint {
+                        size: *size, signed: false, byte_order: *byte_order,
+                    });
+                }
                 match dtype {
                     Datatype::FixedPoint {
                         size,
@@ -116,6 +121,11 @@ macro_rules! impl_h5type_int {
             }
 
             fn decode_vec(raw: &[u8], dtype: &Datatype, count: usize) -> Option<Result<Vec<Self>>> {
+                if let Datatype::Bitfield { size, byte_order } = dtype {
+                    return Self::decode_vec(raw, &Datatype::FixedPoint {
+                        size: *size, signed: false, byte_order: *byte_order,
+                    }, count);
+                }
                 match dtype {
                     Datatype::FixedPoint {
                         size,
@@ -160,6 +170,11 @@ macro_rules! impl_h5type_int {
             }
 
             fn native_copy_compatible(dtype: &Datatype) -> bool {
+                if let Datatype::Bitfield { size, byte_order } = dtype {
+                    return Self::native_copy_compatible(&Datatype::FixedPoint {
+                        size: *size, signed: false, byte_order: *byte_order,
+                    });
+                }
                 matches!(
                     dtype,
                     Datatype::FixedPoint {
@@ -495,5 +510,25 @@ mod tests {
 
         let err = dtype_element_size(&dtype).unwrap_err();
         assert!(err.to_string().contains("array datatype"));
+    }
+}
+
+#[cfg(test)]
+mod bitfield_tests {
+    use super::*;
+    #[test]
+    fn unsigned_bitfields_decode_without_signed_coercion() {
+        for order in [ByteOrder::LittleEndian, ByteOrder::BigEndian] {
+            let dtype = Datatype::Bitfield { size: 2, byte_order: order };
+            let raw = if order == ByteOrder::LittleEndian { [0x01, 0x80] } else { [0x80, 0x01] };
+            assert_eq!(u16::from_bytes(&raw, &dtype).unwrap(), 0x8001);
+            assert_eq!(u16::decode_vec(&raw, &dtype, 1).unwrap().unwrap(), [0x8001]);
+            assert!(i16::from_bytes(&raw, &dtype).is_err());
+            assert!(i16::decode_vec(&raw, &dtype, 1).is_none());
+            assert!(!i16::native_copy_compatible(&dtype));
+            assert!(!u8::native_copy_compatible(&dtype));
+            assert!(u16::from_bytes(&raw[..1], &dtype).is_err());
+            assert_eq!(u16::native_copy_compatible(&dtype), byte_order_is_native(order));
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 `vendor/` holds a modified copy of the `hdf5-reader` and `hdf5-core` crates from
 [roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) at tag `v0.9.3`
-(commit `3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`, crate version 0.9.3), with the 14
+(commit `3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`, crate version 0.9.3), with the 15
 patches in `patches/` applied in order. Copyright (c) 2026 Ian Norden. The upstream
 licences (`LICENSE-MIT`, `LICENSE-APACHE`) and the upstream `README.md` are retained
 byte for byte. None of these changes has been accepted upstream yet.
@@ -62,6 +62,7 @@ upstream's `netcdf-reader`; that crate is not vendored, so those hunks have no e
 | `0012` | Follow soft links in old-style groups (symbol-table cache type 2). | spec fix |
 | `0013` | Sparse row/column gathers (`read_rows_columns_chunked*`), uncached full reads (`read_array_uncached*`), zero-byte cache bypass, `DEFAULT_CHUNK_CACHE_{BYTES,SLOTS}`. Adds `tests/fixtures/perf2/gather.h5`. | performance + API |
 | `0014` | **Engine policy.** Refuse extensible-array chunk indexes with more elements than the index block (`UnsupportedEncoding`), because upstream 0.9.3 silently returns fill values for chunks past the index block. Adjusts two upstream integration tests. Adds `tests/fixtures/perf2/ea_latest.h5`. | policy |
+| `0015` | Decode bitfields through unsigned primitive scalar, bulk and native-copy paths; signed and width-mismatched reads refuse. Engine encoding checks still require zero offset and full precision. | fix |
 
 Patches 0008 and 0014 are fail-closed qualification policies of the engine and are not
 intended for upstream as they stand.
