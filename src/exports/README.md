@@ -54,6 +54,7 @@ native in binary outputs. No unit-based coordinate conversion is guessed.
 | --- | --- | --- |
 | Arrow IPC file | Original WKB, schema and metadata | Exact supported Arrow types, nulls and full uint64 |
 | GeoParquet | WKB GeoParquet metadata, native PROJJSON, bbox/type finalization | Exact supported types, Snappy, 65536-row groups |
+| GeoParquet archive profile | As GeoParquet, plus optional bbox covering (GeoParquet 1.1 `bbox` struct, or four `bbox_*` columns) and file-level `bbox` | One or more layers unified into one schema with a `layer` column; Snappy, ZSTD (level) or none; row groups end at layer boundaries; optional Hilbert order within each layer |
 | FlatGeobuf | Official writer, native WKT, spatial index, mixed geometries; empty/null rejects | uint64 converts to checked signed64; larger values reject because GDAL otherwise rounds ULong to float64. Time stored as integer milliseconds, schema metadata carries contract. Null properties omitted in feature storage and reopen as null |
 | GeoPackage | Complete SQLite container, feature table, SRS/WKT2 extension, RTree and contents tables | SQLite signed64 (larger uint64 rejects), bool, real, UTF8, blob, nullable fields; timestamp stored as UTC ISO text with millisecond precision. Field metadata beyond CRS is not archived |
 | GeoJSON / Lines | WGS84 longitude/latitude only, CCW exterior/CW holes; Python transforms and orients | Nullable scalar properties; integers outside ±(2**53-1) become decimal strings. Millisecond timestamps remain JSON integers. Binary attributes reject. No full Arrow schema/field metadata archive. Lines is one feature per newline, with no RFC8142 record separator |
@@ -63,6 +64,34 @@ consumer with an exact integer parser; year3000 timestamps are inside that range
 GeoJSON has no fidelity claim for the original Arrow type schema. Binary source
 exports retain geometry coordinates, without rendering simplification or tiling.
 PMTiles/freestiler remains the separate rendering path and owner.
+
+## GeoParquet archive profile
+
+`exports::geoparquet::export_layers` (Python: `export_geoparquet_ipc_files(inputs,
+output, options)`, `inputs` a list of `(layer_name, ipc_path)`, `options` JSON) writes
+one GeoParquet from several layers, as ras2cng's archive does (`Model.g01.parquet` with a
+`layer` column). Options, all optional and unknown keys refused:
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `compression` | `"snappy"` | `"snappy"`, `"zstd"` or `"uncompressed"` |
+| `compression_level` | unset | ZSTD level 1 to 22 (default 1); refused for other codecs |
+| `row_group_rows` | 65536 | Maximum rows per row group; a row group also ends at every layer boundary |
+| `bbox_covering` | `"none"` | `"struct"`: a nullable `bbox` struct (`xmin`, `ymin`, `xmax`, `ymax`) with covering paths `["bbox", "xmin"]`, the GeoParquet 1.1 layout. `"columns"`: four float64 columns `bbox_xmin` ... `bbox_ymax`, the layout of ras2cng archives up to 0.12; DuckDB and pyarrow filter on them, but GeoParquet 1.1 validators reject their one-element covering paths |
+| `order` | `"input"` | `"hilbert"`: within each layer, the Hilbert index of each bbox centre over the layer's extent, exactly DuckDB spatial's `ST_Hilbert(x, y, extent)` (16 bits per axis); ties keep input order, null and empty geometries go last |
+| `layer_column` | unset | Name of a nonnullable Utf8 column holding each input's layer name; required with more than one layer, and then every layer needs a unique, nonempty name |
+| `identity` | `{}` | Per layer name, `{"namespace": <Utf8 column>, "local": <Int64 column or null>}`; unlisted layers use `(mesh_name, cell_id)`. Names of layers that are not supplied refuse |
+| `max_batch_rows` | 65536 | As for the other writers |
+
+Each layer is validated against contract v1 with its own schema and identity. All layers
+must carry the same `ras:export:v1` CRS evidence and the same geometry field. The output
+schema is the union of the layer fields in first-appearance order, then the layer column,
+then the bbox covering. A field missing from a layer is null for its rows; a field with
+different types in two layers, or one that collides (case-insensitively) with a generated
+column, refuses. Bbox values are the minimum and maximum over every coordinate, holes and
+parts included, and null (not NaN) for null or empty geometry. Rows, attributes and WKB are
+otherwise passed through unchanged. Unordered export streams one batch at a time;
+`"hilbert"` holds one layer at a time.
 
 ## Lifecycle and memory
 

@@ -105,7 +105,14 @@ exports-arrow = [
 exports-pmtiles = ["exports-arrow", "dep:geozero", "geozero/with-geo"]
 exports-geojson = ["exports-arrow", "dep:geozero"]
 exports-flatgeobuf = ["exports-arrow", "dep:flatgeobuf", "dep:geozero"]
-exports-geoparquet = ["exports-arrow", "dep:geoparquet", "dep:parquet"]
+exports-geoparquet = [
+    "exports-arrow",
+    "dep:geoparquet",
+    "dep:parquet",
+    "parquet/zstd",
+    "dep:arrow-select",
+    "dep:arrow-buffer",
+]
 exports-geopackage = ["exports-arrow", "dep:geopackage"]
 exports-all = [
     "exports-geojson",
@@ -149,6 +156,8 @@ integer-encoding = { version = "=4.0.2", optional = true }
 arrow-array = { version = "=59.0.0", optional = true }
 arrow-schema = { version = "=59.0.0", optional = true }
 arrow-ipc = { version = "=59.0.0", optional = true }
+arrow-select = { version = "=59.0.0", optional = true }
+arrow-buffer = { version = "59.0.0", optional = true }
 tempfile = { version = "3", optional = true }
 geozero = { version = "=0.15.1", optional = true, default-features = false, features = ["with-wkb", "with-geojson"] }
 flatgeobuf = { version = "=6.0.1", optional = true, default-features = false }

@@ -99,6 +99,7 @@ reference gives arguments and return shapes.
 | `assemble_rings`, `face_graph`, `NativeAnalysis` | Fluvial/pluvial boundary and polygon kernels (`HdfFluvialPluvial`). |
 | `write_pmtiles(layers, output, min_zoom, max_zoom, threads=None)` | Writes mesh polygons to a PMTiles vector tile archive. |
 | `export_ipc_file`, `export_pmtiles_ipc_file`, `validate_export_wkb` | Vector exports (GeoJSON, FlatGeobuf, GeoParquet, GeoPackage, PMTiles) from Arrow IPC; present when built with the `exports-*` features. |
+| `export_geoparquet_ipc_files` | GeoParquet archive profile: several IPC layers into one file with a `layer` column, bbox covering, Hilbert order and ZSTD (`exports-geoparquet`; see `src/exports/README.md`). |
 | `text_index`, `text_geometry_index`, `text_geometry_edit`, `text_apply_edits` | Fast parsing and editing of HEC-RAS text files (`ras_commander.fast_text`). |
 
 ## Threads and the GIL
