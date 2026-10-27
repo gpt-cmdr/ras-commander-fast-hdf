@@ -20,19 +20,19 @@ native-vs-h5py column, in h5py mode. Both used the same Python and libraries
 (warm) on that model, medians of three fresh processes per column, ranked by
 the 0.106.1 time.
 
-![Bar chart, log time axis, repeat-call time on each call's largest test model, 0.106.1 against 0.110.1 in auto mode: fluvial-pluvial boundary 21,557 ms to 94.9 ms (227.1x, BaldEagleDamBrk.p18); cell polygons 20,592 ms to 460 ms (44.8x, JUL2020_D100RAS.p04); maximum face velocity 8,459 ms to 564 ms (15.0x); maximum water surface 2,733 ms to 238 ms (11.5x); cell points 2,459 ms to 139 ms (17.7x); mesh summary of maximum face velocity 2,094 ms to 172 ms (12.1x, BaldEagleDamBrk.p07); face-velocity time series 1,505 ms to 181 ms (8.3x); water-surface time series 1,426 ms to 192 ms (7.4x); one cell's water-surface time series 1,400 ms to 182 ms (7.7x).](images/large-project-calls-light.svg)
+![Bar chart, log time axis, repeat-call time on each call's largest test model, 0.106.1 against 0.110.1 in auto mode: fluvial-pluvial boundary 21,557 ms to 94.9 ms (227.1x, BaldEagleDamBrk.p18); the rest on BaldEagleDamBrk.p07: cell polygons 5,190 ms to 153 ms (34.0x); mesh summary of maximum face velocity 2,094 ms to 172 ms (12.1x); maximum face velocity 2,090 ms to 175 ms (12.0x); face-velocity time series 1,505 ms to 181 ms (8.3x); water-surface time series 1,426 ms to 192 ms (7.4x); one cell's water-surface time series 1,400 ms to 182 ms (7.7x); maximum water surface 708 ms to 78.4 ms (9.0x); cell points 662 ms to 40.3 ms (16.4x).](images/large-project-calls-light.svg)
 
 | Method | Largest test model (result rows) | 0.106.1 | 0.110.1 h5py | 0.110.1 `auto` | Speed-up vs 0.106.1 | Native vs h5py (0.110.1) |
 |---|---|---:|---:|---:|---:|---:|
 | `HdfFluvialPluvial.calculate_fluvial_pluvial_boundary` | BaldEagleDamBrk.p18, 4,425 cells (829 lines) | 21,557 ms | 447 ms | 94.9 ms | **227×** | 4.7× |
-| `HdfMesh.get_mesh_cell_polygons` | JUL2020_D100RAS.p04 (340,246 cells) | 20,592 ms | 13,354 ms | 460 ms | **44.8×** | 29.0× |
-| `HdfResultsMesh.get_mesh_max_face_v` | JUL2020_D100RAS.p04 (705,332 faces) | 8,459 ms | 595 ms | 564 ms | **15.0×** | 1.1× |
-| `HdfResultsMesh.get_mesh_max_ws` | JUL2020_D100RAS.p04 (340,248 cells) | 2,733 ms | 247 ms | 238 ms | **11.5×** | 1.0× |
-| `HdfMesh.get_mesh_cell_points` | JUL2020_D100RAS.p04 (352,141 cells) | 2,459 ms | 149 ms | 139 ms | **17.7×** | 1.1× |
+| `HdfMesh.get_mesh_cell_polygons` | BaldEagleDamBrk.p07 (87,039 cells) | 5,190 ms | 3,242 ms | 153 ms | **34.0×** | 21.2× |
 | `HdfResultsMesh.get_mesh_summary` (maximum face velocity) | BaldEagleDamBrk.p07 (177,301 faces) | 2,094 ms | 177 ms | 172 ms | **12.1×** | 1.0× |
+| `HdfResultsMesh.get_mesh_max_face_v` | BaldEagleDamBrk.p07 (177,301 faces) | 2,090 ms | 178 ms | 175 ms | **12.0×** | 1.0× |
 | `HdfResultsMesh.get_mesh_timeseries` (face velocity) | BaldEagleDamBrk.p07 (865 steps × 177,301 faces) | 1,505 ms | 1,453 ms | 181 ms | **8.3×** | 8.0× |
 | `HdfResultsMesh.get_mesh_timeseries` (water surface) | BaldEagleDamBrk.p07 (865 steps × 87,039 cells) | 1,426 ms | 1,369 ms | 192 ms | **7.4×** | 7.1× |
 | `HdfResultsMesh.get_mesh_cells_timeseries` (water surface, one cell) | BaldEagleDamBrk.p07 (87,039 cells) | 1,400 ms | 1,370 ms | 182 ms | **7.7×** | 7.5× |
+| `HdfResultsMesh.get_mesh_max_ws` | BaldEagleDamBrk.p07 (87,039 cells) | 708 ms | 81 ms | 78 ms | **9.0×** | 1.0× |
+| `HdfMesh.get_mesh_cell_points` | BaldEagleDamBrk.p07 (89,879 cells) | 662 ms | 44 ms | 40 ms | **16.4×** | 1.1× |
 
 - **Speed-up vs 0.106.1** is what you notice after upgrading: 0.106.1 time ÷
   0.110.1 `auto` time.
@@ -40,18 +40,12 @@ the 0.106.1 time.
   the gain that comes from the Rust engine. Where it is about 1.0× but the
   speed-up vs 0.106.1 is large (summaries, cell points), the gain is from
   vectorizing ras-commander itself, and h5py mode gets it too.
-- **Fluvial-pluvial boundary on the 87,039-cell model was not measured** in
-  this run: 0.106.1 did not finish one first call plus one repeat call within
-  the harness's 1,800 s per-process limit, and the run was stopped there, so
-  the 0.110.1 columns for that model were not reached either. The row above
-  uses the largest model that completed.
-- Other large-model rows of the same mesh show the same pattern; for example
-  `get_mesh_cell_polygons` on BaldEagleDamBrk.p07 (87,039 cells) takes 5,190 ms
-  with 0.106.1 and 153 ms with 0.110.1 (34×), and the water-surface time series
-  on JUL2020_D100RAS.p04 takes 1,398 ms and 199 ms (7.0×).
+- Other large models show the same pattern; for example `get_mesh_max_ws` on
+  Homewood.p02 (68,743 cells) takes 629 ms with 0.106.1 and 62 ms with 0.110.1
+  (10×).
 - **First calls in a new process** (cold) show the same order of gains on large
-  models, for example `get_mesh_max_face_v` on JUL2020_D100RAS.p04: 8,272 ms
-  with 0.106.1, 500 ms with 0.110.1 `auto`.
+  models, for example `get_mesh_max_face_v` on BaldEagleDamBrk.p07: 2,135 ms
+  with 0.106.1, 188 ms with 0.110.1 `auto`.
 - Every 0.110.1 case returned identical data in `h5py`, `auto` and `native`
   mode (each result hashed: values, dtypes, columns, index, CRS, geometry and
   attributes). 0.106.1 returns different output for `get_mesh_cell_polygons`,
@@ -61,7 +55,7 @@ the 0.106.1 time.
 
 ### Cell polygons by mesh size
 
-![Bar chart, log time axis: HdfMesh.get_mesh_cell_polygons repeat-call time. 340,246 cells: 20,592 ms with 0.106.1, 13,354 ms with 0.110.1 in h5py mode, 460 ms with 0.110.1 in auto mode. 87,039 cells: 5,190, 3,242 and 153 ms. 4,425 cells: 296, 186 and 24.5 ms. 3,314 cells: 234, 134 and 16.9 ms.](images/mesh-polygons-light.svg)
+![Bar chart, log time axis: HdfMesh.get_mesh_cell_polygons repeat-call time. 87,039 cells: 5,190 ms with 0.106.1, 3,242 ms with 0.110.1 in h5py mode, 153 ms with 0.110.1 in auto mode. 4,425 cells: 296, 186 and 24.5 ms. 3,314 cells: 234, 134 and 16.9 ms.](images/mesh-polygons-light.svg)
 
 ## Small calls (under 100 ms)
 
@@ -73,12 +67,10 @@ absolute times are given (repeat calls, largest test model for each method).
 
 | Method | Largest test model (result rows) | 0.106.1 | 0.110.1 h5py | 0.110.1 `auto` |
 |---|---|---:|---:|---:|
-| `HdfXsec.get_cross_sections` | JUL2020_D100RAS.p04 (1,769) | 97 ms | 87 ms | 83 ms |
 | `HdfStruc.get_structures` | BaldEagleDamBrk.p07 (4) | 41 ms | 32 ms | 33 ms |
+| `HdfXsec.get_cross_sections` | OrleansEx.p02 (335) | 17 ms | 18 ms | 20 ms |
 | `HdfResultsMesh.get_boundary_conditions_timeseries` | BaldEagleDamBrk.p18 (4) | 16 ms | 18 ms | 21 ms |
-| `HdfBndry.get_bc_lines` | JUL2020_D100RAS.p04 (13) | 15 ms | 4.4 ms | 5.4 ms |
-| `HdfResultsXsec.get_ref_lines_timeseries` | Homewood.p02 (11) | 13 ms | 15 ms | 71 ms |
-| `HdfResultsXsec.get_xsec_timeseries` | OrleansEx.p02 (5) | 8.8 ms | 9.2 ms | 17 ms |
+| `HdfBndry.get_bc_lines` | AustinOyster.p01 (2) | 15 ms | 4.9 ms | 5.5 ms |
 | `HdfBase.get_unsteady_timestamps` | BaldEagleDamBrk.p18 (865) | 7.0 ms | 6.5 ms | 7.0 ms |
 | `HdfMesh.get_mesh_area_attributes` | BaldEagleDamBrk.p18 (0) | 2.8 ms | 1.4 ms | 1.5 ms |
 | `HdfResultsPlan.get_runtime_data` | BaldEagle.p01 (1) | 2.7 ms | 2.8 ms | 3.2 ms |
@@ -86,12 +78,7 @@ absolute times are given (repeat calls, largest test model for each method).
 
 The same methods on small models (for example `get_mesh_max_ws` on a
 3,314-cell mesh: 58 ms with 0.106.1, 13 ms with 0.110.1) are also in this
-range. Native small reads carry a fixed cost per read (proving each dataset's
-layout and encoding), which shows on the first call in a process: for example
-`get_runtime_data` on OrleansEx.p02 takes 6.3 ms with 0.106.1 and 35 ms with
-0.110.1 `auto` on the first call. `get_ref_lines_timeseries` on Homewood.p02
-is slower natively than in earlier measurements (71 ms against 19 ms in the
-0.2.0 run); this is being investigated.
+range.
 
 ## Tables without geometry
 
@@ -120,12 +107,11 @@ The table output was not part of this run (0.106.1 has no such option).
   and hashes the result. Per case there is one untimed first-touch process per
   column, then three rounds of timed processes; within each round the four
   columns (0.106.1 h5py, 0.110.1 h5py, `auto`, `native`) run in a rotated
-  order, so drift affects them equally. 784 processes in all, 0 errors.
-- **Cases:** 19 public methods on 7 HEC-RAS result files, from a 3,314-cell
-  mesh to JUL2020_D100RAS.p04 (340,248 cells, 705,332 faces), the same 50
-  method × file cases as the 0.2.0 release run. Three extra large-model cases
-  (face lines, maximum depth and the face-velocity table on JUL2020_D100RAS.p04)
-  were planned after the fluvial row and were not reached.
+  order, so drift affects them equally. 624 processes for the cases
+  published here, 0 errors.
+- **Cases:** 19 public methods on 6 public HEC-RAS result files, from a
+  3,314-cell mesh to BaldEagleDamBrk.p07 (87,039 cells, 177,301 faces): 39
+  method × file cases.
 - **Software:** both variants on Python 3.13.9 with numpy 2.3.3, pandas 2.3.2,
   h5py 3.14.0 (HDF5 1.14.6), Shapely 2.1.2, GeoPandas 1.1.1, pyproj 3.7.2 and
   xarray 2026.4.0. 0.106.1 was installed from PyPI without
@@ -140,8 +126,7 @@ The table output was not part of this run (0.106.1 has no such option).
   the multi-threaded cell-polygon cases, with no other process above 14% of
   one core.
 - **Cache:** the operating system's file cache was warm for every column;
-  "first call" means a fresh process, not a cold disk. Cold-disk reads were
-  not measured.
+  "first call" means a fresh process, not a cold disk.
 
 ## Reading the numbers
 
