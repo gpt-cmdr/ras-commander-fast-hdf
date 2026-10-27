@@ -12,6 +12,30 @@
   Lists still work. Holes and multipart features (`ring_offsets`/`polygon_offsets`/
   `feature_offsets`) now have a decoded-tile test: exterior, hole and island keep their
   windings.
+- GeoParquet archive profile (`exports-geoparquet`): new
+  `export_geoparquet_ipc_files(inputs, output, options)` writes one GeoParquet from one
+  or more Arrow IPC layers, with ZSTD (level selectable), a row-group size, per-row bbox
+  covering, Hilbert order within each layer and a `layer` discriminator column. Layers
+  are validated against contract v1 on their own schemas and unified into one schema
+  (a field missing from a layer is null there; a field with different types refuses).
+  Covering is either the GeoParquet 1.1 `bbox` struct (`"struct"`, recommended,
+  which geoparquet-io's spec check accepts) or ras2cng's four `bbox_xmin` ...
+  `bbox_ymax` columns (`"columns"`), which DuckDB filters on but spec validators reject
+  because their covering paths have one element. Hilbert order is DuckDB spatial's
+  `ST_Hilbert` of each bbox centre over the layer's extent, bit for bit; null and empty
+  geometries go last and ties keep input order. A row group ends at every layer
+  boundary. Unordered export streams one batch at a time; Hilbert order buffers one
+  layer at a time. The plain `parquet` format is unchanged (Snappy, 65,536-row groups).
+  On the BaldEagleDamBrk g04 geometry (264,346 rows in 7 layers), against ras2cng 0.12's
+  `_write_geoparquet`: identical rows, attributes and WKB; writer time 2.8-4.1 s to
+  1.5-2.1 s (0.4-0.6 s native, the rest the Python Arrow adapter); peak working set
+  1,460 to 855 MiB.
+- Export contract v1 identity is now selectable per layer for the GeoParquet profile:
+  a Utf8 namespace with an optional Int64 local ID (`Identity`), so mesh faces
+  (`mesh_name`, `face_id`) and one-row-per-name layers (`mesh_name`) can be exported.
+  The default stays `(mesh_name, cell_id)` and the other writers are unchanged.
+- `parquet` now builds with its `zstd` feature (adds `zstd` 0.13 and `zstd-safe` 7 to
+  the lock file; `zstd-sys` was already linked).
 - Faster reference-line result reads. Since 0.2.2 every `read_family_dataset` of a
   `ReadFamily::ReferenceLines` dataset proved the column-to-geometry link again (it read
   the whole reference-line geometry family), although the link never changes what the

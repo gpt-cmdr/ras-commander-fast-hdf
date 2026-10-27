@@ -30,7 +30,7 @@ SOFTWARE.
 
 ## Components
 
-260 components.
+262 components.
 
 | Component | Version | Licence (SPDX, as declared) | Source | Licence texts |
 |---|---|---|---|---|
@@ -291,7 +291,9 @@ SOFTWARE.
 | zlib-rs | 0.6.8 | Zlib | https://github.com/trifectatechfoundation/zlib-rs | [e72111c52b7d](#licence-e72111c52b7d) |
 | zmij | 1.0.23 | MIT | https://github.com/dtolnay/zmij | [23f18e03dc49](#licence-23f18e03dc49) |
 | zstd | 0.11.2+zstd.1.5.2 | MIT | https://github.com/gyscos/zstd-rs | [129e8edef29e](#licence-129e8edef29e) |
+| zstd | 0.13.3 | MIT | https://github.com/gyscos/zstd-rs | [129e8edef29e](#licence-129e8edef29e) |
 | zstd-safe | 5.0.2+zstd.1.5.2 | MIT/Apache-2.0 | https://github.com/gyscos/zstd-rs | [a77b7cfeaf91](#licence-a77b7cfeaf91), [bb28c48e3e07](#licence-bb28c48e3e07), [129e8edef29e](#licence-129e8edef29e) |
+| zstd-safe | 7.3.0 | BSD-3-Clause | https://github.com/gyscos/zstd-rs | [ce4868c8e4eb](#licence-ce4868c8e4eb) |
 | zstd-sys | 2.1.2+zstd.1.5.7 | BSD-3-Clause | https://github.com/gyscos/zstd-rs | [ce4868c8e4eb](#licence-ce4868c8e4eb), [bf7017a73a95](#licence-bf7017a73a95) |
 | zstd (C library, bundled by zstd-sys) | 2.1.2+zstd.1.5.7 | BSD-3-Clause OR GPL-2.0 (BSD-3-Clause elected) | https://github.com/facebook/zstd | [b90ed8150a6d](#licence-b90ed8150a6d), [705526649763](#licence-705526649763) |
 
@@ -844,7 +846,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ### licence-129e8edef29e
 
-File(s): LICENSE, LICENSE.Mit. Used by: zstd 0.11.2+zstd.1.5.2, zstd-safe 5.0.2+zstd.1.5.2.
+File(s): LICENSE, LICENSE.Mit. Used by: zstd 0.11.2+zstd.1.5.2, zstd 0.13.3, zstd-safe 5.0.2+zstd.1.5.2.
 
 ```text
 The MIT License (MIT)
@@ -2022,7 +2024,7 @@ SOFTWARE.
 
 ### licence-ce4868c8e4eb
 
-File(s): LICENSE. Used by: zstd-sys 2.1.2+zstd.1.5.7.
+File(s): LICENSE. Used by: zstd-safe 7.3.0, zstd-sys 2.1.2+zstd.1.5.7.
 
 ```text
 BSD 3-Clause License

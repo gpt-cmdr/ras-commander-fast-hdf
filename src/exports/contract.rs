@@ -20,13 +20,40 @@ pub struct Crs {
     pub geographic_wgs84: bool,
 }
 
+/// Stable row identity: a nonnullable, nonempty Utf8 namespace and an
+/// optional nonnullable, nonnegative Int64 local ID. Their composite must be
+/// unique within each batch. Contract v1's default is `(mesh_name, cell_id)`;
+/// other producers name their own (for example `(mesh_name, face_id)`, or a
+/// namespace alone for one-row-per-name layers such as 2D flow areas).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Identity {
+    pub namespace: String,
+    pub local: Option<String>,
+}
+
+impl Default for Identity {
+    fn default() -> Self {
+        Self {
+            namespace: "mesh_name".into(),
+            local: Some("cell_id".into()),
+        }
+    }
+}
+
 pub struct Contract {
     pub schema: SchemaRef,
     pub crs: Crs,
     pub geometry: usize,
+    namespace: usize,
+    local: Option<usize>,
 }
 impl Contract {
     pub fn new(schema: SchemaRef) -> Result<Self> {
+        Self::with_identity(schema, &Identity::default())
+    }
+
+    pub fn with_identity(schema: SchemaRef, identity: &Identity) -> Result<Self> {
         let crs: Crs = serde_json::from_str(
             schema
                 .metadata()
@@ -70,11 +97,14 @@ impl Contract {
                 )));
             }
         }
-        for (name, dtype) in [
-            ("mesh_name", DataType::Utf8),
-            ("cell_id", DataType::Int64),
+        let mut required = vec![
+            (identity.namespace.as_str(), DataType::Utf8),
             ("geometry", DataType::Binary),
-        ] {
+        ];
+        if let Some(local) = &identity.local {
+            required.push((local.as_str(), DataType::Int64));
+        }
+        for (name, dtype) in required {
             let f = schema.field_with_name(name)?;
             if f.data_type() != &dtype {
                 return Err(fail(format!("{name} has incorrect type")));
@@ -83,6 +113,19 @@ impl Contract {
                 return Err(fail("identity fields must be nonnullable"));
             }
         }
+        if identity.local.as_deref() == Some(identity.namespace.as_str())
+            || identity.namespace == "geometry"
+        {
+            return Err(fail(
+                "identity fields must be distinct non-geometry columns",
+            ));
+        }
+        let namespace = schema.index_of(&identity.namespace)?;
+        let local = identity
+            .local
+            .as_ref()
+            .map(|l| schema.index_of(l))
+            .transpose()?;
         let geometry = schema.index_of("geometry")?;
         let field = schema.field(geometry);
         if field
@@ -108,6 +151,8 @@ impl Contract {
             schema,
             crs,
             geometry,
+            namespace,
+            local,
         })
     }
 
@@ -119,24 +164,24 @@ impl Contract {
             return Err(fail("batch exceeds max_batch_rows"));
         }
         let meshes = batch
-            .column_by_name("mesh_name")
-            .unwrap()
+            .column(self.namespace)
             .as_any()
             .downcast_ref::<StringArray>()
             .unwrap();
-        let cells = batch
-            .column_by_name("cell_id")
-            .unwrap()
-            .as_any()
-            .downcast_ref::<Int64Array>()
-            .unwrap();
+        let cells = self.local.map(|i| {
+            batch
+                .column(i)
+                .as_any()
+                .downcast_ref::<Int64Array>()
+                .unwrap()
+        });
         let mut identities = HashSet::new();
         for row in 0..batch.num_rows() {
+            let local = cells.map(|c| (c.is_null(row), c.value(row)));
             if meshes.is_null(row)
-                || cells.is_null(row)
+                || local.is_some_and(|(null, value)| null || value < 0)
                 || meshes.value(row).is_empty()
-                || cells.value(row) < 0
-                || !identities.insert((meshes.value(row), cells.value(row)))
+                || !identities.insert((meshes.value(row), local.map(|l| l.1)))
             {
                 return Err(fail(
                     "null/empty/negative or duplicate within-batch composite identity",
@@ -169,15 +214,22 @@ impl Contract {
 // nonfinite coordinates, unclosed/undersized rings and trailing/truncated input.
 // Full topology validity remains the source geometry producer's responsibility.
 pub fn validate_wkb(bytes: &[u8], geographic: bool) -> Result<()> {
-    validate_wkb_profile(bytes, geographic, false, false)
+    validate_wkb_profile(bytes, geographic, false, false).map(|_| ())
+}
+
+/// Validate like [`validate_wkb`] and return the XY bounds
+/// `[xmin, ymin, xmax, ymax]` over every coordinate (holes and parts
+/// included), or `None` for an empty geometry.
+pub fn wkb_bounds(bytes: &[u8]) -> Result<Option<[f64; 4]>> {
+    validate_wkb_profile(bytes, false, false, false)
 }
 
 pub fn validate_geojson_wkb(bytes: &[u8]) -> Result<()> {
-    validate_wkb_profile(bytes, true, true, false)
+    validate_wkb_profile(bytes, true, true, false).map(|_| ())
 }
 
 pub fn validate_flatgeobuf_wkb(bytes: &[u8]) -> Result<()> {
-    validate_wkb_profile(bytes, false, false, true)
+    validate_wkb_profile(bytes, false, false, true).map(|_| ())
 }
 
 fn validate_wkb_profile(
@@ -185,13 +237,14 @@ fn validate_wkb_profile(
     geographic: bool,
     winding: bool,
     reject_empty: bool,
-) -> Result<()> {
+) -> Result<Option<[f64; 4]>> {
     struct Reader<'a> {
         bytes: &'a [u8],
         pos: usize,
         geographic: bool,
         winding: bool,
         reject_empty: bool,
+        bounds: Option<[f64; 4]>,
     }
     impl Reader<'_> {
         fn read<const N: usize>(&mut self) -> Result<[u8; N]> {
@@ -231,6 +284,11 @@ fn validate_wkb_profile(
                     "nonfinite/out-of-domain WKB coordinates; empty points unsupported",
                 ));
             }
+            let b = self.bounds.get_or_insert([xy[0], xy[1], xy[0], xy[1]]);
+            b[0] = b[0].min(xy[0]);
+            b[1] = b[1].min(xy[1]);
+            b[2] = b[2].max(xy[0]);
+            b[3] = b[3].max(xy[1]);
             Ok(xy)
         }
         fn count(&mut self, le: bool) -> Result<usize> {
@@ -316,10 +374,11 @@ fn validate_wkb_profile(
         geographic,
         winding,
         reject_empty,
+        bounds: None,
     };
     r.geometry(None)?;
     if r.pos != bytes.len() {
         return Err(fail("trailing WKB bytes"));
     }
-    Ok(())
+    Ok(r.bounds)
 }
