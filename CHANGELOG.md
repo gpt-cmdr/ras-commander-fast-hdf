@@ -6,16 +6,16 @@
   (HDF5 1.10+ files written with `libver="latest"`, chunked along an unlimited
   dimension) are read instead of refused. hdf5-reader 0.9.3 returned fill values
   for their chunks past the index block, so the engine refused them (`Unsupported`,
-  "non-inline extensible-array chunk index"); 0.10.0 maps them as libhdf5 does.
+  "non-inline extensible-array chunk index"); 0.10 maps them as libhdf5 does.
   Every value of `tests/fixtures/reader_policy/ea_latest.h5` (50 chunks) and the
   new `ea_deep.h5` (9,000 chunks: super blocks and paged data blocks) matches
   h5py, in full reads, slices and row/column gathers. HEC-RAS does not write
   this layout. Behaviour change, separate from the reader update.
 
-- The HDF5 reader is now the crates.io `hdf5-reader`/`hdf5-core` 0.10.0
+- The HDF5 reader is now the crates.io `hdf5-reader`/`hdf5-core` 0.10.1
   (roteiro-gis/netcdf-rust), a normal dependency, instead of a patched copy of
-  0.9.3 compiled into the crate. Upstream 0.10.0 contains 12 of the 14 local
-  patches (#102 to #109; the mapping is in `docs/reference/provenance.md`). The
+  0.9.3 compiled into the crate. Upstream 0.10.0 and 0.10.1 contain 12 of the 14
+  local patches (#102 to #109 and #111; the mapping is in `docs/reference/provenance.md`). The
   other two were CLB policies and are now applied by the engine itself, in
   `src/hdf/reader.rs`, with the same refusals, error kinds, codes and messages:
   a pipeline with LZ4, SZIP or an unknown filter as an intermediate decoding
@@ -28,7 +28,10 @@
   "reserved attribute flags", "shared datatype/dataspace in attribute v2 is not
   supported" for "shared attribute encoding", and the size in "datatype
   description of 12 bytes exceeds its 8-byte message").
-  Upstream 0.10.0 also reads paged fixed-array chunk indexes correctly (bit
+  0.10.1 adds #111: row/column gathers look up only the selected chunks in
+  v1/v2 B-tree, fixed-array and extensible-array indexes, which the old patch
+  0013 did with one bounded query (same values; sparse gathers do less index
+  work). Upstream 0.10.0 also reads paged fixed-array chunk indexes correctly (bit
   order and checksum of the page bitmap, `e18dfde`) and numbers
   extensible-array chunks by the maximum dimensions (#105), so values of such
   datasets (not written by HEC-RAS) can differ from the old reader.

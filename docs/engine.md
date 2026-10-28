@@ -106,7 +106,7 @@ HEC-RAS 5.0.7), so ras-commander reads them with h5py.
 
 ## Licenses
 
-MIT. The HDF5 reader is the crates.io `hdf5-reader` and `hdf5-core` 0.10.0
+MIT. The HDF5 reader is the crates.io `hdf5-reader` and `hdf5-core` 0.10.1
 from [netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (MIT OR
 Apache-2.0), an ordinary dependency; the engine's two read policies on top of
 it are in `src/hdf/reader.rs` (see [Provenance](reference/provenance.md#hdf5-reader)).

@@ -437,8 +437,8 @@ define how the bindings are used:
 
 ## Dependency provenance
 
-* `hdf5-reader`/`hdf5-core` 0.10.0 from crates.io (`roteiro-gis/netcdf-rust` tag
-  `v0.10.0`, `9076a070fc7a03f913881e18b77082e3bea30791`), `MIT OR Apache-2.0`, an ordinary
+* `hdf5-reader`/`hdf5-core` 0.10.1 from crates.io (`roteiro-gis/netcdf-rust` tag
+  `v0.10.1`, `957b10000b1bb52654a51881b3fb868a32f26b7e`), `MIT OR Apache-2.0`, an ordinary
   dependency of the engine (feature `hdf`). The engine's two read policies on top of it are
   in `src/hdf/reader.rs` (see [provenance.md](provenance.md#hdf5-reader)). The extension
   has no direct generic-reader dependency.
