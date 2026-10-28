@@ -151,6 +151,10 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "read_family_dataset", "hdf"),
     e("ReadOnlyHdfSession", "reference_point_geometry", "hdf"),
     e("ReadOnlyHdfSession", "mesh_corner_elevations", "hdf"),
+    // Additive within API 10 (terrio HECRAS driver; not called by ras-commander).
+    e("ReadOnlyHdfSession", "hec_ras_file_type", "hdf"),
+    e("StoredFileType", "is_hec_ras", "hdf"),
+    e("ReadOnlyHdfSession", "pipe_nodes", "hdf"),
 ];
 
 /// What this build of the engine offers.

@@ -91,7 +91,69 @@ pub struct CompoundTable {
     pub dataspace: Dataspace,
     pub columns: Vec<CompoundColumn>,
 }
+/// The root `File Type` values HEC-RAS writes in its geometry (`.g##.hdf`) and plan
+/// (`.p##.hdf`) HDF files, exactly as h5py decodes them (padding removed).
+///
+/// They identify the file as HEC-RAS's, not which kind it is: plans written before 6.4 can say
+/// `HEC-RAS Geometry`, and 6.4+ geometry files say `HEC-RAS Results`. HEC terrain and land
+/// cover files (`HEC Terrain`, `HEC Land Cover`) are not geometry or plan files.
+pub const HEC_RAS_FILE_TYPES: &[&str] = &["HEC-RAS Geometry", "HEC-RAS Results"];
+
+/// The stored root `File Type` of a file ([`ReadOnlyHdfSession::hec_ras_file_type`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum StoredFileType {
+    /// No root `File Type` attribute.
+    Absent,
+    /// One of [`HEC_RAS_FILE_TYPES`], exactly.
+    HecRas(String),
+    /// A readable single string that is not a HEC-RAS geometry or plan file type (for example
+    /// `HEC Terrain`), exactly as stored.
+    Other(String),
+}
+
+impl StoredFileType {
+    /// Whether the file says it is a HEC-RAS geometry or plan HDF file.
+    pub fn is_hec_ras(&self) -> bool {
+        matches!(self, Self::HecRas(_))
+    }
+}
+
 impl ReadOnlyHdfSession {
+    /// The stored root `File Type` attribute, classified against [`HEC_RAS_FILE_TYPES`].
+    ///
+    /// Callers use it to decide whether an HDF5 file is a HEC-RAS geometry or plan file before
+    /// reading HEC-RAS layouts from it. Only the attribute is read. The value must be a single
+    /// string (a scalar or a one-element array); any other stored shape or type, or a payload
+    /// the engine cannot decode, is `Unsupported` or `Corrupt`, never a guess.
+    pub fn hec_ras_file_type(&self) -> Result<StoredFileType> {
+        let attributes = self.typed_group_attributes("/")?;
+        let Some(attribute) = attributes.iter().find(|a| a.name == "File Type") else {
+            return Ok(StoredFileType::Absent);
+        };
+        match &attribute.value {
+            MetadataValue::Strings(v) if v.len() == 1 => {
+                let text = v[0].clone();
+                Ok(if HEC_RAS_FILE_TYPES.contains(&text.as_str()) {
+                    StoredFileType::HecRas(text)
+                } else {
+                    StoredFileType::Other(text)
+                })
+            }
+            MetadataValue::Corrupt { reason } => Err(Error::new(
+                ErrorKind::Corrupt,
+                format!("root File Type attribute: {reason}"),
+            )),
+            MetadataValue::Unsupported { code, reason } => Err(Error::unsupported(
+                *code,
+                format!("root File Type attribute: {reason}"),
+            )),
+            _ => Err(Error::unsupported(
+                UnsupportedCode::Encoding,
+                "root File Type attribute is not a single string",
+            )),
+        }
+    }
     pub fn typed_group_attributes(&self, path: &str) -> Result<Vec<TypedAttribute>> {
         self.file
             .group(path)

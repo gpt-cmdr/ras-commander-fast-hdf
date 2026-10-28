@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- `ReadOnlyHdfSession::hec_ras_file_type` classifies the stored root `File Type`
+  attribute against `HEC_RAS_FILE_TYPES` (`HEC-RAS Geometry`, `HEC-RAS Results`):
+  `HecRas`, `Other` (for example `HEC Terrain`) or `Absent`; a value that is not a
+  single string is refused. It lets callers such as terrio's HECRAS driver claim only
+  HEC-RAS geometry and plan files. Rust only; additive within API 10.
+- Pipe networks (Rust only, additive within API 10): `OneDLineFamily::PipeConduits`
+  (`Geometry/Pipe Conduits`, listed in the new `PIPE_LINE_FAMILIES`, not in
+  `ONE_D_LINE_FAMILIES`) and `ReadOnlyHdfSession::pipe_nodes` (`Geometry/Pipe Nodes`).
+  Both use the existing packed-line and point-family rules.
+
 - Export contract v1 accepts the column types of ras2cng's archives. Arrow IPC and
   GeoParquet (plain and archive profile) store Float32, `Null` (all-null) columns,
   timezone-free Timestamp(Microsecond/Nanosecond), and `List` and `Struct` of supported

@@ -173,7 +173,14 @@ pub enum OneDLineFamily {
     RiverFlowPaths,
     StructureCenterlines,
     StorageAreaPolygons,
+    /// `Geometry/Pipe Conduits`: storm and sewer pipe conduits (HEC-RAS 6.5+ pipe networks).
+    /// Not part of [`ONE_D_LINE_FAMILIES`] (which lists the river and structure families); it
+    /// is listed in [`PIPE_LINE_FAMILIES`].
+    PipeConduits,
 }
+/// The pipe-network line families, read with the same packed-line rules as
+/// [`ONE_D_LINE_FAMILIES`].
+pub const PIPE_LINE_FAMILIES: &[OneDLineFamily] = &[OneDLineFamily::PipeConduits];
 pub const ONE_D_LINE_FAMILIES: &[OneDLineFamily] = &[
     OneDLineFamily::CrossSectionCutLines,
     OneDLineFamily::RiverCenterlines,
@@ -193,6 +200,7 @@ impl OneDLineFamily {
             Self::RiverFlowPaths => "river_flow_paths",
             Self::StructureCenterlines => "structure_centerlines",
             Self::StorageAreaPolygons => "storage_area_polygons",
+            Self::PipeConduits => "pipe_conduits",
         }
     }
     pub fn group_path(self) -> &'static str {
@@ -204,6 +212,7 @@ impl OneDLineFamily {
             Self::RiverFlowPaths => "Geometry/River Flow Paths",
             Self::StructureCenterlines => "Geometry/Structures",
             Self::StorageAreaPolygons => "Geometry/Storage Areas",
+            Self::PipeConduits => "Geometry/Pipe Conduits",
         }
     }
     /// Dataset prefix of the packed `Info`/`Parts`/`Points` triple.
@@ -222,6 +231,7 @@ impl OneDLineFamily {
                 | Self::RiverCenterlines
                 | Self::StructureCenterlines
                 | Self::StorageAreaPolygons
+                | Self::PipeConduits
         )
     }
 }
@@ -1103,6 +1113,11 @@ impl ReadOnlyHdfSession {
             points,
             names,
         }))
+    }
+    /// `Geometry/Pipe Nodes` Attributes compound and stored points, one per row (manholes,
+    /// junctions and outfalls of a pipe network). Same rules as [`Self::river_junctions`].
+    pub fn pipe_nodes(&self, max_bytes: usize) -> Result<Reported<OneDPointData>> {
+        self.point_family("Geometry/Pipe Nodes", max_bytes)
     }
     /// `Geometry/Junctions` Attributes compound and stored points, one per row.
     pub fn river_junctions(&self, max_bytes: usize) -> Result<Reported<OneDPointData>> {

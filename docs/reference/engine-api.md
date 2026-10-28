@@ -273,6 +273,14 @@ that same evidence (a duplicated attribute is Corrupt, as in `unit_system_eviden
 Absence adds nothing. Semantic CRS validation and authority/unit inference are not
 implemented.
 
+`hec_ras_file_type()` reads only the root `File Type` attribute and classifies it: `HecRas(text)`
+when the text is exactly one of `HEC_RAS_FILE_TYPES` (`HEC-RAS Geometry`, `HEC-RAS Results`,
+decoded as h5py decodes them, padding removed), `Other(text)` for any other single string (HEC
+terrain and land-cover files say `HEC Terrain` and `HEC Land Cover`), and `Absent` without the
+attribute. Any other shape or type is `Unsupported`; a damaged payload is `Corrupt`. The value
+says the file is HEC-RAS's, not whether it is a geometry or a plan file: plans before 6.4 can say
+`HEC-RAS Geometry`, and 6.4+ geometry files say `HEC-RAS Results`.
+
 The two small committed malformed attribute fixtures run in the default tests; their
 generator requires h5py/NumPy only and is not needed at test runtime.
 
