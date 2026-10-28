@@ -71,6 +71,38 @@ pub enum Order {
     Hilbert,
 }
 
+/// Which columns get Parquet dictionary encoding.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Dictionary {
+    /// Every column (the Parquet writer default).
+    #[default]
+    All,
+    /// Top-level Utf8 columns only, including the layer column; what pyarrow
+    /// writes with `use_dictionary=[<string column names>]`. Unique numeric
+    /// columns gain nothing from a dictionary that falls back in every row
+    /// group.
+    Utf8,
+    /// No column.
+    None,
+}
+
+/// Parquet statistics granularity.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Statistics {
+    /// Column-chunk and page statistics with a page index (column and offset
+    /// index); binary and string minimum/maximum truncated to 64 bytes. The
+    /// Parquet writer default.
+    #[default]
+    Page,
+    /// Column-chunk statistics only, minimum/maximum not truncated, no page
+    /// index: what pyarrow writes by default (it also drops binary
+    /// statistics over 4,096 bytes, which `geometry_statistics = false`
+    /// sidesteps for WKB).
+    Chunk,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Options {
@@ -90,6 +122,15 @@ pub struct Options {
     /// Row identity per layer name (`""` for an unnamed single layer). Layers
     /// not listed use contract v1's `(mesh_name, cell_id)`.
     pub identity: HashMap<String, Identity>,
+    pub dictionary: Dictionary,
+    /// With `order = "hilbert"`: also store each row's Hilbert key in a
+    /// nullable UInt64 column of this name (null for null or empty geometry),
+    /// after the bbox covering.
+    pub hilbert_column: Option<String>,
+    pub statistics: Statistics,
+    /// `false`: no minimum/maximum statistics for the WKB geometry column.
+    /// Byte-order WKB bounds prune nothing; the bbox covering does that.
+    pub geometry_statistics: bool,
 }
 
 impl Default for Options {
@@ -103,6 +144,10 @@ impl Default for Options {
             layer_column: None,
             max_batch_rows: 65536,
             identity: HashMap::new(),
+            dictionary: Dictionary::All,
+            hilbert_column: None,
+            statistics: Statistics::Page,
+            geometry_statistics: true,
         }
     }
 }
@@ -167,6 +212,8 @@ struct Plan {
     layer_column: Option<usize>,
     /// Index of the bbox struct column, or of the first of four bbox columns.
     bbox: Option<usize>,
+    /// Index of the `hilbert_column`.
+    hilbert: Option<usize>,
 }
 
 fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
@@ -276,6 +323,20 @@ fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
             Some(first)
         }
     };
+    let hilbert = match &options.hilbert_column {
+        None => None,
+        Some(_) if options.order != Order::Hilbert => {
+            return Err(fail("hilbert_column requires order = \"hilbert\""));
+        }
+        Some(name) if name.is_empty() => {
+            return Err(fail("hilbert_column must be a nonempty name"));
+        }
+        Some(name) => {
+            added.push(name.clone());
+            fields.push(Field::new(name, DataType::UInt64, true));
+            Some(fields.len() - 1)
+        }
+    };
     for name in &added {
         if fields
             .iter()
@@ -306,6 +367,7 @@ fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
         layers,
         layer_column,
         bbox,
+        hilbert,
     })
 }
 
@@ -356,6 +418,9 @@ fn conform(
             Arc::new(StringArray::from_iter_values(std::iter::repeat_n(
                 name, rows,
             ))) as ArrayRef
+        } else if Some(i) == plan.hilbert {
+            // Filled once the layer's extent is known, when it is ordered.
+            arrow_array::new_null_array(&DataType::UInt64, rows)
         } else if Some(i) == plan.bbox && matches!(field.data_type(), DataType::Struct(_)) {
             let validity = arrow_buffer::NullBuffer::from_iter(bounds.iter().map(Option::is_some));
             Arc::new(arrow_array::StructArray::try_new(
@@ -365,8 +430,9 @@ fn conform(
             )?)
         } else if let Some(k) = plan
             .bbox
+            .filter(|&f| !matches!(plan.schema.field(f).data_type(), DataType::Struct(_)))
             .and_then(|f| i.checked_sub(f))
-            .filter(|k| *k < 4 && !matches!(field.data_type(), DataType::Struct(_)))
+            .filter(|k| *k < 4)
         {
             bbox_array(bounds, k)
         } else if let Some(source) = columns[i] {
@@ -435,9 +501,9 @@ fn hilbert_encode_16(x: u32, y: u32) -> u32 {
     (interleave(i1) << 1) | interleave(i0)
 }
 
-/// Stable permutation of one layer's rows: Hilbert index of bbox centres over
-/// the union of row bboxes; null/empty geometries last in input order.
-pub fn hilbert_permutation(bounds: &[Option<[f64; 4]>]) -> Vec<usize> {
+/// Hilbert index of each row's bbox centre over the union of the layer's row
+/// bboxes; `None` for null or empty geometry.
+pub fn hilbert_keys(bounds: &[Option<[f64; 4]>]) -> Vec<Option<u32>> {
     let mut extent: Option<[f64; 4]> = None;
     for b in bounds.iter().flatten() {
         let e = extent.get_or_insert(*b);
@@ -446,19 +512,30 @@ pub fn hilbert_permutation(bounds: &[Option<[f64; 4]>]) -> Vec<usize> {
         e[2] = e[2].max(b[2]);
         e[3] = e[3].max(b[3]);
     }
-    let mut keys: Vec<(u64, usize)> = bounds
+    bounds
+        .iter()
+        .map(|b| match (b, extent) {
+            (Some(b), Some(e)) => Some(hilbert_index((b[0] + b[2]) / 2., (b[1] + b[3]) / 2., e)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Stable permutation of one layer's rows by [`hilbert_keys`]; null/empty
+/// geometries last in input order.
+#[cfg(test)]
+pub fn hilbert_permutation(bounds: &[Option<[f64; 4]>]) -> Vec<usize> {
+    permutation(&hilbert_keys(bounds))
+}
+
+fn permutation(keys: &[Option<u32>]) -> Vec<usize> {
+    let mut keyed: Vec<(u64, usize)> = keys
         .iter()
         .enumerate()
-        .map(|(i, b)| match (b, extent) {
-            (Some(b), Some(e)) => (
-                u64::from(hilbert_index((b[0] + b[2]) / 2., (b[1] + b[3]) / 2., e)),
-                i,
-            ),
-            _ => (u64::MAX, i),
-        })
+        .map(|(i, k)| (k.map_or(u64::MAX, u64::from), i))
         .collect();
-    keys.sort_unstable();
-    keys.into_iter().map(|(_, i)| i).collect()
+    keyed.sort_unstable();
+    keyed.into_iter().map(|(_, i)| i).collect()
 }
 
 type ParquetWriter = (
@@ -503,18 +580,66 @@ where
         .build();
     let encoder =
         geoparquet::writer::GeoParquetRecordBatchEncoder::try_new(&plan.schema, &geo_options)?;
-    let props = parquet::file::properties::WriterProperties::builder()
+    let mut props = parquet::file::properties::WriterProperties::builder()
         .set_compression(compression)
         .set_max_row_group_row_count(Some(options.row_group_rows))
-        .build();
-    let arrow_writer = parquet::arrow::ArrowWriter::try_new(
+        // The specification's (and pyarrow's) list layout: 3-level LIST with
+        // the element named `element`.
+        .set_coerce_types(true);
+    match options.dictionary {
+        Dictionary::All => {}
+        Dictionary::None => props = props.set_dictionary_enabled(false),
+        Dictionary::Utf8 => {
+            props = props.set_dictionary_enabled(false);
+            for field in plan.schema.fields() {
+                if field.data_type() == &DataType::Utf8 {
+                    props = props.set_column_dictionary_enabled(
+                        parquet::schema::types::ColumnPath::from(field.name().as_str()),
+                        true,
+                    );
+                }
+            }
+        }
+    }
+    if options.statistics == Statistics::Chunk {
+        props = props
+            .set_statistics_enabled(parquet::file::properties::EnabledStatistics::Chunk)
+            .set_statistics_truncate_length(None)
+            .set_offset_index_disabled(true);
+        // pyarrow writes no statistics for all-null (`Null`, Parquet UNKNOWN)
+        // columns, nested ones included.
+        let leaves = parquet::arrow::ArrowSchemaConverter::new()
+            .with_coerce_types(true)
+            .convert(encoder.target_schema().as_ref())?;
+        for leaf in leaves.columns() {
+            if leaf.logical_type_ref() == Some(&parquet::basic::LogicalType::Unknown) {
+                props = props.set_column_statistics_enabled(
+                    leaf.path().clone(),
+                    parquet::file::properties::EnabledStatistics::None,
+                );
+            }
+        }
+    }
+    if !options.geometry_statistics {
+        props = props.set_column_statistics_enabled(
+            parquet::schema::types::ColumnPath::from("geometry"),
+            parquet::file::properties::EnabledStatistics::None,
+        );
+    }
+    let props = props.build();
+    // The root group pyarrow writes (`schema`, not arrow-rs's `arrow_schema`).
+    let arrow_writer = parquet::arrow::ArrowWriter::try_new_with_options(
         File::create(&staged)?,
         encoder.target_schema(),
-        Some(props),
+        parquet::arrow::arrow_writer::ArrowWriterOptions::new()
+            .with_properties(props)
+            .with_schema_root("schema".into()),
     )?;
     let mut writer: ParquetWriter = (encoder, arrow_writer);
     let mut metrics = Metrics::default();
-    let need_bounds = options.bbox_covering != Covering::None || options.order == Order::Hilbert;
+    // Row bounds also give the file-level bbox: the encoder's own extent is
+    // NaN (written as null) as soon as one geometry is empty.
+    let mut extent: Option<[f64; 4]> = None;
     for (layer, (contract, columns)) in layers.into_iter().zip(&plan.layers) {
         let name = layer.name.as_deref();
         let mut buffered: Vec<RecordBatch> = Vec::new();
@@ -525,11 +650,14 @@ where
             contract.validate(&batch, options.max_batch_rows)?;
             metrics.validation_seconds += time.elapsed().as_secs_f64();
             let time = Instant::now();
-            let bounds = if need_bounds {
-                row_bounds(&batch, contract.geometry)?
-            } else {
-                Vec::new()
-            };
+            let bounds = row_bounds(&batch, contract.geometry)?;
+            for b in bounds.iter().flatten() {
+                let e = extent.get_or_insert(*b);
+                e[0] = e[0].min(b[0]);
+                e[1] = e[1].min(b[1]);
+                e[2] = e[2].max(b[2]);
+                e[3] = e[3].max(b[3]);
+            }
             let conformed = conform(&plan, columns, name, &batch, &bounds)?;
             metrics.preparation_seconds += time.elapsed().as_secs_f64();
             metrics.rows += batch.num_rows();
@@ -549,13 +677,33 @@ where
             for (b, batch) in buffered.iter().enumerate() {
                 locations.extend((0..batch.num_rows()).map(|r| (b, r)));
             }
-            let order = hilbert_permutation(&layer_bounds);
+            let keys = hilbert_keys(&layer_bounds);
+            let order = permutation(&keys);
             let refs: Vec<&RecordBatch> = buffered.iter().collect();
             metrics.preparation_seconds += time.elapsed().as_secs_f64();
             for chunk in order.chunks(options.row_group_rows) {
                 let time = Instant::now();
-                let indices: Vec<(usize, usize)> = chunk.iter().map(|&i| locations[i]).collect();
-                let sorted = arrow_select::interleave::interleave_record_batch(&refs, &indices)?;
+                // One buffered batch: `take`, whose list and struct kernels are
+                // much faster than `interleave`'s generic fallback for them.
+                let mut sorted = if let [only] = refs.as_slice() {
+                    let indices = chunk
+                        .iter()
+                        .map(|&i| u32::try_from(i))
+                        .collect::<std::result::Result<Vec<_>, _>>()?;
+                    let indices = arrow_array::UInt32Array::from(indices);
+                    arrow_select::take::take_record_batch(only, &indices)?
+                } else {
+                    let indices: Vec<(usize, usize)> =
+                        chunk.iter().map(|&i| locations[i]).collect();
+                    arrow_select::interleave::interleave_record_batch(&refs, &indices)?
+                };
+                if let Some(column) = plan.hilbert {
+                    let mut columns = sorted.columns().to_vec();
+                    columns[column] = Arc::new(arrow_array::UInt64Array::from_iter(
+                        chunk.iter().map(|&i| keys[i].map(u64::from)),
+                    ));
+                    sorted = RecordBatch::try_new(plan.schema.clone(), columns)?;
+                }
                 metrics.preparation_seconds += time.elapsed().as_secs_f64();
                 let time = Instant::now();
                 write_batch(&mut writer, &sorted)?;
@@ -569,6 +717,12 @@ where
     let time = Instant::now();
     let (encoder, mut arrow_writer) = writer;
     let mut geo = encoder.into_geoparquet_metadata();
+    if let Some(extent) = extent {
+        geo.columns
+            .get_mut("geometry")
+            .ok_or_else(|| fail("GeoParquet metadata lacks the geometry column"))?
+            .bbox = Some(extent.to_vec());
+    }
     if options.bbox_covering != Covering::None {
         let column = geo
             .columns
@@ -614,3 +768,7 @@ where
 #[cfg(test)]
 #[path = "geoparquet_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "archive_types_tests.rs"]
+mod archive_types_tests;
