@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- Export contract v1 accepts the column types of ras2cng's archives. Arrow IPC and
+  GeoParquet (plain and archive profile) store Float32, `Null` (all-null) columns,
+  timezone-free Timestamp(Microsecond/Nanosecond), and `List` and `Struct` of supported
+  types at any depth exactly: values, nulls, nested nulls, empty lists and offsets, with
+  the Parquet 3-level `LIST` layout and element name `element`, as pyarrow writes it.
+  FlatGeobuf (`Float`), GeoPackage (`FLOAT`, stored as REAL) and GeoJSON (exact float64
+  value) store Float32 exactly; they refuse the other new types before writing anything.
+  NaN and infinity now reject at any nesting depth. Field names that differ only in case
+  (`River`, `river`) are kept by Arrow IPC and GeoParquet; FlatGeobuf, GeoPackage, GeoJSON
+  and the PMTiles bridge still refuse them. Large/fixed-size lists, maps, dictionaries,
+  narrower integers and timezone-qualified timestamps still reject.
+- GeoParquet archive profile options `dictionary` (`"all"`, `"utf8"`, `"none"`),
+  `hilbert_column` (store the Hilbert key as a nullable UInt64 column), `statistics`
+  (`"page"`, or `"chunk"` for pyarrow's column-chunk statistics without a page index) and
+  `geometry_statistics`. Both GeoParquet writers now name the Parquet root group
+  `schema`, as pyarrow does. With ras2cng's options, on 17 archive files from five
+  HEC-RAS 7.0.1 example projects (155 to 264,351 rows), ras2cng's Python writer and this
+  profile give identical tables on read, Parquet schemas, GeoParquet metadata, row
+  groups, codecs, dictionaries and statistics; the bytes differ (see
+  `src/exports/README.md`).
+- Fix: the archive profile's file-level GeoParquet `bbox` was `[null, null, null, null]`
+  when any geometry was empty. It is now the extent of the non-empty geometries.
+- The archive profile reorders a one-batch layer with `take` instead of `interleave`,
+  which is faster for list and struct columns.
+
 - `write_pmtiles` property columns can be NumPy arrays (`float64/32`, `int64/32`,
   `uint64/32`, `bool`), `(values, valid)` pairs with a boolean mask, or categorical
   `{"codes", "categories"}` string columns, read in Rust with no Python object per value.
@@ -13,33 +38,21 @@
   `feature_offsets`) now have a decoded-tile test: exterior, hole and island keep their
   windings.
 - GeoParquet archive profile fixes, found by writing a real ras2cng archive
-  (BaldEagleDamBrk: 15 geometry files and the p07 results). Before, the profile refused
-  every file.
-  - Attribute types: the profile now accepts every type that Parquet stores and returns
-    unchanged through its embedded Arrow schema. That is Float32 (never widened),
-    Timestamp in ms/us/ns (time zone kept), all-null `Null` columns, and List,
-    LargeList, FixedSizeList and nonempty Struct nested to any depth over the contract
-    scalars, Float32 and those timestamps (for example `list<list<double>>`
-    station/elevation, `list<struct<...>>` profiles, `struct<list, list>` Manning's n).
-    Field names that differ only in case (`River`, `river`) are separate columns. NaN
-    and infinity still refuse, including nested values. Other types refuse and the
-    error names the field. The FlatGeobuf, GeoPackage, GeoJSON and plain Parquet writers
-    keep the contract v1 types and case-insensitive names.
+  (BaldEagleDamBrk: 15 geometry files and the p07 results):
   - `geometry_types` in the `geo` metadata is sorted by name, as GeoPandas writes it.
     Before, it followed `HashSet` order and changed between runs. Output is now
     byte-identical for the same input and options.
-  - The file-level `bbox` comes from the row bounds. Before, it was `[null, null, null,
-    null]` when a layer held an empty geometry.
   - The output no longer carries the internal `ras:export:v1` key in its Arrow schema
     metadata; `contract_metadata: true` keeps it. The embedded Arrow schema now carries
     the `geo` metadata, as pyarrow's writer does, so pyarrow `read_schema` sees it.
-  - New options: `layer_row_groups` (default `true`; `false` fills row groups across
-    layer boundaries), `dictionary` (`"all"` default, or `"utf8"`: only top-level Utf8
-    columns are dictionary-encoded, as pyarrow `use_dictionary=[names]`), and
-    `hilbert_column` (with Hilbert order, a nullable UInt64 column of each row's sort
-    key, after the bbox covering).
+  - The file-level `bbox` is omitted, not `[null, null, null, null]`, when no row has a
+    geometry.
+  - New option `layer_row_groups` (default `true`; `false` fills row groups across
+    layer boundaries, the pyarrow `write_table(row_group_size=N)` layout).
   - The `row_groups` metric is counted at close, so it includes a row group that is still
     open then (possible with `layer_row_groups: false`).
+  - Unsupported-type refusals name the field. NaN or infinity hidden under a null list
+    or struct slot is no longer refused: only values a valid row references are data.
 - GeoParquet archive profile (`exports-geoparquet`): new
   `export_geoparquet_ipc_files(inputs, output, options)` writes one GeoParquet from one
   or more Arrow IPC layers, with ZSTD (level selectable), a row-group size, per-row bbox

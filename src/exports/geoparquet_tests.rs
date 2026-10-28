@@ -560,28 +560,9 @@ fn typed_layer(extra: Vec<(&str, ArrayRef)>) -> RecordBatch {
     batch
 }
 
-/// `[[station, elevation], ...]` per row, as ras2cng's `station_elevation`.
-fn station_elevation(rows: Vec<Option<Vec<[f64; 2]>>>) -> ArrayRef {
-    use arrow_array::builder::{Float64Builder, ListBuilder};
-    let mut builder = ListBuilder::new(ListBuilder::new(Float64Builder::new()));
-    for row in rows {
-        match row {
-            None => builder.append(false),
-            Some(pairs) => {
-                for pair in pairs {
-                    builder.values().values().append_slice(&pair);
-                    builder.values().append(true);
-                }
-                builder.append(true);
-            }
-        }
-    }
-    Arc::new(builder.finish())
-}
-
-/// `struct<Mann n: list<double>, Station: list<double>>`, with a null row
-/// that hides a NaN (values under a null slot are not data).
-fn mannings_n() -> ArrayRef {
+/// `struct<Mann n: list<double>, Station: list<double>>` whose null row hides
+/// a NaN, and a `list<double>` whose null row references a NaN.
+fn hidden_nonfinite() -> (ArrayRef, ArrayRef) {
     use arrow_array::types::Float64Type;
     let list = |rows: Vec<Option<Vec<Option<f64>>>>| -> ArrayRef {
         Arc::new(ListArray::from_iter_primitive::<Float64Type, _, _>(rows))
@@ -590,217 +571,80 @@ fn mannings_n() -> ArrayRef {
         Field::new("Mann n", DataType::new_list(DataType::Float64, true), true),
         Field::new("Station", DataType::new_list(DataType::Float64, true), true),
     ];
-    Arc::new(
-        arrow_array::StructArray::try_new(
-            fields.into(),
-            vec![
-                list(vec![
-                    Some(vec![Some(0.035), Some(0.06)]),
-                    Some(vec![Some(f64::NAN)]),
-                    Some(vec![]),
-                ]),
-                list(vec![Some(vec![Some(0.), Some(120.5)]), None, Some(vec![])]),
-            ],
-            Some(arrow_buffer::NullBuffer::from(vec![true, false, true])),
-        )
-        .unwrap(),
-    )
-}
-
-/// `list<struct<Elevation: double, Station: double>>`.
-fn profile_data() -> ArrayRef {
-    let fields: arrow_schema::Fields = vec![
-        Field::new("Elevation", DataType::Float64, true),
-        Field::new("Station", DataType::Float64, true),
-    ]
-    .into();
-    let values = arrow_array::StructArray::try_new(
-        fields.clone(),
+    let mannings_n = arrow_array::StructArray::try_new(
+        fields.into(),
         vec![
-            Arc::new(Float64Array::from(vec![10., 8.5, 9.])),
-            Arc::new(Float64Array::from(vec![0., 5., 7.])),
+            list(vec![
+                Some(vec![Some(0.035), Some(0.06)]),
+                Some(vec![Some(f64::NAN)]),
+                Some(vec![]),
+            ]),
+            list(vec![Some(vec![Some(0.), Some(120.5)]), None, Some(vec![])]),
         ],
-        None,
+        Some(arrow_buffer::NullBuffer::from(vec![true, false, true])),
     )
     .unwrap();
-    Arc::new(
-        ListArray::try_new(
-            Arc::new(Field::new("item", DataType::Struct(fields), true)),
-            arrow_buffer::OffsetBuffer::new(vec![0, 2, 2, 3].into()),
-            Arc::new(values),
-            Some(arrow_buffer::NullBuffer::from(vec![true, false, true])),
-        )
-        .unwrap(),
+    // Offsets 0..1, 1..2 (null slot over the NaN), 2..3.
+    let masked = ListArray::try_new(
+        Arc::new(Field::new("item", DataType::Float64, true)),
+        arrow_buffer::OffsetBuffer::new(vec![0, 1, 2, 3].into()),
+        Arc::new(Float64Array::from(vec![1., f64::NAN, 3.])),
+        Some(arrow_buffer::NullBuffer::from(vec![true, false, true])),
     )
+    .unwrap();
+    (Arc::new(mannings_n), Arc::new(masked))
 }
 
 #[test]
-fn archive_types_pass_through_unchanged() {
-    use arrow_array::builder::{FixedSizeListBuilder, Float64Builder, ListBuilder, StringBuilder};
-    use arrow_array::types::Int64Type;
-    use arrow_array::{Float32Array, LargeListArray};
+fn nonfinite_under_null_slots_is_not_data_and_refusals_name_the_field() {
     let temp = tempfile::tempdir().unwrap();
-    let output = temp.path().join("typed.parquet");
-    let mut fixed = FixedSizeListBuilder::new(Float64Builder::new(), 2);
-    for (pair, valid) in [([1., 2.], true), ([0., 0.], false), ([5., 6.], true)] {
-        fixed.values().append_slice(&pair);
-        fixed.append(valid);
-    }
-    let mut names = ListBuilder::new(StringBuilder::new());
-    names.append_value([Some("a"), None]);
-    names.append_null();
-    names.append_value([Some("b")]);
-    let extra: Vec<(&str, ArrayRef)> = vec![
-        (
-            "upstream_distance",
-            Arc::new(Float32Array::from(vec![Some(1.25f32), None, Some(-3.5)])),
-        ),
-        (
-            "station_elevation",
-            station_elevation(vec![Some(vec![[0., 10.], [5., 8.5]]), None, Some(vec![])]),
-        ),
-        (
-            "large",
-            Arc::new(LargeListArray::from_iter_primitive::<Int64Type, _, _>(
-                vec![Some(vec![Some(1), None]), Some(vec![]), None],
-            )),
-        ),
-        ("fixed", Arc::new(fixed.finish())),
-        ("names", Arc::new(names.finish())),
-        ("mannings_n", mannings_n()),
-        ("profile", profile_data()),
-        ("levee", Arc::new(arrow_array::NullArray::new(3))),
-        (
-            "max_time",
-            Arc::new(
-                arrow_array::TimestampNanosecondArray::from(vec![
-                    Some(1_700_000_000_123_456_789),
-                    None,
-                    Some(-5),
-                ])
-                .with_timezone("UTC"),
-            ),
-        ),
-        (
-            "naive_time",
-            Arc::new(arrow_array::TimestampMicrosecondArray::from(vec![
-                Some(1),
-                None,
-                Some(2),
-            ])),
-        ),
-    ];
-    let batch = typed_layer(extra);
-    let options = Options {
-        compression: Codec::Zstd,
-        layer_column: Some("layer".into()),
-        ..Options::default()
-    };
-    export_layers(vec![input("xs", batch.clone())], &output, &options).unwrap();
+    let output = temp.path().join("hidden.parquet");
+    let (mannings_n, masked) = hidden_nonfinite();
+    let batch = typed_layer(vec![("mannings_n", mannings_n), ("masked", masked)]);
+    export_layers(vec![input("xs", batch.clone())], &output, &archive()).unwrap();
     let (read_back, _, _) = read(&output);
-    for name in [
-        "upstream_distance",
-        "station_elevation",
-        "large",
-        "fixed",
-        "names",
-        "mannings_n",
-        "profile",
-        "levee",
-        "max_time",
-        "naive_time",
-    ] {
-        let expected = batch.column_by_name(name).unwrap();
+    for name in ["mannings_n", "masked"] {
         let actual = read_back.column_by_name(name).unwrap();
-        // No widening: the stored type is the input type.
-        assert_eq!(actual.data_type(), expected.data_type(), "{name}");
-        assert_eq!(actual.to_data(), expected.to_data(), "{name}");
+        let expected = batch.column_by_name(name).unwrap();
+        assert_eq!(actual.nulls(), expected.nulls(), "{name}");
     }
-    // The portable writers still refuse what they cannot store faithfully.
-    let error = crate::exports::contract::Contract::new(batch.schema())
-        .err()
-        .unwrap();
-    assert!(error.to_string().contains("upstream_distance"), "{error}");
-}
-
-#[test]
-fn archive_type_refusals_name_the_field() {
-    use arrow_array::types::Int32Type;
-    use arrow_array::{Float32Array, Int32Array};
-    let temp = tempfile::tempdir().unwrap();
+    // The same NaN in a valid slot refuses.
     let output = temp.path().join("refused.parquet");
-    let cases: Vec<(ArrayRef, &str)> = vec![
-        (
-            Arc::new(Int32Array::from(vec![1, 2, 3])),
-            "unsupported field type for field v: Int32",
-        ),
-        (
-            Arc::new(ListArray::from_iter_primitive::<Int32Type, _, _>(vec![
-                Some(vec![Some(1)]),
-                None,
-                None,
-            ])),
-            "unsupported field type for field v",
-        ),
-        (
-            Arc::new(
-                arrow_array::DictionaryArray::<Int32Type>::try_new(
-                    Int32Array::from(vec![0, 0, 0]),
-                    Arc::new(StringArray::from(vec!["a"])),
-                )
-                .unwrap(),
-            ),
-            "unsupported field type for field v",
-        ),
-        (
-            Arc::new(Float32Array::from(vec![1., f32::NAN, 3.])),
-            "nonfinite",
-        ),
-        (
-            Arc::new(Float32Array::from(vec![1., f32::INFINITY, 3.])),
-            "nonfinite",
-        ),
-        (
-            station_elevation(vec![Some(vec![[0., f64::NAN]]), None, None]),
-            "nonfinite",
-        ),
-        (
-            Arc::new(
-                arrow_array::StructArray::try_new(
-                    vec![Field::new("v", DataType::Float64, true)].into(),
-                    vec![Arc::new(Float64Array::from(vec![1., 2., f64::NAN]))],
-                    None,
-                )
-                .unwrap(),
-            ),
-            "nonfinite",
-        ),
-        (
-            Arc::new(arrow_array::StructArray::new_empty_fields(3, None)),
-            "unsupported field type for field v",
-        ),
-        (
-            Arc::new(arrow_array::TimestampSecondArray::from(vec![1, 2, 3])),
-            "unsupported field type for field v",
-        ),
-        (
-            Arc::new(arrow_array::Date32Array::from(vec![1, 2, 3])),
-            "unsupported field type for field v",
-        ),
-        (
-            Arc::new(ListArray::new_null(
-                Arc::new(Field::new("item", DataType::Null, true)),
-                3,
-            )),
-            "unsupported field type for field v",
-        ),
-    ];
-    for (array, message) in cases {
-        let batch = typed_layer(vec![("v", array)]);
-        let error = export_layers(vec![input("a", batch)], &output, &archive()).unwrap_err();
-        assert!(error.to_string().contains(message), "{error} vs {message}");
-        assert_eq!(temp.path().read_dir().unwrap().count(), 0);
-    }
+    let visible: ArrayRef = Arc::new(ListArray::from_iter_primitive::<
+        arrow_array::types::Float64Type,
+        _,
+        _,
+    >(vec![
+        Some(vec![Some(1.)]),
+        Some(vec![Some(f64::NAN)]),
+        None,
+    ]));
+    let error = export_layers(
+        vec![input("xs", typed_layer(vec![("v", visible)]))],
+        &output,
+        &archive(),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("nonfinite"), "{error}");
+    let error = export_layers(
+        vec![input(
+            "xs",
+            typed_layer(vec![(
+                "v",
+                Arc::new(arrow_array::Int32Array::from(vec![1, 2, 3])),
+            )]),
+        )],
+        &output,
+        &archive(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("unsupported field type for field v: Int32"),
+        "{error}"
+    );
+    assert_eq!(temp.path().read_dir().unwrap().count(), 1);
 }
 
 #[test]
@@ -987,110 +831,21 @@ fn hilbert_column_holds_the_sort_key() {
         ]
     );
     assert!(keys[..3].windows(2).all(|w| w[0] <= w[1]));
-    // Refused without Hilbert order, when empty, and on a name collision.
-    for (options, message) in [
-        (
-            Options {
-                order: Order::Input,
-                hilbert_column: Some("hilbert".into()),
-                ..archive()
-            },
-            "requires order",
-        ),
-        (
-            Options {
-                hilbert_column: Some(String::new()),
-                ..archive()
-            },
-            "nonempty",
-        ),
-        (
-            Options {
-                hilbert_column: Some("Layer".into()),
-                ..archive()
-            },
-            "collides",
-        ),
-    ] {
-        let target = temp.path().join("refused.parquet");
-        let error = export_layers(
-            vec![input("a", layer("crs", None, vec![Some(point(1., 1.))]))],
-            &target,
-            &options,
-        )
-        .unwrap_err();
-        assert!(error.to_string().contains(message), "{error} vs {message}");
-        assert!(!target.exists());
-    }
-}
-
-#[test]
-fn dictionary_utf8_encodes_only_string_columns() {
-    use parquet::basic::Encoding;
-    let temp = tempfile::tempdir().unwrap();
-    let make = || {
-        vec![input(
-            "cells",
-            layer(
-                "crs",
-                Some((
-                    "elevation",
-                    Arc::new(Float64Array::from(vec![Some(1.), Some(1.), Some(1.)])),
-                )),
-                vec![
-                    Some(point(0., 0.)),
-                    Some(point(1., 1.)),
-                    Some(point(2., 2.)),
-                ],
-            ),
-        )]
-    };
-    let dictionary_columns = |path: &Path| {
-        let builder = ParquetRecordBatchReaderBuilder::try_new(File::open(path).unwrap()).unwrap();
-        let group = builder.metadata().row_group(0);
-        group
-            .columns()
-            .iter()
-            .filter(|c| {
-                c.encodings()
-                    .any(|e| matches!(e, Encoding::RLE_DICTIONARY | Encoding::PLAIN_DICTIONARY))
-            })
-            .map(|c| c.column_path().string())
-            .collect::<Vec<_>>()
-    };
-    let all = temp.path().join("all.parquet");
-    export_layers(make(), &all, &archive()).unwrap();
-    assert!(dictionary_columns(&all).contains(&"elevation".to_string()));
-    let utf8 = temp.path().join("utf8.parquet");
+    // An empty name refuses (order and collision refusals:
+    // archive_types_tests.rs).
+    let target = temp.path().join("refused.parquet");
     let options = Options {
-        dictionary: Dictionary::Utf8,
+        hilbert_column: Some(String::new()),
         ..archive()
     };
-    export_layers(make(), &utf8, &options).unwrap();
-    assert_eq!(dictionary_columns(&utf8), ["mesh_name", "layer"]);
-    assert_eq!(read(&all).0, read(&utf8).0);
-    let parsed: Options = serde_json::from_str(r#"{"dictionary":"utf8"}"#).unwrap();
-    assert_eq!(parsed.dictionary, Dictionary::Utf8);
-    assert!(serde_json::from_str::<Options>(r#"{"dictionary":"float"}"#).is_err());
-}
-
-#[test]
-fn names_differing_only_in_case_are_distinct_columns() {
-    let temp = tempfile::tempdir().unwrap();
-    let output = temp.path().join("case.parquet");
-    let batch = typed_layer(vec![
-        ("River", Arc::new(StringArray::from(vec!["A", "B", "C"]))),
-        ("river", Arc::new(StringArray::from(vec!["a", "b", "c"]))),
-    ]);
-    export_layers(vec![input("xs", batch.clone())], &output, &archive()).unwrap();
-    let (read_back, _, _) = read(&output);
-    assert_eq!(strings(&read_back, "River")[0].as_deref(), Some("A"));
-    assert_eq!(strings(&read_back, "river")[0].as_deref(), Some("a"));
-    // GeoPackage folds case, so the portable writers still refuse.
-    let error = crate::exports::contract::Contract::new(batch.schema())
-        .err()
-        .unwrap();
-    assert!(error.to_string().contains("case-insensitive"), "{error}");
+    let error = export_layers(
+        vec![input("a", layer("crs", None, vec![Some(point(1., 1.))]))],
+        &target,
+        &options,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("nonempty"), "{error}");
+    assert!(!target.exists());
 }
 
 #[test]

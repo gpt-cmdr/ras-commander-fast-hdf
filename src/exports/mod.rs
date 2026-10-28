@@ -247,3 +247,7 @@ mod tests {
         assert_eq!(temp.path().read_dir().unwrap().count(), 1);
     }
 }
+
+#[cfg(all(test, feature = "exports-all"))]
+#[path = "format_types_tests.rs"]
+mod format_types_tests;

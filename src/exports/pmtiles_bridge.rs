@@ -229,6 +229,7 @@ where
         return Err(fail("invalid layer, batch limit or zoom range"));
     }
     let contract = Contract::new(schema.clone())?;
+    crate::exports::contract::require_case_insensitive_names(&schema)?;
     if !contract.crs.geographic_wgs84
         || contract.crs.projjson["type"] != "GeographicCRS"
         || !["degree", "degrees"].contains(&contract.crs.units.as_str())
