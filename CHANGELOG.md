@@ -37,6 +37,22 @@
   Lists still work. Holes and multipart features (`ring_offsets`/`polygon_offsets`/
   `feature_offsets`) now have a decoded-tile test: exterior, hole and island keep their
   windings.
+- GeoParquet archive profile fixes, found by writing a real ras2cng archive
+  (BaldEagleDamBrk: 15 geometry files and the p07 results):
+  - `geometry_types` in the `geo` metadata is sorted by name, as GeoPandas writes it.
+    Before, it followed `HashSet` order and changed between runs. Output is now
+    byte-identical for the same input and options.
+  - The output no longer carries the internal `ras:export:v1` key in its Arrow schema
+    metadata; `contract_metadata: true` keeps it. The embedded Arrow schema now carries
+    the `geo` metadata, as pyarrow's writer does, so pyarrow `read_schema` sees it.
+  - The file-level `bbox` is omitted, not `[null, null, null, null]`, when no row has a
+    geometry.
+  - New option `layer_row_groups` (default `true`; `false` fills row groups across
+    layer boundaries, the pyarrow `write_table(row_group_size=N)` layout).
+  - The `row_groups` metric is counted at close, so it includes a row group that is still
+    open then (possible with `layer_row_groups: false`).
+  - Unsupported-type refusals name the field. NaN or infinity hidden under a null list
+    or struct slot is no longer refused: only values a valid row references are data.
 - GeoParquet archive profile (`exports-geoparquet`): new
   `export_geoparquet_ipc_files(inputs, output, options)` writes one GeoParquet from one
   or more Arrow IPC layers, with ZSTD (level selectable), a row-group size, per-row bbox

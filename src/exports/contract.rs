@@ -86,7 +86,8 @@ impl Contract {
             }
             if !supported_type(field.data_type()) {
                 return Err(fail(format!(
-                    "unsupported field type: {}",
+                    "unsupported field type for field {}: {}",
+                    field.name(),
                     field.data_type()
                 )));
             }
@@ -274,9 +275,18 @@ pub fn is_v1_scalar(data_type: &DataType) -> bool {
 }
 
 /// True unless a non-null float, at any nesting depth, is NaN or infinite.
-/// List children are checked over the range the offsets reference.
+/// Only the values a valid row references are data: list children are checked
+/// over the offset ranges of valid rows, and struct children only in valid
+/// struct slots (a null slot may hide any value).
 fn all_finite(array: &dyn Array) -> bool {
     use arrow_array::cast::AsArray;
+    // Contiguous runs of valid rows.
+    fn valid_runs(array: &dyn Array) -> Vec<(usize, usize)> {
+        match array.nulls().filter(|n| n.null_count() > 0) {
+            Some(nulls) => nulls.valid_slices().collect(),
+            None => vec![(0, array.len())],
+        }
+    }
     match array.data_type() {
         DataType::Float64 => array
             .as_primitive::<arrow_array::types::Float64Type>()
@@ -291,14 +301,19 @@ fn all_finite(array: &dyn Array) -> bool {
         DataType::List(_) => {
             let list = array.as_list::<i32>();
             let offsets = list.value_offsets();
-            let (start, end) = (offsets[0] as usize, offsets[offsets.len() - 1] as usize);
-            all_finite(list.values().slice(start, end - start).as_ref())
+            valid_runs(array).into_iter().all(|(first, end)| {
+                let (start, stop) = (offsets[first] as usize, offsets[end] as usize);
+                all_finite(list.values().slice(start, stop - start).as_ref())
+            })
         }
-        DataType::Struct(_) => array
-            .as_struct()
-            .columns()
-            .iter()
-            .all(|c| all_finite(c.as_ref())),
+        DataType::Struct(_) => {
+            let columns = array.as_struct().columns();
+            valid_runs(array).into_iter().all(|(first, end)| {
+                columns
+                    .iter()
+                    .all(|c| all_finite(c.slice(first, end - first).as_ref()))
+            })
+        }
         _ => true,
     }
 }

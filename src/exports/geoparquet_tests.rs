@@ -1,6 +1,6 @@
 use super::*;
 use crate::exports::contract::{Crs, CONTRACT_KEY};
-use arrow_array::{BooleanArray, Int64Array};
+use arrow_array::{BooleanArray, Int64Array, ListArray};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 
 /// Recommended archive options: ZSTD, bbox struct covering, Hilbert order
@@ -509,4 +509,386 @@ fn struct_covering_follows_the_specification_layout() {
     let xmax = xmax.as_any().downcast_ref::<Float64Array>().unwrap();
     assert_eq!((xmax.value(0), xmax.value(1)), (1., 14.));
     assert!(batch.column_by_name("bbox_xmin").is_none());
+}
+
+fn line(points: &[(f64, f64)]) -> Vec<u8> {
+    let mut b = vec![1, 2, 0, 0, 0];
+    b.extend((points.len() as u32).to_le_bytes());
+    for (x, y) in points {
+        b.extend(x.to_le_bytes());
+        b.extend(y.to_le_bytes());
+    }
+    b
+}
+
+fn multipolygon(polygons: &[Vec<u8>]) -> Vec<u8> {
+    let mut b = vec![1, 6, 0, 0, 0];
+    b.extend((polygons.len() as u32).to_le_bytes());
+    for p in polygons {
+        b.extend(p);
+    }
+    b
+}
+
+/// Single layer of three points carrying the given extra columns.
+fn typed_layer(extra: Vec<(&str, ArrayRef)>) -> RecordBatch {
+    let mut batch = layer(
+        "crs",
+        None,
+        vec![
+            Some(point(0., 0.)),
+            Some(point(1., 1.)),
+            Some(point(2., 2.)),
+        ],
+    );
+    for (name, array) in extra {
+        let mut fields: Vec<Field> = batch
+            .schema()
+            .fields()
+            .iter()
+            .map(|f| f.as_ref().clone())
+            .collect();
+        let mut columns = batch.columns().to_vec();
+        fields.push(Field::new(name, array.data_type().clone(), true));
+        columns.push(array);
+        batch = RecordBatch::try_new(
+            Arc::new(Schema::new_with_metadata(fields, crs("crs"))),
+            columns,
+        )
+        .unwrap();
+    }
+    batch
+}
+
+/// `struct<Mann n: list<double>, Station: list<double>>` whose null row hides
+/// a NaN, and a `list<double>` whose null row references a NaN.
+fn hidden_nonfinite() -> (ArrayRef, ArrayRef) {
+    use arrow_array::types::Float64Type;
+    let list = |rows: Vec<Option<Vec<Option<f64>>>>| -> ArrayRef {
+        Arc::new(ListArray::from_iter_primitive::<Float64Type, _, _>(rows))
+    };
+    let fields = vec![
+        Field::new("Mann n", DataType::new_list(DataType::Float64, true), true),
+        Field::new("Station", DataType::new_list(DataType::Float64, true), true),
+    ];
+    let mannings_n = arrow_array::StructArray::try_new(
+        fields.into(),
+        vec![
+            list(vec![
+                Some(vec![Some(0.035), Some(0.06)]),
+                Some(vec![Some(f64::NAN)]),
+                Some(vec![]),
+            ]),
+            list(vec![Some(vec![Some(0.), Some(120.5)]), None, Some(vec![])]),
+        ],
+        Some(arrow_buffer::NullBuffer::from(vec![true, false, true])),
+    )
+    .unwrap();
+    // Offsets 0..1, 1..2 (null slot over the NaN), 2..3.
+    let masked = ListArray::try_new(
+        Arc::new(Field::new("item", DataType::Float64, true)),
+        arrow_buffer::OffsetBuffer::new(vec![0, 1, 2, 3].into()),
+        Arc::new(Float64Array::from(vec![1., f64::NAN, 3.])),
+        Some(arrow_buffer::NullBuffer::from(vec![true, false, true])),
+    )
+    .unwrap();
+    (Arc::new(mannings_n), Arc::new(masked))
+}
+
+#[test]
+fn nonfinite_under_null_slots_is_not_data_and_refusals_name_the_field() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = temp.path().join("hidden.parquet");
+    let (mannings_n, masked) = hidden_nonfinite();
+    let batch = typed_layer(vec![("mannings_n", mannings_n), ("masked", masked)]);
+    export_layers(vec![input("xs", batch.clone())], &output, &archive()).unwrap();
+    let (read_back, _, _) = read(&output);
+    for name in ["mannings_n", "masked"] {
+        let actual = read_back.column_by_name(name).unwrap();
+        let expected = batch.column_by_name(name).unwrap();
+        assert_eq!(actual.nulls(), expected.nulls(), "{name}");
+    }
+    // The same NaN in a valid slot refuses.
+    let output = temp.path().join("refused.parquet");
+    let visible: ArrayRef = Arc::new(ListArray::from_iter_primitive::<
+        arrow_array::types::Float64Type,
+        _,
+        _,
+    >(vec![
+        Some(vec![Some(1.)]),
+        Some(vec![Some(f64::NAN)]),
+        None,
+    ]));
+    let error = export_layers(
+        vec![input("xs", typed_layer(vec![("v", visible)]))],
+        &output,
+        &archive(),
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("nonfinite"), "{error}");
+    let error = export_layers(
+        vec![input(
+            "xs",
+            typed_layer(vec![(
+                "v",
+                Arc::new(arrow_array::Int32Array::from(vec![1, 2, 3])),
+            )]),
+        )],
+        &output,
+        &archive(),
+    )
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("unsupported field type for field v: Int32"),
+        "{error}"
+    );
+    assert_eq!(temp.path().read_dir().unwrap().count(), 1);
+}
+
+#[test]
+fn geometry_types_are_sorted_and_output_is_byte_reproducible() {
+    let temp = tempfile::tempdir().unwrap();
+    let make = || {
+        vec![
+            input(
+                "mixed",
+                layer(
+                    "crs",
+                    None,
+                    vec![
+                        Some(square(0., 0., 4.)),
+                        Some(point(1., 1.)),
+                        Some(line(&[(0., 0.), (3., 3.)])),
+                        Some(multipolygon(&[square(10., 10., 2.)])),
+                    ],
+                ),
+            ),
+            input("points", layer("crs", None, vec![Some(point(7., 9.))])),
+        ]
+    };
+    let mut first: Option<Vec<u8>> = None;
+    for run in 0..8 {
+        let output = temp.path().join(format!("run{run}.parquet"));
+        export_layers(make(), &output, &archive()).unwrap();
+        let (_, geo, _) = read(&output);
+        assert_eq!(
+            geo["columns"]["geometry"]["geometry_types"],
+            serde_json::json!(["LineString", "MultiPolygon", "Point", "Polygon"])
+        );
+        let bytes = std::fs::read(&output).unwrap();
+        match &first {
+            None => first = Some(bytes),
+            Some(first) => assert!(first == &bytes, "run {run} differs"),
+        }
+    }
+}
+
+#[test]
+fn contract_metadata_is_dropped_unless_requested() {
+    let temp = tempfile::tempdir().unwrap();
+    let cells = || layer("crs", None, vec![Some(point(1., 1.))]);
+    let metadata = |path: &Path| {
+        ParquetRecordBatchReaderBuilder::try_new(File::open(path).unwrap())
+            .unwrap()
+            .schema()
+            .metadata()
+            .clone()
+    };
+    let plain = temp.path().join("plain.parquet");
+    export_layers(vec![input("a", cells())], &plain, &archive()).unwrap();
+    assert!(!metadata(&plain).contains_key(CONTRACT_KEY));
+    let kept = temp.path().join("kept.parquet");
+    let options = Options {
+        contract_metadata: true,
+        ..archive()
+    };
+    export_layers(vec![input("a", cells())], &kept, &options).unwrap();
+    assert_eq!(
+        metadata(&kept).get(CONTRACT_KEY),
+        crs("crs").get(CONTRACT_KEY)
+    );
+    let parsed: Options = serde_json::from_str(r#"{"contract_metadata":true}"#).unwrap();
+    assert!(parsed.contract_metadata);
+}
+
+#[test]
+fn layer_row_groups_can_span_layers() {
+    let temp = tempfile::tempdir().unwrap();
+    let layers = || {
+        vec![
+            input(
+                "cells",
+                layer(
+                    "crs",
+                    None,
+                    vec![
+                        Some(square(100., 100., 8.)),
+                        Some(square(0., 0., 4.)),
+                        Some(square(50., 50., 2.)),
+                    ],
+                ),
+            ),
+            input(
+                "points",
+                layer("crs", None, vec![Some(point(7., 9.)), None]),
+            ),
+        ]
+    };
+    let group_rows = |path: &Path| {
+        let builder = ParquetRecordBatchReaderBuilder::try_new(File::open(path).unwrap()).unwrap();
+        builder
+            .metadata()
+            .row_groups()
+            .iter()
+            .map(|g| g.num_rows())
+            .collect::<Vec<_>>()
+    };
+    let split = temp.path().join("split.parquet");
+    let options = Options {
+        row_group_rows: 4,
+        ..archive()
+    };
+    let metrics = export_layers(layers(), &split, &options).unwrap();
+    assert_eq!(metrics.row_groups, 2);
+    assert_eq!(group_rows(&split), vec![3, 2]);
+    let packed = temp.path().join("packed.parquet");
+    let options = Options {
+        row_group_rows: 4,
+        layer_row_groups: false,
+        ..archive()
+    };
+    let metrics = export_layers(layers(), &packed, &options).unwrap();
+    assert_eq!(metrics.row_groups, 2);
+    assert_eq!(group_rows(&packed), vec![4, 1]);
+    // Same rows in the same order either way.
+    assert_eq!(read(&split).0, read(&packed).0);
+    assert!(Options::default().layer_row_groups);
+    let parsed: Options = serde_json::from_str(r#"{"layer_row_groups":false}"#).unwrap();
+    assert!(!parsed.layer_row_groups);
+}
+
+#[test]
+fn hilbert_column_holds_the_sort_key() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = temp.path().join("keys.parquet");
+    let cells = layer(
+        "crs",
+        None,
+        vec![
+            Some(square(100., 100., 8.)),
+            None,
+            Some(square(0., 0., 4.)),
+            Some(square(50., 50., 2.)),
+        ],
+    );
+    let points = layer("crs", None, vec![Some(point(7., 9.))]);
+    let options = Options {
+        row_group_rows: 2,
+        hilbert_column: Some("hilbert".into()),
+        ..archive()
+    };
+    export_layers(
+        vec![input("cells", cells), input("points", points)],
+        &output,
+        &options,
+    )
+    .unwrap();
+    let (batch, _, _) = read(&output);
+    let names: Vec<_> = batch
+        .schema()
+        .fields()
+        .iter()
+        .map(|f| f.name().clone())
+        .collect();
+    assert_eq!(names.last().unwrap(), "hilbert");
+    assert_eq!(names[names.len() - 2], "bbox");
+    let field = batch.schema().field_with_name("hilbert").unwrap().clone();
+    assert_eq!(field.data_type(), &DataType::UInt64);
+    assert!(field.is_nullable());
+    let keys: Vec<Option<u64>> = batch
+        .column_by_name("hilbert")
+        .unwrap()
+        .as_any()
+        .downcast_ref::<arrow_array::UInt64Array>()
+        .unwrap()
+        .iter()
+        .collect();
+    let extent = [0., 0., 108., 108.];
+    let key = |x: f64, y: f64| Some(u64::from(hilbert_index(x, y, extent)));
+    // Hilbert order of the cells, the null geometry last, then the single
+    // point keyed over its own (degenerate) extent.
+    assert_eq!(ids(&batch), vec![2, 3, 0, 1, 0]);
+    assert_eq!(
+        keys,
+        vec![
+            key(2., 2.),
+            key(51., 51.),
+            key(104., 104.),
+            None,
+            Some(u64::from(hilbert_index(7., 9., [7., 9., 7., 9.])))
+        ]
+    );
+    assert!(keys[..3].windows(2).all(|w| w[0] <= w[1]));
+    // An empty name refuses (order and collision refusals:
+    // archive_types_tests.rs).
+    let target = temp.path().join("refused.parquet");
+    let options = Options {
+        hilbert_column: Some(String::new()),
+        ..archive()
+    };
+    let error = export_layers(
+        vec![input("a", layer("crs", None, vec![Some(point(1., 1.))]))],
+        &target,
+        &options,
+    )
+    .unwrap_err();
+    assert!(error.to_string().contains("nonempty"), "{error}");
+    assert!(!target.exists());
+}
+
+#[test]
+fn file_bbox_ignores_empty_geometry_and_schema_carries_geo() {
+    let temp = tempfile::tempdir().unwrap();
+    let output = temp.path().join("empty.parquet");
+    let empty_polygon = vec![1, 3, 0, 0, 0, 0, 0, 0, 0];
+    let cells = layer(
+        "crs",
+        None,
+        vec![Some(square(0., 0., 4.)), Some(empty_polygon), None],
+    );
+    let points = layer("crs", None, vec![Some(point(-2., 9.))]);
+    // Input order, no covering: the file bbox is still computed.
+    let options = Options {
+        layer_column: Some("layer".into()),
+        ..Options::default()
+    };
+    export_layers(
+        vec![input("cells", cells), input("points", points)],
+        &output,
+        &options,
+    )
+    .unwrap();
+    let (_, geo, _) = read(&output);
+    assert_eq!(
+        geo["columns"]["geometry"]["bbox"],
+        serde_json::json!([-2., 0., 4., 9.])
+    );
+    // The embedded Arrow schema carries the same `geo` metadata.
+    let builder = ParquetRecordBatchReaderBuilder::try_new(File::open(&output).unwrap()).unwrap();
+    let embedded: serde_json::Value =
+        serde_json::from_str(&builder.schema().metadata()["geo"]).unwrap();
+    assert_eq!(embedded, geo);
+    // No geometry at all: no file bbox rather than NaN.
+    let nothing = temp.path().join("nothing.parquet");
+    export_layers(
+        vec![input("a", layer("crs", None, vec![None]))],
+        &nothing,
+        &Options::default(),
+    )
+    .unwrap();
+    assert!(read(&nothing).1["columns"]["geometry"]
+        .get("bbox")
+        .is_none());
 }

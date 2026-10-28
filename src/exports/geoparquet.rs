@@ -7,7 +7,7 @@
 //! conformed to the unified output schema. Nothing here repairs geometry,
 //! guesses a CRS or reorders rows unless `order = "hilbert"` is requested.
 use crate::exports::{
-    contract::{Contract, Identity},
+    contract::{Contract, Identity, CONTRACT_KEY},
     fail, Result,
 };
 use arrow_array::{Array, ArrayRef, BinaryArray, Float64Array, RecordBatch, StringArray};
@@ -109,9 +109,13 @@ pub struct Options {
     pub compression: Codec,
     /// ZSTD level (1..=22); rejected for other codecs. Default 1 when unset.
     pub compression_level: Option<i32>,
-    /// Maximum rows per Parquet row group. A new row group also starts at
-    /// every layer boundary, so a `layer` filter can skip whole row groups.
+    /// Maximum rows per Parquet row group.
     pub row_group_rows: usize,
+    /// When true (the default), a row group also ends at every layer
+    /// boundary, so a `layer` filter can skip whole row groups. When false,
+    /// row groups are filled to `row_group_rows` across layer boundaries
+    /// (fewer, larger row groups and a smaller file).
+    pub layer_row_groups: bool,
     pub bbox_covering: Covering,
     pub order: Order,
     /// Name of a nonnullable Utf8 column carrying each input's layer name.
@@ -122,6 +126,10 @@ pub struct Options {
     /// Row identity per layer name (`""` for an unnamed single layer). Layers
     /// not listed use contract v1's `(mesh_name, cell_id)`.
     pub identity: HashMap<String, Identity>,
+    /// Keep the internal `ras:export:v1` CRS contract in the output's Arrow
+    /// schema metadata. Off by default: the GeoParquet `geo` metadata already
+    /// carries the CRS, and the contract key is an input-side detail.
+    pub contract_metadata: bool,
     pub dictionary: Dictionary,
     /// With `order = "hilbert"`: also store each row's Hilbert key in a
     /// nullable UInt64 column of this name (null for null or empty geometry),
@@ -139,11 +147,13 @@ impl Default for Options {
             compression: Codec::Snappy,
             compression_level: None,
             row_group_rows: 65536,
+            layer_row_groups: true,
             bbox_covering: Covering::None,
             order: Order::Input,
             layer_column: None,
             max_batch_rows: 65536,
             identity: HashMap::new(),
+            contract_metadata: false,
             dictionary: Dictionary::All,
             hilbert_column: None,
             statistics: Statistics::Page,
@@ -349,7 +359,11 @@ fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
             )));
         }
     }
-    let schema = Arc::new(Schema::new_with_metadata(fields, first.metadata().clone()));
+    let mut metadata = first.metadata().clone();
+    if !options.contract_metadata {
+        metadata.remove(CONTRACT_KEY);
+    }
+    let schema = Arc::new(Schema::new_with_metadata(fields, metadata));
     let layers = layers
         .iter()
         .zip(contracts)
@@ -443,6 +457,36 @@ fn conform(
         out.push(array);
     }
     Ok(RecordBatch::try_new(plan.schema.clone(), out)?)
+}
+
+/// Serialize the `geo` metadata deterministically. The geoparquet crate keeps
+/// `geometry_types` in a `HashSet`, whose iteration order changes from run to
+/// run; it is written sorted by name, as GeoPandas writes it.
+fn geo_json(geo: &geoparquet::metadata::GeoParquetMetadata) -> Result<String> {
+    let mut value = serde_json::to_value(geo)?;
+    if let Some(columns) = value
+        .get_mut("columns")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        for column in columns.values_mut() {
+            if let Some(types) = column
+                .get_mut("geometry_types")
+                .and_then(serde_json::Value::as_array_mut)
+            {
+                let mut names = types
+                    .iter()
+                    .map(|t| {
+                        t.as_str()
+                            .map(str::to_owned)
+                            .ok_or_else(|| fail("geometry_types entry is not a string"))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                names.sort();
+                *types = names.into_iter().map(serde_json::Value::String).collect();
+            }
+        }
+    }
+    Ok(serde_json::to_string(&value)?)
 }
 
 /// Encode the Hilbert index of `(x, y)` on a 16-bit-per-axis grid covering
@@ -628,12 +672,17 @@ where
     }
     let props = props.build();
     // The root group pyarrow writes (`schema`, not arrow-rs's `arrow_schema`).
+    // The embedded Arrow schema is written at the end instead, so that it can
+    // carry the finished `geo` metadata as pyarrow's writer does; readers that
+    // take schema metadata from it (pyarrow `read_schema`) then see `geo`.
+    let target_schema = encoder.target_schema();
     let arrow_writer = parquet::arrow::ArrowWriter::try_new_with_options(
         File::create(&staged)?,
-        encoder.target_schema(),
+        target_schema.clone(),
         parquet::arrow::arrow_writer::ArrowWriterOptions::new()
             .with_properties(props)
-            .with_schema_root("schema".into()),
+            .with_schema_root("schema".into())
+            .with_skip_arrow_metadata(true),
     )?;
     let mut writer: ParquetWriter = (encoder, arrow_writer);
     let mut metrics = Metrics::default();
@@ -710,19 +759,21 @@ where
                 metrics.write_seconds += time.elapsed().as_secs_f64();
             }
         }
-        // Close the row group at every layer boundary so layer filters prune.
-        writer.1.flush()?;
+        if options.layer_row_groups {
+            // Close the row group at every layer boundary so layer filters prune.
+            writer.1.flush()?;
+        }
         metrics.layers += 1;
     }
     let time = Instant::now();
     let (encoder, mut arrow_writer) = writer;
     let mut geo = encoder.into_geoparquet_metadata();
-    if let Some(extent) = extent {
-        geo.columns
-            .get_mut("geometry")
-            .ok_or_else(|| fail("GeoParquet metadata lacks the geometry column"))?
-            .bbox = Some(extent.to_vec());
-    }
+    // Minimum and maximum over every coordinate of every row (holes and parts
+    // included), as the per-row covering; omitted when no row has a geometry.
+    geo.columns
+        .get_mut("geometry")
+        .ok_or_else(|| fail("GeoParquet metadata lacks the geometry column"))?
+        .bbox = extent.map(|e| e.to_vec());
     if options.bbox_covering != Covering::None {
         let column = geo
             .columns
@@ -743,12 +794,25 @@ where
             },
         });
     }
+    let geo = geo_json(&geo)?;
+    let mut schema_metadata = target_schema.metadata().clone();
+    schema_metadata.insert("geo".to_string(), geo.clone());
+    arrow_writer.append_key_value_metadata(parquet::file::metadata::KeyValue::new(
+        parquet::arrow::ARROW_SCHEMA_META_KEY.to_string(),
+        Some(parquet::arrow::encode_arrow_schema(
+            &target_schema
+                .as_ref()
+                .clone()
+                .with_metadata(schema_metadata),
+        )),
+    ));
     arrow_writer.append_key_value_metadata(parquet::file::metadata::KeyValue::new(
         "geo".to_string(),
-        Some(serde_json::to_string(&geo)?),
+        Some(geo),
     ));
-    metrics.row_groups = arrow_writer.flushed_row_groups().len();
-    arrow_writer.close()?;
+    // Counted at close, so a row group still open then (possible with
+    // `layer_row_groups: false`) is included.
+    metrics.row_groups = arrow_writer.close()?.num_row_groups();
     std::fs::OpenOptions::new()
         .read(true)
         .write(true)
