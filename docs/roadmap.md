@@ -285,14 +285,17 @@ depend on `geo`; only the Python extension's embedded vector-tile code does.
 
 ### HEC-RAS driver for terrio
 
-**Status:** planned; the `terrio-hecras` crate exists in the gpt-cmdr/terrio
-fork, upstream PR not opened.
+**Status:** engine side done; the built-in `HECRAS` driver is in the
+gpt-cmdr/terrio fork (PR #1); the upstream PR to opengeos/terrio is prepared,
+not opened.
 
 Upstreaming the driver to opengeos/terrio needed the crates.io release, no
 Git dependencies, PRs #7 and #8 and a minimum Rust version compatible with
-terrio's (1.90; the engine features need 1.88); 0.2.0 provides these. Still
-needed: an engine call that identifies HEC-RAS files from the stored root
-`File Type` attribute, so the driver does not claim other HDF5 files.
+terrio's (1.90; the engine features need 1.88); 0.2.0 provides these. The
+`File Type` identification (`hec_ras_file_type`, so the driver does not claim
+other HDF5 files) and the pipe-network families are #40; one HDF5 reader shared
+with terrio (crates.io `hdf5-reader` 0.10) is #42. The driver needs a crates.io
+release with both.
 
 The driver's output field names stay as implemented.
 

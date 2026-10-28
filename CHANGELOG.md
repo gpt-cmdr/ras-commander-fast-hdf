@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- `ReadOnlyHdfSession::hec_ras_file_type` classifies the stored root `File Type`
+  attribute against `HEC_RAS_FILE_TYPES` (`HEC-RAS Geometry`, `HEC-RAS Results`):
+  `HecRas`, `Other` (for example `HEC Terrain`) or `Absent`; a value that is not a
+  single string is refused. It lets callers such as terrio's HECRAS driver claim only
+  HEC-RAS geometry and plan files. Rust only; additive within API 10.
+- Pipe networks (Rust only, additive within API 10): `OneDLineFamily::PipeConduits`
+  (`Geometry/Pipe Conduits`, listed in the new `PIPE_LINE_FAMILIES`, not in
+  `ONE_D_LINE_FAMILIES`) and `ReadOnlyHdfSession::pipe_nodes` (`Geometry/Pipe Nodes`).
+  Both use the existing packed-line and point-family rules.
 - Extensible-array chunk indexes with more elements than their index block
   (HDF5 1.10+ files written with `libver="latest"`, chunked along an unlimited
   dimension) are read instead of refused. hdf5-reader 0.9.3 returned fill values
