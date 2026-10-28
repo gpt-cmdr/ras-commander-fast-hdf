@@ -57,6 +57,11 @@ Unsupported with a typed code, contradictory storage is Corrupt. `metadata_max_b
 - `river_reaches(max_bytes)`: stored reach topology (River/Reach names, upstream and
   downstream type/name) from `Geometry/River Centerlines/Attributes`; no connectivity is
   inferred. `river_junctions(max_bytes)`: `Geometry/Junctions` Attributes + Points.
+- Pipe networks (Rust only, not in the Python bindings): `one_d_line_family(PipeConduits, ..)`
+  reads `Geometry/Pipe Conduits` (Attributes required, `Polyline` Info/Parts/Points) with the
+  same rules. It is listed in `PIPE_LINE_FAMILIES`, not `ONE_D_LINE_FAMILIES`, so the 1D
+  family listing is unchanged. `pipe_nodes(max_bytes)`: `Geometry/Pipe Nodes` Attributes +
+  Points, as `river_junctions`.
 - `xs_interpolation_surfaces(max_bytes)`: exact TIN Info/Points/Triangles with validated
   point/triangle ranges per surface plus `XSIDs`, `Areas`, `Orthogonal Vectors`,
   `Bounding Lines`. Triangle index base is not asserted.
