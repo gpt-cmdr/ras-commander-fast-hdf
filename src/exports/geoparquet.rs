@@ -7,7 +7,7 @@
 //! conformed to the unified output schema. Nothing here repairs geometry,
 //! guesses a CRS or reorders rows unless `order = "hilbert"` is requested.
 use crate::exports::{
-    contract::{Contract, Identity},
+    contract::{Attributes, Contract, Identity, CONTRACT_KEY},
     fail, Result,
 };
 use arrow_array::{Array, ArrayRef, BinaryArray, Float64Array, RecordBatch, StringArray};
@@ -71,15 +71,32 @@ pub enum Order {
     Hilbert,
 }
 
+/// Which columns may use Parquet dictionary encoding.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Dictionary {
+    /// Every column (the Parquet writer default). Columns whose values are
+    /// mostly unique fall back to plain encoding within each row group.
+    #[default]
+    All,
+    /// Only top-level Utf8 columns (the layer column included); every other
+    /// column is plain encoded. As pyarrow `use_dictionary=[utf8 names]`.
+    Utf8,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct Options {
     pub compression: Codec,
     /// ZSTD level (1..=22); rejected for other codecs. Default 1 when unset.
     pub compression_level: Option<i32>,
-    /// Maximum rows per Parquet row group. A new row group also starts at
-    /// every layer boundary, so a `layer` filter can skip whole row groups.
+    /// Maximum rows per Parquet row group.
     pub row_group_rows: usize,
+    /// When true (the default), a row group also ends at every layer
+    /// boundary, so a `layer` filter can skip whole row groups. When false,
+    /// row groups are filled to `row_group_rows` across layer boundaries
+    /// (fewer, larger row groups and a smaller file).
+    pub layer_row_groups: bool,
     pub bbox_covering: Covering,
     pub order: Order,
     /// Name of a nonnullable Utf8 column carrying each input's layer name.
@@ -90,6 +107,15 @@ pub struct Options {
     /// Row identity per layer name (`""` for an unnamed single layer). Layers
     /// not listed use contract v1's `(mesh_name, cell_id)`.
     pub identity: HashMap<String, Identity>,
+    /// Keep the internal `ras:export:v1` CRS contract in the output's Arrow
+    /// schema metadata. Off by default: the GeoParquet `geo` metadata already
+    /// carries the CRS, and the contract key is an input-side detail.
+    pub contract_metadata: bool,
+    pub dictionary: Dictionary,
+    /// With `order = "hilbert"`, name of a nullable UInt64 column appended
+    /// after the bbox covering that holds each row's Hilbert key (the sort
+    /// key, over its layer's extent); null for null or empty geometry.
+    pub hilbert_column: Option<String>,
 }
 
 impl Default for Options {
@@ -98,11 +124,15 @@ impl Default for Options {
             compression: Codec::Snappy,
             compression_level: None,
             row_group_rows: 65536,
+            layer_row_groups: true,
             bbox_covering: Covering::None,
             order: Order::Input,
             layer_column: None,
             max_batch_rows: 65536,
             identity: HashMap::new(),
+            contract_metadata: false,
+            dictionary: Dictionary::All,
+            hilbert_column: None,
         }
     }
 }
@@ -167,6 +197,8 @@ struct Plan {
     layer_column: Option<usize>,
     /// Index of the bbox struct column, or of the first of four bbox columns.
     bbox: Option<usize>,
+    covering: Covering,
+    hilbert: Option<usize>,
 }
 
 fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
@@ -239,7 +271,11 @@ fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
             .get(layer.name.as_deref().unwrap_or(""))
             .cloned()
             .unwrap_or_default();
-        contracts.push(Contract::with_identity(schema.clone(), &identity)?);
+        contracts.push(Contract::with_profile(
+            schema.clone(),
+            &identity,
+            Attributes::Archive,
+        )?);
     }
     // A field missing from any layer is null there.
     for field in &mut fields {
@@ -276,6 +312,20 @@ fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
             Some(first)
         }
     };
+    let hilbert = match &options.hilbert_column {
+        None => None,
+        Some(_) if options.order != Order::Hilbert => {
+            return Err(fail("hilbert_column requires order \"hilbert\""));
+        }
+        Some(name) if name.is_empty() => {
+            return Err(fail("hilbert_column must be a nonempty name"));
+        }
+        Some(name) => {
+            added.push(name.clone());
+            fields.push(Field::new(name, DataType::UInt64, true));
+            Some(fields.len() - 1)
+        }
+    };
     for name in &added {
         if fields
             .iter()
@@ -288,7 +338,11 @@ fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
             )));
         }
     }
-    let schema = Arc::new(Schema::new_with_metadata(fields, first.metadata().clone()));
+    let mut metadata = first.metadata().clone();
+    if !options.contract_metadata {
+        metadata.remove(CONTRACT_KEY);
+    }
+    let schema = Arc::new(Schema::new_with_metadata(fields, metadata));
     let layers = layers
         .iter()
         .zip(contracts)
@@ -306,6 +360,8 @@ fn plan<I>(layers: &[LayerInput<I>], options: &Options) -> Result<Plan> {
         layers,
         layer_column,
         bbox,
+        covering: options.bbox_covering,
+        hilbert,
     })
 }
 
@@ -366,7 +422,7 @@ fn conform(
         } else if let Some(k) = plan
             .bbox
             .and_then(|f| i.checked_sub(f))
-            .filter(|k| *k < 4 && !matches!(field.data_type(), DataType::Struct(_)))
+            .filter(|k| *k < 4 && plan.covering == Covering::Columns)
         {
             bbox_array(bounds, k)
         } else if let Some(source) = columns[i] {
@@ -377,6 +433,36 @@ fn conform(
         out.push(array);
     }
     Ok(RecordBatch::try_new(plan.schema.clone(), out)?)
+}
+
+/// Serialize the `geo` metadata deterministically. The geoparquet crate keeps
+/// `geometry_types` in a `HashSet`, whose iteration order changes from run to
+/// run; it is written sorted by name, as GeoPandas writes it.
+fn geo_json(geo: &geoparquet::metadata::GeoParquetMetadata) -> Result<String> {
+    let mut value = serde_json::to_value(geo)?;
+    if let Some(columns) = value
+        .get_mut("columns")
+        .and_then(serde_json::Value::as_object_mut)
+    {
+        for column in columns.values_mut() {
+            if let Some(types) = column
+                .get_mut("geometry_types")
+                .and_then(serde_json::Value::as_array_mut)
+            {
+                let mut names = types
+                    .iter()
+                    .map(|t| {
+                        t.as_str()
+                            .map(str::to_owned)
+                            .ok_or_else(|| fail("geometry_types entry is not a string"))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                names.sort();
+                *types = names.into_iter().map(serde_json::Value::String).collect();
+            }
+        }
+    }
+    Ok(serde_json::to_string(&value)?)
 }
 
 /// Encode the Hilbert index of `(x, y)` on a 16-bit-per-axis grid covering
@@ -437,7 +523,24 @@ fn hilbert_encode_16(x: u32, y: u32) -> u32 {
 
 /// Stable permutation of one layer's rows: Hilbert index of bbox centres over
 /// the union of row bboxes; null/empty geometries last in input order.
+#[cfg(test)]
 pub fn hilbert_permutation(bounds: &[Option<[f64; 4]>]) -> Vec<usize> {
+    permutation(&hilbert_keys(bounds))
+}
+
+fn permutation(keys: &[Option<u32>]) -> Vec<usize> {
+    let mut keys: Vec<(u64, usize)> = keys
+        .iter()
+        .enumerate()
+        .map(|(i, k)| (k.map_or(u64::MAX, u64::from), i))
+        .collect();
+    keys.sort_unstable();
+    keys.into_iter().map(|(_, i)| i).collect()
+}
+
+/// Hilbert key of each row's bbox centre over the union of row bboxes;
+/// `None` for null or empty geometry.
+pub fn hilbert_keys(bounds: &[Option<[f64; 4]>]) -> Vec<Option<u32>> {
     let mut extent: Option<[f64; 4]> = None;
     for b in bounds.iter().flatten() {
         let e = extent.get_or_insert(*b);
@@ -446,19 +549,13 @@ pub fn hilbert_permutation(bounds: &[Option<[f64; 4]>]) -> Vec<usize> {
         e[2] = e[2].max(b[2]);
         e[3] = e[3].max(b[3]);
     }
-    let mut keys: Vec<(u64, usize)> = bounds
+    bounds
         .iter()
-        .enumerate()
-        .map(|(i, b)| match (b, extent) {
-            (Some(b), Some(e)) => (
-                u64::from(hilbert_index((b[0] + b[2]) / 2., (b[1] + b[3]) / 2., e)),
-                i,
-            ),
-            _ => (u64::MAX, i),
+        .map(|b| match (b, extent) {
+            (Some(b), Some(e)) => Some(hilbert_index((b[0] + b[2]) / 2., (b[1] + b[3]) / 2., e)),
+            _ => None,
         })
-        .collect();
-    keys.sort_unstable();
-    keys.into_iter().map(|(_, i)| i).collect()
+        .collect()
 }
 
 type ParquetWriter = (
@@ -503,18 +600,37 @@ where
         .build();
     let encoder =
         geoparquet::writer::GeoParquetRecordBatchEncoder::try_new(&plan.schema, &geo_options)?;
-    let props = parquet::file::properties::WriterProperties::builder()
+    let mut props = parquet::file::properties::WriterProperties::builder()
         .set_compression(compression)
-        .set_max_row_group_row_count(Some(options.row_group_rows))
-        .build();
-    let arrow_writer = parquet::arrow::ArrowWriter::try_new(
+        .set_max_row_group_row_count(Some(options.row_group_rows));
+    if options.dictionary == Dictionary::Utf8 {
+        props = props.set_dictionary_enabled(false);
+        for field in plan.schema.fields() {
+            if field.data_type() == &DataType::Utf8 {
+                props = props.set_column_dictionary_enabled(
+                    parquet::schema::types::ColumnPath::new(vec![field.name().clone()]),
+                    true,
+                );
+            }
+        }
+    }
+    let props = props.build();
+    // The embedded Arrow schema is written at the end instead, so that it can
+    // carry the finished `geo` metadata as pyarrow's writer does; readers that
+    // take schema metadata from it (pyarrow `read_schema`) then see `geo`.
+    let arrow_writer = parquet::arrow::ArrowWriter::try_new_with_options(
         File::create(&staged)?,
         encoder.target_schema(),
-        Some(props),
+        parquet::arrow::arrow_writer::ArrowWriterOptions::new()
+            .with_properties(props)
+            .with_skip_arrow_metadata(true),
     )?;
+    let target_schema = encoder.target_schema();
     let mut writer: ParquetWriter = (encoder, arrow_writer);
     let mut metrics = Metrics::default();
-    let need_bounds = options.bbox_covering != Covering::None || options.order == Order::Hilbert;
+    // Row bounds are always computed: they give the file-level `bbox`, which
+    // the geoparquet encoder reports as NaN when a layer has empty geometry.
+    let mut extent: Option<[f64; 4]> = None;
     for (layer, (contract, columns)) in layers.into_iter().zip(&plan.layers) {
         let name = layer.name.as_deref();
         let mut buffered: Vec<RecordBatch> = Vec::new();
@@ -525,11 +641,14 @@ where
             contract.validate(&batch, options.max_batch_rows)?;
             metrics.validation_seconds += time.elapsed().as_secs_f64();
             let time = Instant::now();
-            let bounds = if need_bounds {
-                row_bounds(&batch, contract.geometry)?
-            } else {
-                Vec::new()
-            };
+            let bounds = row_bounds(&batch, contract.geometry)?;
+            for b in bounds.iter().flatten() {
+                let e = extent.get_or_insert(*b);
+                e[0] = e[0].min(b[0]);
+                e[1] = e[1].min(b[1]);
+                e[2] = e[2].max(b[2]);
+                e[3] = e[3].max(b[3]);
+            }
             let conformed = conform(&plan, columns, name, &batch, &bounds)?;
             metrics.preparation_seconds += time.elapsed().as_secs_f64();
             metrics.rows += batch.num_rows();
@@ -549,21 +668,32 @@ where
             for (b, batch) in buffered.iter().enumerate() {
                 locations.extend((0..batch.num_rows()).map(|r| (b, r)));
             }
-            let order = hilbert_permutation(&layer_bounds);
+            let keys = hilbert_keys(&layer_bounds);
+            let order = permutation(&keys);
             let refs: Vec<&RecordBatch> = buffered.iter().collect();
             metrics.preparation_seconds += time.elapsed().as_secs_f64();
             for chunk in order.chunks(options.row_group_rows) {
                 let time = Instant::now();
                 let indices: Vec<(usize, usize)> = chunk.iter().map(|&i| locations[i]).collect();
-                let sorted = arrow_select::interleave::interleave_record_batch(&refs, &indices)?;
+                let mut sorted =
+                    arrow_select::interleave::interleave_record_batch(&refs, &indices)?;
+                if let Some(column) = plan.hilbert {
+                    let mut columns = sorted.columns().to_vec();
+                    columns[column] = Arc::new(arrow_array::UInt64Array::from_iter(
+                        chunk.iter().map(|&i| keys[i].map(u64::from)),
+                    ));
+                    sorted = RecordBatch::try_new(plan.schema.clone(), columns)?;
+                }
                 metrics.preparation_seconds += time.elapsed().as_secs_f64();
                 let time = Instant::now();
                 write_batch(&mut writer, &sorted)?;
                 metrics.write_seconds += time.elapsed().as_secs_f64();
             }
         }
-        // Close the row group at every layer boundary so layer filters prune.
-        writer.1.flush()?;
+        if options.layer_row_groups {
+            // Close the row group at every layer boundary so layer filters prune.
+            writer.1.flush()?;
+        }
         metrics.layers += 1;
     }
     let time = Instant::now();
@@ -589,12 +719,29 @@ where
             },
         });
     }
+    // Minimum and maximum over every coordinate of every row (holes and parts
+    // included), as the per-row covering; omitted when no row has a geometry.
+    geo.columns
+        .get_mut("geometry")
+        .ok_or_else(|| fail("GeoParquet metadata lacks the geometry column"))?
+        .bbox = extent.map(|e| e.to_vec());
+    let geo = geo_json(&geo)?;
+    let mut schema_metadata = target_schema.metadata().clone();
+    schema_metadata.insert("geo".to_string(), geo.clone());
+    arrow_writer.append_key_value_metadata(parquet::file::metadata::KeyValue::new(
+        parquet::arrow::ARROW_SCHEMA_META_KEY.to_string(),
+        Some(parquet::arrow::encode_arrow_schema(
+            &target_schema
+                .as_ref()
+                .clone()
+                .with_metadata(schema_metadata),
+        )),
+    ));
     arrow_writer.append_key_value_metadata(parquet::file::metadata::KeyValue::new(
         "geo".to_string(),
-        Some(serde_json::to_string(&geo)?),
+        Some(geo),
     ));
-    metrics.row_groups = arrow_writer.flushed_row_groups().len();
-    arrow_writer.close()?;
+    metrics.row_groups = arrow_writer.close()?.num_row_groups();
     std::fs::OpenOptions::new()
         .read(true)
         .write(true)

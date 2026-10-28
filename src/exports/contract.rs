@@ -1,6 +1,9 @@
 //! Contract v1: XY OGC WKB + nullable typed Arrow fields; no implicit CRS defaults.
 use crate::exports::{fail, Result};
-use arrow_array::{Array, BinaryArray, Float64Array, Int64Array, RecordBatch, StringArray};
+use arrow_array::{
+    Array, BinaryArray, FixedSizeListArray, Float32Array, Float64Array, Int64Array, LargeListArray,
+    ListArray, RecordBatch, StringArray, StructArray,
+};
 use arrow_schema::{DataType, SchemaRef, TimeUnit};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -41,6 +44,112 @@ impl Default for Identity {
     }
 }
 
+/// Which attribute types a writer accepts.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Attributes {
+    /// Contract v1 scalars, which every writer can store faithfully.
+    #[default]
+    Portable,
+    /// Every type Parquet stores and returns unchanged through the Arrow
+    /// schema it embeds: contract v1 scalars plus Float32, Timestamp in
+    /// milliseconds, microseconds or nanoseconds (time zone kept as given),
+    /// an all-null `Null` column, and List, LargeList, FixedSizeList and
+    /// nonempty Struct nested to any depth over Int64, UInt64, Float64,
+    /// Float32, Boolean, Utf8, Binary or those timestamps. Field names may
+    /// differ only in case (Parquet names are case-sensitive). Only the
+    /// GeoParquet archive profile accepts these; it passes them through with
+    /// no widening or conversion.
+    Archive,
+}
+
+fn portable_type(data_type: &DataType) -> bool {
+    matches!(
+        data_type,
+        DataType::Int64
+            | DataType::UInt64
+            | DataType::Float64
+            | DataType::Boolean
+            | DataType::Utf8
+            | DataType::Binary
+            | DataType::Timestamp(TimeUnit::Millisecond, None)
+    )
+}
+
+fn archive_type(data_type: &DataType, top_level: bool) -> bool {
+    match data_type {
+        DataType::Int64
+        | DataType::UInt64
+        | DataType::Float64
+        | DataType::Float32
+        | DataType::Boolean
+        | DataType::Utf8
+        | DataType::Binary
+        | DataType::Timestamp(
+            TimeUnit::Millisecond | TimeUnit::Microsecond | TimeUnit::Nanosecond,
+            _,
+        ) => true,
+        DataType::Null => top_level,
+        DataType::List(item) | DataType::LargeList(item) | DataType::FixedSizeList(item, _) => {
+            archive_type(item.data_type(), false)
+        }
+        DataType::Struct(fields) => {
+            !fields.is_empty() && fields.iter().all(|f| archive_type(f.data_type(), false))
+        }
+        _ => false,
+    }
+}
+
+impl Attributes {
+    fn accepts(self, data_type: &DataType) -> bool {
+        match self {
+            Self::Portable => portable_type(data_type),
+            Self::Archive => archive_type(data_type, true),
+        }
+    }
+}
+
+/// Refuse NaN or infinity in a float column, including float values nested
+/// in lists and structs. Only the values each valid row references are checked.
+fn check_finite(array: &dyn Array) -> Result<()> {
+    fn nonfinite() -> crate::exports::Error {
+        fail("nonfinite attribute: supply null explicitly")
+    }
+    let any = array.as_any();
+    if let Some(values) = any.downcast_ref::<Float64Array>() {
+        if values.iter().flatten().any(|v| !v.is_finite()) {
+            return Err(nonfinite());
+        }
+    } else if let Some(values) = any.downcast_ref::<Float32Array>() {
+        if values.iter().flatten().any(|v| !v.is_finite()) {
+            return Err(nonfinite());
+        }
+    } else if let Some(list) = any.downcast_ref::<ListArray>() {
+        for row in list.iter().flatten() {
+            check_finite(row.as_ref())?;
+        }
+    } else if let Some(list) = any.downcast_ref::<LargeListArray>() {
+        for row in list.iter().flatten() {
+            check_finite(row.as_ref())?;
+        }
+    } else if let Some(list) = any.downcast_ref::<FixedSizeListArray>() {
+        for row in list.iter().flatten() {
+            check_finite(row.as_ref())?;
+        }
+    } else if let Some(fields) = any.downcast_ref::<StructArray>() {
+        // Values under a null struct slot are not data: check valid rows only.
+        for child in fields.columns() {
+            if fields.null_count() == 0 {
+                check_finite(child.as_ref())?;
+            } else {
+                for row in (0..fields.len()).filter(|&row| fields.is_valid(row)) {
+                    check_finite(child.slice(row, 1).as_ref())?;
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 pub struct Contract {
     pub schema: SchemaRef,
     pub crs: Crs,
@@ -54,6 +163,14 @@ impl Contract {
     }
 
     pub fn with_identity(schema: SchemaRef, identity: &Identity) -> Result<Self> {
+        Self::with_profile(schema, identity, Attributes::Portable)
+    }
+
+    pub fn with_profile(
+        schema: SchemaRef,
+        identity: &Identity,
+        attributes: Attributes,
+    ) -> Result<Self> {
         let crs: Crs = serde_json::from_str(
             schema
                 .metadata()
@@ -74,25 +191,31 @@ impl Contract {
         for field in schema.fields() {
             if field.name().is_empty()
                 || field.name().contains('\0')
-                || !names.insert(field.name().to_lowercase())
+                || !names.insert(match attributes {
+                    // SQLite (GeoPackage) and Esri formats fold case;
+                    // Parquet names are case-sensitive, so `River` and
+                    // `river` are two columns there.
+                    Attributes::Portable => field.name().to_lowercase(),
+                    Attributes::Archive => field.name().clone(),
+                })
             {
-                return Err(fail("empty/NUL/duplicate case-insensitive field name"));
+                return Err(fail(format!(
+                    "empty/NUL/duplicate{} field name {:?}",
+                    if attributes == Attributes::Portable {
+                        " case-insensitive"
+                    } else {
+                        ""
+                    },
+                    field.name()
+                )));
             }
             if ["fid", "_ras_fid"].contains(&field.name().to_lowercase().as_str()) {
                 return Err(fail("reserved GeoPackage primary key name"));
             }
-            if !matches!(
-                field.data_type(),
-                DataType::Int64
-                    | DataType::UInt64
-                    | DataType::Float64
-                    | DataType::Boolean
-                    | DataType::Utf8
-                    | DataType::Binary
-                    | DataType::Timestamp(TimeUnit::Millisecond, None)
-            ) {
+            if !attributes.accepts(field.data_type()) {
                 return Err(fail(format!(
-                    "unsupported field type: {}",
+                    "unsupported field type for field {}: {}",
+                    field.name(),
                     field.data_type()
                 )));
             }
@@ -192,11 +315,7 @@ impl Contract {
             if !field.is_nullable() && array.null_count() > 0 {
                 return Err(fail("null in nonnullable field"));
             }
-            if let Some(values) = array.as_any().downcast_ref::<Float64Array>() {
-                if values.iter().flatten().any(|v| !v.is_finite()) {
-                    return Err(fail("nonfinite attribute: supply null explicitly"));
-                }
-            }
+            check_finite(array.as_ref())?;
         }
         let geometry = batch
             .column(self.geometry)

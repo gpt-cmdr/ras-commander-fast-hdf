@@ -12,6 +12,34 @@
   Lists still work. Holes and multipart features (`ring_offsets`/`polygon_offsets`/
   `feature_offsets`) now have a decoded-tile test: exterior, hole and island keep their
   windings.
+- GeoParquet archive profile fixes, found by writing a real ras2cng archive
+  (BaldEagleDamBrk: 15 geometry files and the p07 results). Before, the profile refused
+  every file.
+  - Attribute types: the profile now accepts every type that Parquet stores and returns
+    unchanged through its embedded Arrow schema. That is Float32 (never widened),
+    Timestamp in ms/us/ns (time zone kept), all-null `Null` columns, and List,
+    LargeList, FixedSizeList and nonempty Struct nested to any depth over the contract
+    scalars, Float32 and those timestamps (for example `list<list<double>>`
+    station/elevation, `list<struct<...>>` profiles, `struct<list, list>` Manning's n).
+    Field names that differ only in case (`River`, `river`) are separate columns. NaN
+    and infinity still refuse, including nested values. Other types refuse and the
+    error names the field. The FlatGeobuf, GeoPackage, GeoJSON and plain Parquet writers
+    keep the contract v1 types and case-insensitive names.
+  - `geometry_types` in the `geo` metadata is sorted by name, as GeoPandas writes it.
+    Before, it followed `HashSet` order and changed between runs. Output is now
+    byte-identical for the same input and options.
+  - The file-level `bbox` comes from the row bounds. Before, it was `[null, null, null,
+    null]` when a layer held an empty geometry.
+  - The output no longer carries the internal `ras:export:v1` key in its Arrow schema
+    metadata; `contract_metadata: true` keeps it. The embedded Arrow schema now carries
+    the `geo` metadata, as pyarrow's writer does, so pyarrow `read_schema` sees it.
+  - New options: `layer_row_groups` (default `true`; `false` fills row groups across
+    layer boundaries), `dictionary` (`"all"` default, or `"utf8"`: only top-level Utf8
+    columns are dictionary-encoded, as pyarrow `use_dictionary=[names]`), and
+    `hilbert_column` (with Hilbert order, a nullable UInt64 column of each row's sort
+    key, after the bbox covering).
+  - The `row_groups` metric is counted at close, so it includes a row group that is still
+    open then (possible with `layer_row_groups: false`).
 - GeoParquet archive profile (`exports-geoparquet`): new
   `export_geoparquet_ipc_files(inputs, output, options)` writes one GeoParquet from one
   or more Arrow IPC layers, with ZSTD (level selectable), a row-group size, per-row bbox
