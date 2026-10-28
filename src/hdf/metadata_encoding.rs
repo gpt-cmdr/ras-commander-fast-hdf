@@ -1,6 +1,6 @@
-use crate::hdf5_reader::{io::Cursor, messages::datatype::parse_datatype_description};
 use crate::UnsupportedCode;
 use crate::{Error, ErrorKind, Result};
+use hdf5_reader::{io::Cursor, messages::datatype::parse_datatype_description};
 #[derive(Debug)]
 pub(super) struct Proof {
     pub width: usize,

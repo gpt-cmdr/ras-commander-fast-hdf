@@ -1,0 +1,17 @@
+{
+  "generator": "make_fixtures.py",
+  "h5py_values_sha256": {
+    "ea_deep.h5": "606c7529b0ac6036b82c64b9f62aa07e2ba3f80f0bfd1e6f0f249ff1102561cf",
+    "ea_latest.h5": "4b1069c83dc02e8c6f743fea72bd9d72e3ed14eac0125db4c91aa5e69200e6c2"
+  },
+  "h5py": "3.16.0",
+  "hdf5": "2.0.0",
+  "files": {
+    "ea_deep.h5": "7650ac19990aadb0ac2ee92fb68449e5de43be84b2acba33325a8c1ec80ccae4",
+    "ea_inline.h5": "9864eed495d124ad8bdc55ae8962f531e80f8090f9c24ba89ffed122e3885258",
+    "ea_latest.h5": "7df4183e8eb0894bd550b683e9220874fbad7a796fe0a0fdd36a6b4019ff5683",
+    "filter_deflate_then_lz4.h5": "82a08acdc36ad6f7d412cd0376868ca0c4e35173a4527f828af30dcaf4956d42",
+    "filter_lz4_then_deflate.h5": "8a5554333ff79c13ef8da48fea3b5787746498767ad919148d396cbb54a80832",
+    "filter_unknown_then_deflate.h5": "03bb793bf05d4b66dccff229f1b317deec919ed369da055066b29c84107f2ead"
+  }
+}

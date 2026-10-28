@@ -179,14 +179,14 @@
     "name": "attribute2_shared.h5",
     "sha256": "b5363e7a2b53c098dee1e8fae86a2a4f2e0cddd09bcfc2e9413452c1dc367f56",
     "kind": "error",
-    "reason": "shared attribute",
+    "reason": "shared datatype/dataspace",
     "error": "Unsupported"
   },
   {
     "name": "attribute2_reserved.h5",
     "sha256": "d0d5e35c844c46b085b90cc94651479d0478d4272f55d52481d1f965adb25606",
     "kind": "error",
-    "reason": "reserved attribute flags",
+    "reason": "reserved flags",
     "error": "Corrupt"
   },
   {
@@ -208,7 +208,7 @@
     "name": "attribute3_reserved.h5",
     "sha256": "8149ae71c8784a6c369129c51a0ba6548338e1a34df38b7c68262573f36f2658",
     "kind": "error",
-    "reason": "reserved attribute flags",
+    "reason": "reserved flags",
     "error": "Corrupt"
   },
   {

@@ -13,7 +13,7 @@ pub(super) struct Memo {
     numeric: Mutex<HashMap<String, Arc<NumericDataset>>>,
 }
 pub(super) struct NumericDataset {
-    pub dataset: crate::hdf5_reader::Dataset,
+    pub dataset: crate::hdf::reader::Dataset,
     pub kind: OnceLock<super::NumericKind>,
 }
 impl ReadOnlyHdfSession {
@@ -25,7 +25,7 @@ impl ReadOnlyHdfSession {
     fn numeric_dataset_with(
         &self,
         path: &str,
-        open: impl FnOnce() -> Result<crate::hdf5_reader::Dataset>,
+        open: impl FnOnce() -> Result<crate::hdf::reader::Dataset>,
     ) -> Result<Arc<NumericDataset>> {
         {
             let cache = self.memo.numeric.lock().unwrap_or_else(|e| e.into_inner());

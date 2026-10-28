@@ -56,7 +56,7 @@ fn corrupt_child_listing_retains_original_verdict() {
         .file
         .group("G")
         .unwrap()
-        .members()
+        .member_lists()
         .err()
         .map(map_error)
         .unwrap();

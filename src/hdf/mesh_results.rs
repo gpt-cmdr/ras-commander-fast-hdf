@@ -180,9 +180,9 @@ impl ReadOnlyHdfSession {
                 let attributes = group
                     .raw_attributes()
                     .map_err(map_error)?
-                    .into_iter()
+                    .iter()
                     .map(|a| {
-                        budget(a.raw_data.len() as u64, max_bytes)?;
+                        budget(a.message().raw_data.len() as u64, max_bytes)?;
                         typed_attribute(a)
                     })
                     .collect::<Result<Vec<_>>>()?;
@@ -621,10 +621,11 @@ impl ReadOnlyHdfSession {
     fn mr_attributes(&self, path: &str, max_bytes: usize) -> Result<Vec<TypedAttribute>> {
         let ds = self.file.dataset(path).map_err(map_error)?;
         ds.raw_attributes()
+            .map_err(map_error)?
             .iter()
             .map(|a| {
-                budget(a.raw_data.len() as u64, max_bytes)?;
-                typed_attribute(a.clone())
+                budget(a.message().raw_data.len() as u64, max_bytes)?;
+                typed_attribute(a)
             })
             .collect()
     }

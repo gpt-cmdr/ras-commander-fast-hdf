@@ -13,7 +13,6 @@ cargo test --locked --no-default-features --features catalog                    
 cargo test --locked --no-default-features --features catalog,hdf,mesh,results    # engine, pure Rust
 cargo test --locked --features python,exports-all,exports-pmtiles                # engine, extension and exports
 cargo clippy --locked --all-features --all-targets --no-deps -- -D warnings
-cargo test --locked --manifest-path vendor/reader-tests/Cargo.toml               # embedded reader, upstream tests
 python scripts/vendor_sources.py --check                                         # vendor/ matches PROVENANCE.json
 ```
 

@@ -256,7 +256,7 @@ impl ReadOnlyHdfSession {
             .file
             .dataset(path)
             .map_err(super::encoding::map_error)?;
-        let attrs = ds.raw_attributes();
+        let attrs = &ds.raw_attributes().map_err(super::encoding::map_error)?;
         let units = if family_level {
             self.unit_evidence_bounded(path, max_bytes, true)?
         } else {
@@ -348,7 +348,7 @@ impl ReadOnlyHdfSession {
     pub(super) fn node_pointer(&self, group: &str) -> FResult<NodePointer> {
         let g = self.file.group(group).map_err(super::encoding::map_error)?;
         let attrs = g.raw_attributes().map_err(super::encoding::map_error)?;
-        let mut found = attrs.into_iter().filter(|a| a.name == "Node Pointer");
+        let mut found = attrs.iter().filter(|a| a.name() == "Node Pointer");
         let Some(first) = found.next() else {
             return Ok(NodePointer::unavailable("no Node Pointer attribute"));
         };
@@ -645,29 +645,26 @@ impl ReadOnlyHdfSession {
     }
 }
 
-fn column_labels(
-    attrs: &[crate::hdf5_reader::messages::attribute::AttributeMessage],
-    columns: u64,
-) -> FResult<ColumnLabels> {
+fn column_labels(attrs: &[hdf5_reader::RawAttribute], columns: u64) -> FResult<ColumnLabels> {
     let mut found = attrs
         .iter()
-        .filter(|a| a.name == "Variable_Unit" || a.name == "Connections");
+        .filter(|a| a.name() == "Variable_Unit" || a.name() == "Connections");
     let Some(a) = found.next() else {
         return Ok(ColumnLabels::unavailable("no column-label attribute"));
     };
-    let extra: Vec<&str> = found.map(|e| e.name.as_str()).collect();
-    let source = if a.name == "Variable_Unit" {
+    let extra: Vec<&str> = found.map(|e| e.name()).collect();
+    let source = if a.name() == "Variable_Unit" {
         ColumnLabelSource::VariableUnit
     } else {
         ColumnLabelSource::Connections
     };
-    let t = typed_attribute(a.clone())?;
+    let t = typed_attribute(a)?;
     let raw = t.raw_bytes.clone();
     let bad = |m: String| ColumnLabels::corrupt(m).with_raw_bytes(raw.clone());
     if !extra.is_empty() {
         return Ok(bad(format!(
             "multiple column-label attributes present: {} plus {}",
-            a.name,
+            a.name(),
             extra.join(", ")
         )));
     }
@@ -693,7 +690,8 @@ fn column_labels(
             ),
             _ => bad(format!(
                 "{} shape {:?} does not match {columns} columns",
-                a.name, t.shape
+                a.name(),
+                t.shape
             )),
         },
         MetadataValue::Corrupt { reason } => bad(reason),
@@ -702,7 +700,7 @@ fn column_labels(
         }
         _ => ColumnLabels::unsupported(
             UnsupportedCode::Encoding,
-            format!("{} is not proven fixed text", a.name),
+            format!("{} is not proven fixed text", a.name()),
         )
         .with_raw_bytes(raw.clone()),
     })
