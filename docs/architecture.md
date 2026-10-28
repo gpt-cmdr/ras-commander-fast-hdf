@@ -23,11 +23,14 @@ engine (src/, pure Rust library)
   HEC-RAS knowledge: project/plan catalog, HDF layouts, identities, units, time, CRS evidence
         │
         ▼
-hdf5-reader / hdf5-core (embedded from vendor/, pure Rust HDF5 decoding)
+hdf5-reader / hdf5-core (crates.io dependencies, pure Rust HDF5 decoding)
 ```
 
 All three Rust layers are one crate, `ras-commander-fast-hdf`. The extension is
-its `python` feature; the HDF5 reader is compiled in as private modules.
+its `python` feature. The HDF5 reader is the `hdf5-reader` crate from
+roteiro-gis/netcdf-rust; the engine reaches it only through `src/hdf/reader.rs`,
+which also applies the engine's two read policies (see
+[Provenance](reference/provenance.md#hdf5-reader)).
 
 - **The engine** (`src/`) knows how HEC-RAS stores things:
   which datasets and tables exist in each HEC-RAS version, how mesh topology is
@@ -91,7 +94,7 @@ in `auto` mode. See [Testing and qualification](testing.md).
 
 ## Safety
 
-- The engine modules are `#![forbid(unsafe_code)]`. The embedded HDF5 reader
+- The whole crate is `#![forbid(unsafe_code)]`. The HDF5 reader dependency
   uses `unsafe` only for read-only memory mapping and copies of decoded chunks
   into preallocated buffers.
 - Every count, offset and size read from a file is checked before use, and

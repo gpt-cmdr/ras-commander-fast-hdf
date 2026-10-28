@@ -338,7 +338,7 @@ impl TimeAxis {
 }
 
 impl ReadOnlyHdfSession {
-    fn time_rank1(&self, path: &str, max_bytes: usize) -> Result<crate::hdf5_reader::Dataset> {
+    fn time_rank1(&self, path: &str, max_bytes: usize) -> Result<crate::hdf::reader::Dataset> {
         let ds = self.file.dataset(path).map_err(map_error)?;
         if ds.shape().len() != 1 {
             return Err(corrupt(format!("{path} must be rank one")));

@@ -10,9 +10,8 @@ zstd-sys) are reported with their own licence files.
 
 Source compiled into the crate itself is listed as well: the engine (as
 `ras-commander-fast-hdf`, the name ras-commander's wheel gate looks for) and the
-third-party code embedded from `vendor/` (hdf5-reader/hdf5-core with the `hdf` feature,
-freestiler-core with the `python` feature), with the licence texts recorded in
-`vendor/PROVENANCE.json`.
+third-party code embedded from `vendor/` (freestiler-core with the `python` feature), with
+the licence texts recorded in `vendor/PROVENANCE.json`.
 
 Usage (from the repository root):
 
@@ -99,7 +98,7 @@ def licence_texts(pkg: dict) -> list[tuple[str, str]]:
         for entry in sorted(fallback.iterdir()):
             if entry.is_file() and LICENSE_FILE.match(entry.name):
                 found.setdefault(entry.name, entry)
-    # Path dependencies (the vendored reader) keep their licences one level up;
+    # Path dependencies keep their licences one level up;
     # crates inside a Git dependency's workspace keep them at the checkout root.
     for parent in [] if found else licence_parents(pkg, root):
         for entry in sorted(parent.iterdir()):
@@ -147,7 +146,7 @@ def embedded_components(features: set[str], version: str) -> list[tuple[str, str
              "https://github.com/gpt-cmdr/ras-commander-fast-hdf (the engine modules of this crate)",
              [("LICENSE", read_text(ROOT / "LICENSE"))])]
     manifest = json.loads((ROOT / "vendor" / "PROVENANCE.json").read_text(encoding="utf-8"))
-    wanted = {"hdf5": "hdf", "freestiler": "python"}
+    wanted = {"freestiler": "python"}
     for name, comp in manifest["components"].items():
         if wanted.get(name) not in features:
             continue

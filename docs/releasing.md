@@ -56,7 +56,7 @@ cargo publish --locked
 
 CI runs the same dry run on every push. The package holds only what is needed
 to build, plus `LICENSE`, `README.md`, `CHANGELOG.md`, `THIRD-PARTY-NOTICES.md`
-and the licence, provenance and patch files from `vendor/` (the `include` list
+and the licence and provenance files from `vendor/` (the `include` list
 in `Cargo.toml`). Tests, fixtures and Python packaging are not shipped.
 crates.io versions cannot be replaced, only yanked, so publish only a tag whose
 wheels have been qualified. `ras-commander-fast-hdf` is the only crate this

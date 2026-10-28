@@ -25,21 +25,23 @@
 //!
 //! # Third-party code
 //!
-//! HDF5 decoding uses a modified copy of the `hdf5-reader` and `hdf5-core`
-//! crates from [roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust)
-//! v0.9.3 (MIT OR Apache-2.0, Copyright (c) 2026 Ian Norden), compiled as
-//! private modules. The Python extension's vector tiles use a copy of
-//! `freestiler-core` from [walkerke/freestiler](https://github.com/walkerke/freestiler)
-//! (MIT, Copyright (c) 2026 Kyle Walker; its supercluster port is ISC). Their
-//! licence texts, change notices and provenance are in the package's `vendor/`
-//! directory and in `THIRD-PARTY-NOTICES.md`.
+//! HDF5 decoding uses the [`hdf5-reader`](https://crates.io/crates/hdf5-reader)
+//! crate from [roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust)
+//! (MIT OR Apache-2.0, Copyright (c) 2026 Ian Norden), an ordinary dependency.
+//! The engine applies two read policies of its own on top of it (unbounded
+//! filters and large extensible-array chunk indexes are refused). The Python
+//! extension's vector tiles use a copy of `freestiler-core` from
+//! [walkerke/freestiler](https://github.com/walkerke/freestiler) (MIT, Copyright
+//! (c) 2026 Kyle Walker; its supercluster port is ISC), compiled as a private
+//! module. Its licence texts, change notice and provenance are in the package's
+//! `vendor/` directory; `THIRD-PARTY-NOTICES.md` covers every dependency.
 //!
 //! # Safety
 //!
-//! The engine modules are `#![forbid(unsafe_code)]`. Only the embedded HDF5
-//! reader uses `unsafe`: read-only memory mapping of the input file and
+//! The whole crate is `#![forbid(unsafe_code)]`. The HDF5 reader dependency
+//! uses `unsafe` for read-only memory mapping of the input file and
 //! bounds-checked copies of decoded chunks into preallocated output buffers.
-#![deny(unsafe_code)]
+#![forbid(unsafe_code)]
 
 #[forbid(unsafe_code)]
 pub mod api;
@@ -146,28 +148,9 @@ pub use capability::{Capability, Reported, UnsupportedCode};
 
 // --- Embedded third-party source (vendor/; see vendor/PROVENANCE.json) -------
 //
-// Compiled from the vendored files exactly as recorded there. They are private
-// modules: none of their items are part of this crate's public API. rustfmt and
+// Compiled from the vendored files exactly as recorded there. It is a private
+// module: none of its items are part of this crate's public API. rustfmt and
 // most lints are not applied to upstream code.
-
-/// hdf5-core 0.9.3 (roteiro-gis/netcdf-rust, MIT OR Apache-2.0).
-#[cfg(feature = "hdf")]
-#[path = "../vendor/hdf5-core/src/lib.rs"]
-#[rustfmt::skip]
-#[allow(unused, clippy::all)]
-mod hdf5_core;
-
-/// hdf5-reader 0.9.3 with 14 local patches (roteiro-gis/netcdf-rust, MIT OR
-/// Apache-2.0). The only module that uses `unsafe`: read-only memory mapping
-/// and chunk copies into preallocated buffers, each with a `SAFETY` comment
-/// (upstream's `undocumented_unsafe_blocks` and `unsafe_op_in_unsafe_fn` lints
-/// stay denied).
-#[cfg(feature = "hdf")]
-#[path = "../vendor/hdf5-reader/src/lib.rs"]
-#[rustfmt::skip]
-#[allow(unsafe_code, unused, clippy::all)]
-#[deny(unsafe_op_in_unsafe_fn, clippy::undocumented_unsafe_blocks)]
-mod hdf5_reader;
 
 /// freestiler-core 0.1.0 at walkerke/freestiler beb64b0 (MIT; supercluster ISC).
 #[cfg(feature = "python")]

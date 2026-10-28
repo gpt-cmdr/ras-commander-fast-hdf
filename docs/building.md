@@ -21,7 +21,7 @@ a Rust library; maturin builds the same crate as the Python wheel, through
 | Feature | Adds |
 |---|---|
 | `catalog` (default) | Project and plan text catalogue; standard library only. |
-| `hdf` | HDF5 reads; pure Rust, with the embedded reader. |
+| `hdf` | HDF5 reads; pure Rust, with the `hdf5-reader` crate. |
 | `mesh` | 2D mesh geometry and topology (implies `hdf`). |
 | `results` | 1D/2D results, summaries and time series (implies `hdf`). |
 | `python` | PyO3 bindings, the kernels only ras-commander uses and the embedded `freestiler-core`; implies the four engine features. |
@@ -85,8 +85,8 @@ and smoke-tests them.
 Pushes and pull requests run on CLB Engineering's self-hosted runners (a
 Slurm-scheduled pool for Linux and a disposable Windows VM). Pull requests
 from forks never reach them; they run on GitHub-hosted runners instead. Each
-run tests the pure-Rust engine profiles, the extension, the embedded reader
-(upstream tests and `scripts/vendor_sources.py --check`) and the licence
+run tests the pure-Rust engine profiles, the extension, the vendored source
+(`scripts/vendor_sources.py --check`) and the licence
 notices, packages the crate (`cargo publish --locked --dry-run`), then builds
 the Windows and Linux wheels and smoke-tests them on Python 3.10 and
 3.13. macOS runs only for releases or when requested (`include_macos`).

@@ -118,7 +118,7 @@ your code ──> ras-commander (Hdf* classes, unchanged API)
                   ├──> h5py + HDF5 C library        (reference path)
                   └──> ras_commander_fast_hdf       (this repo, src/python/)
                            └──> engine              (this repo, src/)
-                                    └──> hdf5-reader (embedded from vendor/, pure Rust)
+                                    └──> hdf5-reader (crates.io dependency, pure Rust)
 ```
 
 In the default `auto` mode, ras-commander tries the native read first and
@@ -140,7 +140,7 @@ ras-commander-fast-hdf = { version = "0.2", features = ["hdf", "mesh", "results"
 | Feature | Adds |
 |---|---|
 | `catalog` (default) | Project and plan text catalogue; standard library only. |
-| `hdf` | Read-only HDF5 sessions and reads; pure Rust, with the embedded reader. |
+| `hdf` | Read-only HDF5 sessions and reads; pure Rust, with the `hdf5-reader` crate. |
 | `mesh` | 2D mesh geometry and topology (implies `hdf`). |
 | `results` | 1D/2D results, summaries and time series (implies `hdf`). |
 | `python`, `extension-module`, `exports-*` | The Python extension and its export writers; only for wheel builds. |
@@ -156,7 +156,7 @@ Without `python`, no PyO3 or NumPy is in the dependency tree. See
 | [`src/python`](src/python) | The Python extension `ras_commander_fast_hdf` (PyO3, feature `python`). It exposes the engine to ras-commander, plus native mesh-polygon assembly, fluvial/pluvial kernels and PMTiles tiling. The vector export writers are in [`src/exports`](src/exports). |
 | [`python`](python) | Python packaging: `pyproject.toml` builds the `ras-commander-fast-hdf` wheel from this crate with maturin. |
 | [`tests`](tests) | Rust integration tests and their committed fixtures. |
-| [`vendor`](vendor) | Third-party source compiled into the crate as private modules: a patched copy of `hdf5-reader` and `hdf5-core` 0.9.3 (MIT OR Apache-2.0) and a copy of `freestiler-core` (MIT AND ISC). See [`vendor/LOCAL_PATCHES.md`](vendor/LOCAL_PATCHES.md) and `vendor/PROVENANCE.json`. |
+| [`vendor`](vendor) | Third-party source compiled into the crate as a private module: a copy of `freestiler-core` (MIT AND ISC). See `vendor/PROVENANCE.json`. The HDF5 reader, `hdf5-reader` (MIT OR Apache-2.0), is an ordinary crates.io dependency. |
 | [`docs`](docs/README.md) | Developer documentation. |
 
 ## Building from source
@@ -187,8 +187,8 @@ contributors: start with [AGENTS.md](AGENTS.md).
 ## License
 
 MIT; see [LICENSE](LICENSE). The embedded third-party source keeps its own
-licences (`hdf5-reader` and `hdf5-core`: MIT OR Apache-2.0; `freestiler-core`:
-MIT AND ISC); the texts are in [`vendor`](vendor). The licences of every linked
+licence (`freestiler-core`: MIT AND ISC); the texts are in [`vendor`](vendor).
+The licences of every linked
 crate are in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md) (crate, all
 features) and [`python/licenses/THIRD-PARTY-NOTICES.md`](python/licenses/THIRD-PARTY-NOTICES.md)
 (wheel).

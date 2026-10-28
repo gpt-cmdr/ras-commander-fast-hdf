@@ -982,6 +982,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "hdf5-core"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0299f0eb21c955433f590644a5178c5bb23665a8fef65fbdc0be1d81c26abe1"
+dependencies = [
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "hdf5-reader"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b86dd95f258700fce52515079812ca60707b87b6d8679178f4f2a308fc08ea0b"
+dependencies = [
+ "flate2",
+ "hdf5-core",
+ "libc",
+ "lru",
+ "lz4_flex",
+ "memmap2",
+ "ndarray",
+ "parking_lot",
+ "rayon",
+ "smallvec",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "heapless"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1754,16 +1782,12 @@ dependencies = [
  "geopackage",
  "geoparquet",
  "geozero",
+ "hdf5-reader",
  "i_float",
  "i_overlay",
  "integer-encoding 4.0.2",
- "libc",
- "lru",
- "lz4_flex",
- "memmap2",
  "ndarray",
  "numpy",
- "parking_lot",
  "parquet",
  "pmtiles2",
  "prost",
@@ -1773,9 +1797,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "smallvec",
  "tempfile",
- "thiserror 2.0.21",
 ]
 
 [[package]]

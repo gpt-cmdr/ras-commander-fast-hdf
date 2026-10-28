@@ -213,18 +213,21 @@ refusals (output limits, corrupt streams) are unchanged.
 The engine is one crate, `ras-commander-fast-hdf` (library
 `ras_commander_fast_hdf`), published on crates.io from 0.2.0. It replaces the engine crate name `ras-commander-rust`, so the same
 name is used on crates.io and PyPI. Because crates.io does not accept path or
-Git dependencies, the patched HDF5 reader is carried inside the crate,
-rebased on upstream 0.9.3 plus 14 patches. The Python bindings and the export
+Git dependencies, the patched HDF5 reader was carried inside the crate,
+rebased on upstream 0.9.3 plus 14 patches (until the reader moved to
+crates.io 0.10.1, below). The Python bindings and the export
 writers are optional features. Rust consumers (terrio, RustGIS) can depend on
 a version instead of a Git revision.
 
 ### Upstream the hdf5-reader patches
 
-**Status:** planned; patch set prepared, waiting for maintainer review of the PR scope.
+**Status:** done; upstream released them in 0.10.0 (roteiro-gis/netcdf-rust
+#102 to #109) and 0.10.1 (#111: B-tree walks that enter only the selected
+chunks of a row/column gather).
 
-The engine vendors a patched copy of `hdf5-reader` and `hdf5-core` from
-roteiro-gis/netcdf-rust. Against upstream 0.9.3, 14 patches are still needed;
-with them, crates.io 0.9.3 passes the full engine suite. Proposed grouping:
+The engine vendored a patched copy of `hdf5-reader` and `hdf5-core` from
+roteiro-gis/netcdf-rust. Against upstream 0.9.3, 14 patches were needed.
+Grouping as proposed upstream:
 
 - **A. Spec-conformance read fixes:** shared-message locations (committed
   datatypes), per-stage filter-pipeline bounds, soft links in old-style
@@ -239,32 +242,31 @@ with them, crates.io 0.9.3 passes the full engine suite. Proposed grouping:
 
 Two patches are CLB fail-closed policies and stay local: refusing unbounded
 filters, and refusing extensible-array indexes larger than the index block.
+The engine now applies both itself (`src/hdf/reader.rs`).
 
 ### Report the extensible-array silent-zeros bug upstream
 
-**Status:** planned; waiting for maintainer approval to file.
+**Status:** fixed upstream in 0.10.0 (#102, #105); the engine still refuses.
 
 Upstream `hdf5-reader` 0.9.3 returns fill values (zeros), with no error, for
 extensible-array chunks 36 to 49 of a 50-chunk h5py dataset. The engine
-avoids it by refusing such indexes, which also refuses valid files. The fix
-belongs upstream, in the super-block and data-block mapping; the repro file
-is ready.
+avoids it by refusing such indexes, which also refuses valid files. Upstream
+0.10.0 maps them as libhdf5 does. Lifting the engine's refusal is a separate
+change, qualified on its own.
 
 ### Depend on hdf5-reader from crates.io
 
-**Status:** blocked on upstream accepting the patches above.
+**Status:** done; the engine depends on `hdf5-reader` 0.10.1 from crates.io.
 
-As upstream releases take the patches, the internal copy of the reader
-shrinks to the local policy patches, and eventually the engine depends on
-`hdf5-reader` from crates.io. Until then the copy keeps upstream's
-`MIT OR Apache-2.0` licence, both licence texts and a list of the changes.
+The internal copy of the reader is gone. Its two local policy patches are
+applied by the engine (`src/hdf/reader.rs`) with the same refusals.
 
 ### Reader-level limits for direct reader users
 
 **Status:** planned.
 
 The engine checks sizes before calling the reader, but other users of the
-vendored reader do not get those checks. A zero-width float dataset still
+reader do not get those checks. A zero-width float dataset still
 makes the reader request terabytes for a one-element read, and the reader has
 no overall read budget. A zero-width datatype refusal and a reader
 `max_read_bytes` would protect them; both fit the hardening patches above.

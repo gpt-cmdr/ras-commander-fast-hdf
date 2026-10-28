@@ -20,11 +20,14 @@ the PyPI wheel of the same name (`python/pyproject.toml`, maturin).
   ras-commander uses (mesh polygon assembly, fluvial/pluvial, PMTiles, RAS
   text). `src/exports/` holds the vector export writers (`exports-*` features).
 - `tests/`: all integration tests; fixtures in `tests/fixtures`.
-- `vendor/`: third-party source compiled into the crate as private modules
-  (`src/lib.rs`): patched `hdf5-reader` and `hdf5-core` 0.9.3, and
-  `freestiler-core`. Change the reader only with a matching entry in
-  `vendor/LOCAL_PATCHES.md` and a patch in `vendor/patches/`, then refresh
-  `vendor/PROVENANCE.json` with `scripts/vendor_sources.py`.
+- `vendor/`: third-party source compiled into the crate as a private module
+  (`src/lib.rs`): `freestiler-core`. Refresh `vendor/PROVENANCE.json` with
+  `scripts/vendor_sources.py` after any change.
+- The HDF5 reader is the crates.io `hdf5-reader` crate (roteiro-gis/netcdf-rust).
+  The engine reaches it only through `src/hdf/reader.rs`, which also applies
+  the engine's two read policies (unbounded filters and large
+  extensible-array chunk indexes are refused); see
+  [docs/reference/provenance.md](docs/reference/provenance.md#hdf5-reader).
 - ras-commander (a separate repository) owns the public Python API, the
   h5py reference path, the `auto | h5py | native` routing and the equivalence
   suites that qualify this engine.
@@ -42,8 +45,8 @@ the PyPI wheel of the same name (`python/pyproject.toml`, maturin).
   allocation sizes before using them; release builds keep `overflow-checks`.
   The bridge turns any panic that escapes into a Python exception
   (`src/python/panic_guard.rs`), but that is a backstop, not a design. The
-  engine modules are `#![forbid(unsafe_code)]`; only the embedded HDF5 reader
-  uses `unsafe`.
+  crate is `#![forbid(unsafe_code)]`; only the HDF5 reader dependency uses
+  `unsafe`.
 - **Budget every read** before allocating. A read above the per-call budget is
   refused (ras-commander then reads it in chunks), never allocated blindly.
 - **Never guess a CRS, unit or time zone.** Report the stored evidence.
@@ -74,8 +77,7 @@ the PyPI wheel of the same name (`python/pyproject.toml`, maturin).
     `cargo test --locked --features python,exports-all,exports-pmtiles`
     (engine and bridge; not `--all-features`, because `extension-module`
     cannot link a test binary on Linux)
-  - `cargo test --locked --manifest-path vendor/reader-tests/Cargo.toml` and
-    `python scripts/vendor_sources.py --check` when touching `vendor/`
+  - `python scripts/vendor_sources.py --check` when touching `vendor/`
 - Tests use small committed fixtures under `tests/fixtures`. Generate new synthetic fixtures
   with a script committed next to them, and record their SHA-256 in the
   fixture manifest. Real HEC-RAS models are not committed; real-file tests read

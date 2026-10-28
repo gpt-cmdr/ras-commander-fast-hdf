@@ -167,24 +167,24 @@ fn over_budget(raw_len: usize, max_bytes: usize, name: &str) -> Option<UnitsEvid
     })
 }
 pub(super) fn evidence(
-    attrs: &[crate::hdf5_reader::messages::attribute::AttributeMessage],
+    attrs: &[hdf5_reader::RawAttribute],
     name: &str,
     max_bytes: usize,
 ) -> Result<UnitsEvidence> {
-    let mut found = attrs.iter().filter(|a| a.name == name);
+    let mut found = attrs.iter().filter(|a| a.name() == name);
     let Some(first) = found.next() else {
         return Ok(UnitsEvidence::unavailable(format!("no {name} attribute")));
     };
     if found.next().is_some() {
         return Ok(
             UnitsEvidence::corrupt(format!("duplicate {name} attribute"))
-                .with_raw_bytes(first.raw_data.clone()),
+                .with_raw_bytes(first.message().raw_data.clone()),
         );
     }
-    if let Some(over) = over_budget(first.raw_data.len(), max_bytes, name) {
+    if let Some(over) = over_budget(first.message().raw_data.len(), max_bytes, name) {
         return Ok(over);
     }
-    let t = typed_attribute(first.clone())?;
+    let t = typed_attribute(first)?;
     let raw = t.raw_bytes;
     Ok(match t.value {
         MetadataValue::Strings(mut v) if v.len() == 1 && t.shape.iter().product::<u64>() <= 1 => {
@@ -205,7 +205,7 @@ fn declared(e: &UnitsEvidence) -> Option<String> {
     e.value().cloned()
 }
 fn unit_evidence_from_attrs(
-    attrs: &[crate::hdf5_reader::messages::attribute::AttributeMessage],
+    attrs: &[hdf5_reader::RawAttribute],
     max_bytes: usize,
     allow_labels: bool,
 ) -> Result<DatasetUnits> {
@@ -224,15 +224,15 @@ fn unit_evidence_from_attrs(
             });
         }
     }
-    if let Some(a) = attrs.iter().find(|a| a.name == VARIABLE_PAIR) {
-        if let Some(over) = over_budget(a.raw_data.len(), max_bytes, VARIABLE_PAIR) {
+    if let Some(a) = attrs.iter().find(|a| a.name() == VARIABLE_PAIR) {
+        if let Some(over) = over_budget(a.message().raw_data.len(), max_bytes, VARIABLE_PAIR) {
             return Ok(DatasetUnits {
                 units: over,
                 source: UnitsSource::VariablePair,
                 quantity_name,
             });
         }
-        let t = typed_attribute(a.clone())?;
+        let t = typed_attribute(a)?;
         let raw = t.raw_bytes;
         let units = match t.value {
             MetadataValue::Strings(mut v) if v.len() == 2 && t.shape == vec![2] => {
@@ -258,7 +258,7 @@ fn unit_evidence_from_attrs(
     let labels: Vec<&str> = KNOWN_QUANTITY_LABELS
         .iter()
         .copied()
-        .filter(|l| allow_labels && attrs.iter().any(|a| a.name == *l))
+        .filter(|l| allow_labels && attrs.iter().any(|a| a.name() == *l))
         .collect();
     match labels.as_slice() {
         [] => Ok(DatasetUnits {
@@ -274,13 +274,13 @@ fn unit_evidence_from_attrs(
             quantity_name,
         }),
         many => {
-            let first = attrs.iter().find(|a| a.name == many[0]).unwrap();
+            let first = attrs.iter().find(|a| a.name() == many[0]).unwrap();
             Ok(DatasetUnits {
                 units: UnitsEvidence::unsupported(
                     UnsupportedCode::Schema,
                     format!("ambiguous quantity-label attributes: {many:?}"),
                 )
-                .with_raw_bytes(first.raw_data.clone()),
+                .with_raw_bytes(first.message().raw_data.clone()),
                 source: UnitsSource::None,
                 quantity_name,
             })
@@ -325,7 +325,11 @@ impl ReadOnlyHdfSession {
             ),
             || {
                 let ds = self.file.dataset(dataset).map_err(map_error)?;
-                unit_evidence_from_attrs(ds.raw_attributes(), max_bytes, allow_labels)
+                unit_evidence_from_attrs(
+                    &ds.raw_attributes().map_err(map_error)?,
+                    max_bytes,
+                    allow_labels,
+                )
             },
         )
     }
@@ -333,7 +337,7 @@ impl ReadOnlyHdfSession {
     pub fn dataset_units_attribute(&self, dataset: &str) -> Result<UnitsEvidence> {
         let ds = self.file.dataset(dataset).map_err(map_error)?;
         evidence(
-            ds.raw_attributes(),
+            &ds.raw_attributes().map_err(map_error)?,
             UNITS_ATTRIBUTE,
             super::DEFAULT_MAX_BYTES,
         )

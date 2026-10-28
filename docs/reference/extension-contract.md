@@ -219,7 +219,7 @@ including on process-cached sessions.
 
 Aborts (stack overflow, allocation failure) cannot be caught in-process. The engine
 prevents those on file input with read budgets and malformed-input hardening (see
-[engine-api.md](engine-api.md#byte-budgets) and `vendor/hdf5-reader/PROVENANCE.md`): bounded
+[engine-api.md](engine-api.md#byte-budgets) and [provenance.md](provenance.md#hdf5-reader)): bounded
 soft-link resolution, decoded chunk size bounded before allocation (256 MiB default),
 checked size arithmetic, chunk-cache recovery after a decoder panic, and attribute element
 counts checked against their payload.
@@ -437,15 +437,15 @@ define how the bindings are used:
 
 ## Dependency provenance
 
-* `hdf5-reader`/`hdf5-core` are vendored in this repository's `vendor/` directory and
-  compiled into the crate as private modules, based on upstream `roteiro-gis/netcdf-rust` tag `v0.9.3`
-  (`3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`) plus 14 local patches, `MIT OR Apache-2.0`.
-  `vendor/hdf5-reader/PROVENANCE.md` and `vendor/LOCAL_PATCHES.md` record the local
-  changes. The extension has no direct generic-reader dependency.
+* `hdf5-reader`/`hdf5-core` 0.10.1 from crates.io (`roteiro-gis/netcdf-rust` tag
+  `v0.10.1`, `957b10000b1bb52654a51881b3fb868a32f26b7e`), `MIT OR Apache-2.0`, an ordinary
+  dependency of the engine (feature `hdf`). The engine's two read policies on top of it are
+  in `src/hdf/reader.rs` (see [provenance.md](provenance.md#hdf5-reader)). The extension
+  has no direct generic-reader dependency.
 * `freestiler-core`: `walkerke/freestiler`, revision
   `beb64b0d4414da895ec67d02b2f91db6ab6acc37`, MIT AND ISC. Its crate is unpublished, so its
   source is embedded from `vendor/freestiler-core` (feature `python`; see
-  `vendor/freestiler-core/PROVENANCE.md`). `vendor/PROVENANCE.json` records both upstreams
+  `vendor/freestiler-core/PROVENANCE.md`). `vendor/PROVENANCE.json` records its upstream
   and the file hashes.
 * PyO3/rust-numpy provide the binding. ndarray allocations transfer to NumPy on numeric
   return. Owned input copies are intentional and are not zero-copy.
@@ -472,7 +472,7 @@ The wheel ships these files under `.dist-info/licenses/`, through maturin
 - `THIRD-PARTY-NOTICES.md`: generated from the locked release-wheel graph
   (`python,extension-module,exports-all,exports-pmtiles`). It lists the engine (as
   `ras-commander-fast-hdf`, the name ras-commander's wheel gate looks for), the
-  embedded vendor sources and every crate linked for any target platform, with the full
+  embedded vendor source and every crate linked for any target platform, with the full
   licence texts each crate ships. It includes the bundled zstd C library (BSD-3-Clause,
   elected from BSD-3-Clause OR GPL-2.0) and the Apache-2.0-only `approx` and `prost`.
   Compile-time proc-macro crates (such as `prost-derive`) are listed too, marked as such.

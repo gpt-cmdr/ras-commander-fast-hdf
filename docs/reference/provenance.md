@@ -3,9 +3,9 @@
 This page explains where the code in this repository came from and which licence notices
 apply to it. In short: the Rust engine was extracted from the MIT-licensed
 [ras-commander](https://github.com/gpt-cmdr/ras-commander) project, the Python extension
-came from ras-commander's `rust/fast-hdf` directory, and the pure-Rust HDF5 reader is a
-vendored, locally modified copy of an upstream MIT/Apache-2.0 project. Since 0.2.0 all of it
-is one crate, `ras-commander-fast-hdf`.
+came from ras-commander's `rust/fast-hdf` directory, and the pure-Rust HDF5 reader is the
+upstream MIT/Apache-2.0 `hdf5-reader` crate, an ordinary crates.io dependency. Since 0.2.0
+the engine and the extension are one crate, `ras-commander-fast-hdf`.
 
 ## Engine (`src/`)
 
@@ -23,24 +23,58 @@ The Python extension (`ras_commander._fast_hdf`) was previously maintained in
 ras-commander's `rust/fast-hdf` directory and moved here together with the engine. It is
 now the `python` feature of the same crate; `python/` holds only the Python packaging.
 
+## HDF5 reader
+
+HDF5 decoding uses the `hdf5-reader` and `hdf5-core` crates 0.10.1 from
+[roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (`MIT OR
+Apache-2.0`, copyright Ian Norden; tag `v0.10.1`, commit
+`957b10000b1bb52654a51881b3fb868a32f26b7e`), as ordinary crates.io dependencies with the
+reader's `rayon` and `lz4` features. Up to 0.2.3 the engine compiled a copy of the 0.9.3
+reader with 14 local patches into the crate. Twelve of them are upstream in 0.10.0 and
+0.10.1:
+
+| Old patch | Upstream 0.10.0 / 0.10.1 |
+|---|---|
+| 0001 v2/v3 shared message locations | #103 (`526a88b`) |
+| 0002 exact datatype bytes, raw attributes, `UnsupportedEncoding`, attribute bounds | #108 (`e6d374d`), #109 (`d343783`) |
+| 0003 attribute element counts | #104 (`ec2e4dc`) |
+| 0004 in-flight chunk loads after a decoder panic | #104 (`a2a2a63`) |
+| 0005 checked arithmetic for file-derived sizes | #104 (`4e3705c`) |
+| 0006 per-chunk allocation limit, `ResourceLimit` | #104 (`7698a51`, `52011e7`) |
+| 0007 multi-filter stage bounds | #103 (`d0a51fa`) |
+| 0009 stale chunks outside a shrunk extent | #103 (`ac1572e`) |
+| 0010 one link walk per soft/external link | #104 (`9639349`) |
+| 0011 old-style group name cache, `Group::member_names` | #107 (`5242e51`) |
+| 0012 soft links in old-style groups | #103 (`8c1c6d8`) |
+| 0013 row/column gathers, uncached reads, cache defaults | #106 (`1be2681`); selected-chunk index lookups for gathers: #111 (`269fcae`, 0.10.1) |
+
+The other two were CLB qualification policies, not fixes. The engine now applies them
+itself, in `src/hdf/reader.rs`, with the same refusals:
+
+- **Unbounded filters** (old 0008). In a pipeline of several filters, a filter without an
+  encoded-size bound (LZ4, SZIP or an unknown filter) that is decoded as an intermediate
+  stage would be decoded without a size limit. The read is refused (`Unsupported`, code
+  `encoding`).
+- **Large extensible-array chunk indexes** (old 0014). An extensible-array index with more
+  elements than its index block is refused (`Unsupported`, code `encoding`). Upstream
+  0.10.0 maps such indexes correctly (#102, #105); lifting the refusal is a separate,
+  qualified change.
+
+All reads go through `src/hdf/reader.rs`, which checks both policies before the reader
+reads a dataset's chunk index or decodes a chunk. Metadata reads are not affected. The
+policies are judged per dataset rather than per chunk, so they are slightly stricter than
+before (for example, a pipeline whose chunks all skip the unbounded filter is refused too).
+No HEC-RAS file is affected: HEC-RAS writes v1 B-tree chunk indexes and no LZ4 or unknown
+filters. The tests are `src/hdf/reader_policy_tests.rs`, with fixtures in
+`tests/fixtures/reader_policy`.
+
 ## Vendored source (`vendor/`)
 
-The vendored source is compiled into the crate as private modules (`src/lib.rs`); none of
-it is public API. `vendor/` contains a modified copy of the `hdf5-reader` and `hdf5-core`
-crates from
-[roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (`MIT OR
-Apache-2.0`, copyright Ian Norden), based on upstream tag `v0.9.3` (commit
-`3d708fd40c6809f5d215bd2d9f15e9a05de84bd0`) with 14 local patches (`vendor/patches/`).
-Generic reader changes are kept generic: no RAS-specific parsing is hidden in the reader.
-Two patches are fail-closed engine policies (unbounded filters and non-inline
-extensible-array indexes are refused).
-
-- [`vendor/hdf5-reader/PROVENANCE.md`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/hdf5-reader/PROVENANCE.md) is the
-  change notice for every modified file.
-- [`vendor/LOCAL_PATCHES.md`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/LOCAL_PATCHES.md) summarises the patch series.
-- [`vendor/PROVENANCE.json`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/PROVENANCE.json) records the upstream, base
-  commit and per-file SHA-256 hashes. `scripts/vendor_sources.py --check` (or
-  `scripts/prepare-reader.ps1`) verifies `vendor/` against it.
+The vendored source is compiled into the crate as a private module (`src/lib.rs`); none of
+it is public API. [`vendor/PROVENANCE.json`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/vendor/PROVENANCE.json)
+records the upstream, base commit and per-file SHA-256 hashes.
+`scripts/vendor_sources.py --check` (or `scripts/prepare-reader.ps1`) verifies `vendor/`
+against it.
 
 `vendor/freestiler-core` is a mechanically adapted copy of `freestiler-core` from
 [walkerke/freestiler](https://github.com/walkerke/freestiler) at revision
@@ -55,9 +89,6 @@ dependency; `vendor/freestiler-core/PROVENANCE.md` lists the changes.
 - [`python/licenses/ras-commander-LICENSE.txt`](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/python/licenses/ras-commander-LICENSE.txt):
   MIT, copyright William M. Katzenmeyer. This is the original ras-commander notice and is
   retained for the code extracted from ras-commander.
-- `vendor/LICENSE-MIT` and `vendor/LICENSE-APACHE`: the upstream licences of the vendored
-  reader, retained unchanged. The crate's licence expression keeps the reader's
-  `MIT OR Apache-2.0`.
 - `vendor/freestiler-core/LICENSE`, `LICENSE.md`, `LICENSE.note` and `COPYRIGHTS`: the
   freestiler licence texts, retained unchanged.
 - `THIRD-PARTY-NOTICES.md` (repository root) and `python/licenses/THIRD-PARTY-NOTICES.md` are the

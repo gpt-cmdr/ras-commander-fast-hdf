@@ -167,10 +167,8 @@ impl Dataspace {
     pub fn is_null(&self) -> bool {
         matches!(self, Self::Null)
     }
-    pub(crate) fn from_message(
-        m: &crate::hdf5_reader::messages::dataspace::DataspaceMessage,
-    ) -> Self {
-        use crate::hdf5_reader::messages::dataspace::DataspaceType as T;
+    pub(crate) fn from_message(m: &hdf5_reader::messages::dataspace::DataspaceMessage) -> Self {
+        use hdf5_reader::messages::dataspace::DataspaceType as T;
         match m.dataspace_type {
             T::Null => Self::Null,
             T::Scalar => Self::Scalar,
@@ -179,7 +177,7 @@ impl Dataspace {
     }
     /// A dataset's class without a vendor accessor: rank zero is Scalar (one element) or
     /// Null (no elements); any other rank is Simple.
-    pub(crate) fn of_dataset(ds: &crate::hdf5_reader::Dataset) -> crate::Result<Self> {
+    pub(crate) fn of_dataset(ds: &crate::hdf::reader::Dataset) -> crate::Result<Self> {
         if ds.ndim() > 0 {
             return Ok(Self::Simple(ds.shape().to_vec()));
         }

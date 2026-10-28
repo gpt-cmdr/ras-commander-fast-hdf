@@ -1,9 +1,9 @@
 # Release performance probe
 
 This is a measurement-only harness. It uses the public engine API and, for
-the raw mode, its own copy of the embedded HDF5 reader modules (compiled from
-`vendor/` as `src/lib.rs` does, because the crate keeps them private). It does
-not instrument or alter engine code.
+the raw mode, the `hdf5-reader` crate the engine depends on, called directly
+(without the engine's read policies in `src/hdf/reader.rs`). It does not
+instrument or alter engine code.
 
 ## Requirements
 

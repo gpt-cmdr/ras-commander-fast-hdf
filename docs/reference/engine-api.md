@@ -608,8 +608,8 @@ return types are unchanged.
   reported as units. `dataset_units(path) -> DatasetUnits` is the priority chain with
   provenance; `dataset_units_attribute(path) -> UnitsEvidence` is the exact `Units`
   attribute only; `dataset_unit_evidence` is a deprecated alias of `dataset_units`.
-- Dataset attributes use vendored reader patch 04 (`Dataset::raw_attributes`), the dataset
-  counterpart of the group raw-attribute path.
+- Dataset attributes use the reader's `Dataset::raw_attributes`, the dataset counterpart of
+  the group raw-attribute path.
 - Verification: synthetic h5py fixtures under `tests/fixtures/time/` (generator plus
   SHA-256 manifest). The ms epoch interpretation and real `Time Date Stamp (ms)` semantics
   are checked against real files by the opt-in

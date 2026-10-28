@@ -1,0 +1,12 @@
+{
+  "generator": "make_fixtures.py",
+  "h5py": "3.15.1",
+  "hdf5": "1.14.6",
+  "files": {
+    "ea_inline.h5": "9864eed495d124ad8bdc55ae8962f531e80f8090f9c24ba89ffed122e3885258",
+    "ea_latest.h5": "7df4183e8eb0894bd550b683e9220874fbad7a796fe0a0fdd36a6b4019ff5683",
+    "filter_deflate_then_lz4.h5": "82a08acdc36ad6f7d412cd0376868ca0c4e35173a4527f828af30dcaf4956d42",
+    "filter_lz4_then_deflate.h5": "8a5554333ff79c13ef8da48fea3b5787746498767ad919148d396cbb54a80832",
+    "filter_unknown_then_deflate.h5": "03bb793bf05d4b66dccff229f1b317deec919ed369da055066b29c84107f2ead"
+  }
+}

@@ -62,11 +62,11 @@ pub(super) fn attributes(
             .dataset(path)
             .map_err(map_error)?
             .raw_attributes()
-            .to_vec()
+            .map_err(map_error)?
     };
-    raw.into_iter()
+    raw.iter()
         .map(|a| {
-            budget(a.raw_data.len(), max)?;
+            budget(a.message().raw_data.len(), max)?;
             typed_attribute(a)
         })
         .collect()
@@ -79,11 +79,12 @@ pub(super) fn refused_descriptor(
 ) -> Result<StoredDataset> {
     let ds = s.file.dataset(path).map_err(map_error)?;
     let storage = match ds.dtype() {
-        crate::hdf5_reader::Datatype::FixedPoint { .. }
-        | crate::hdf5_reader::Datatype::FloatingPoint { .. } => "numeric",
-        crate::hdf5_reader::Datatype::String { .. } => "strings",
-        crate::hdf5_reader::Datatype::Compound { .. } => "compound",
-        crate::hdf5_reader::Datatype::Bitfield { size: 1, .. } => "bitfield_bytes",
+        hdf5_reader::Datatype::FixedPoint { .. } | hdf5_reader::Datatype::FloatingPoint { .. } => {
+            "numeric"
+        }
+        hdf5_reader::Datatype::String { .. } => "strings",
+        hdf5_reader::Datatype::Compound { .. } => "compound",
+        hdf5_reader::Datatype::Bitfield { size: 1, .. } => "bitfield_bytes",
         _ => "unqualified",
     };
     Ok(StoredDataset {
@@ -116,10 +117,10 @@ pub(super) fn descriptor(s: &ReadOnlyHdfSession, path: &str, max: usize) -> Resu
         ("numeric", numeric.kind, Capability::Supported)
     } else {
         match ds.dtype() {
-            crate::hdf5_reader::Datatype::Bitfield { size: 1, .. } => {
+            hdf5_reader::Datatype::Bitfield { size: 1, .. } => {
                 ("bitfield_bytes", None, Capability::Supported)
             }
-            crate::hdf5_reader::Datatype::String { .. } => {
+            hdf5_reader::Datatype::String { .. } => {
                 budget(ds.raw_byte_len().map_err(map_error)?, max)?;
                 let cap = match s.read_strings(path) {
                     Ok(_) => Capability::Supported,
@@ -127,7 +128,7 @@ pub(super) fn descriptor(s: &ReadOnlyHdfSession, path: &str, max: usize) -> Resu
                 };
                 ("strings", None, cap)
             }
-            crate::hdf5_reader::Datatype::Compound { .. } => {
+            hdf5_reader::Datatype::Compound { .. } => {
                 let cap = match s.simple_compound(path, max) {
                     Ok(t) => t
                         .columns

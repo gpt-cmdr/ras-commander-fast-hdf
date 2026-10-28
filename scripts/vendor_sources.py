@@ -1,29 +1,28 @@
 """Rebuild or verify the third-party source carried in vendor/.
 
-ras-commander-fast-hdf compiles two third-party code bases as internal modules
+ras-commander-fast-hdf compiles one third-party code base as an internal module
 of its own crate (see lib.rs):
 
-* hdf5: the hdf5-reader and hdf5-core crates of roteiro-gis/netcdf-rust at tag
-  v0.9.3, with the patch series vendor/patches/*.patch applied (git am).
-  Modules crate::hdf5_reader and crate::hdf5_core.
 * freestiler: the freestiler-core crate of walkerke/freestiler at commit
   beb64b0. Module crate::freestiler_core.
+
+(The HDF5 reader, hdf5-reader, is an ordinary crates.io dependency; it is no
+longer vendored.)
 
 Each Rust source file is embedded with a small, mechanical transform (below):
 a two-line notice is prepended and crate-relative paths are re-rooted at the
 module. Everything else (licences, upstream tests and fixtures) is copied
 byte for byte. vendor/PROVENANCE.json records, for every vendored file, its
-SHA-256 and, for transformed files, the SHA-256 of the upstream (patched)
-file it was derived from.
+SHA-256 and, for transformed files, the SHA-256 of the upstream file it was
+derived from.
 
 Usage:
   python scripts/vendor_sources.py --check
       Verify vendor/ against PROVENANCE.json (offline).
-  python scripts/vendor_sources.py --netcdf-rust PATH --freestiler PATH [--write]
-      PATH are clones of https://github.com/roteiro-gis/netcdf-rust and
-      https://github.com/walkerke/freestiler containing the pinned commits.
-      Rebuild the vendored files from upstream, compare them with vendor/
-      (replace them with --write) and rewrite PROVENANCE.json.
+  python scripts/vendor_sources.py --freestiler PATH [--write]
+      PATH is a clone of https://github.com/walkerke/freestiler containing the
+      pinned commit. Rebuild the vendored files from upstream, compare them
+      with vendor/ (replace them with --write) and rewrite PROVENANCE.json.
 """
 from __future__ import annotations
 
@@ -46,12 +45,7 @@ SKIP_DIRS = {"target", ".git", "__pycache__"}
 
 # Files in vendor/ written locally (not derived from upstream).
 LOCAL = [
-    "LOCAL_PATCHES.md",
-    "hdf5-reader/PROVENANCE.md",
     "freestiler-core/PROVENANCE.md",
-    "reader-tests/Cargo.toml",
-    "reader-tests/Cargo.lock",
-    "reader-tests/src/lib.rs",
 ]
 
 CRATE_PATH = rb"(?<![\w$:])crate::"
@@ -62,42 +56,6 @@ def notice(text: str) -> bytes:
 
 
 COMPONENTS = {
-    "hdf5": {
-        "upstream": "https://github.com/roteiro-gis/netcdf-rust",
-        "tag": "v0.9.3",
-        "commit": "3d708fd40c6809f5d215bd2d9f15e9a05de84bd0",
-        "crates": {"hdf5-reader": "0.9.3", "hdf5-core": "0.9.3"},
-        "license": "MIT OR Apache-2.0",
-        "copyright": "Copyright (c) 2026 Ian Norden",
-        "licence_files": ["LICENSE-MIT", "LICENSE-APACHE"],
-        "change_notice": "hdf5-reader/PROVENANCE.md",
-        "patches": "patches",
-        # upstream path -> vendor path, copied byte for byte
-        "copy": {
-            "LICENSE-MIT": "LICENSE-MIT",
-            "LICENSE-APACHE": "LICENSE-APACHE",
-            "README.md": "README.md",
-            "hdf5-reader/tests": "hdf5-reader/tests",
-            "hdf5-reader/testdata": "hdf5-reader/testdata",
-            "testdata/hdf5": "testdata/hdf5",
-        },
-        # upstream source dir -> (vendor dir, module, rules)
-        "embed": {
-            "hdf5-core/src": ("hdf5-core/src", "crate::hdf5_core", [
-                (CRATE_PATH, rb"crate::hdf5_core::"),
-            ]),
-            "hdf5-reader/src": ("hdf5-reader/src", "crate::hdf5_reader", [
-                (CRATE_PATH, rb"crate::hdf5_reader::"),
-                (rb"(?<![\w:])hdf5_core::", rb"crate::hdf5_core::"),
-                (rb'feature = "(?:rayon|lz4)"', rb'feature = "hdf"'),
-            ]),
-        },
-        "omit": [],
-        "notice": (
-            "// ras-commander-fast-hdf: modified copy of roteiro-gis/netcdf-rust v0.9.3, MIT OR Apache-2.0,\n"
-            "// Copyright (c) 2026 Ian Norden. Changes are listed in vendor/hdf5-reader/PROVENANCE.md.\n"
-        ),
-    },
     "freestiler": {
         "upstream": "https://github.com/walkerke/freestiler",
         "tag": None,
@@ -116,7 +74,6 @@ COMPONENTS = {
             "freestiler-core/src/supercluster/UPSTREAM-LICENSES",
         ],
         "change_notice": "freestiler-core/PROVENANCE.md",
-        "patches": None,
         "copy": {
             "LICENSE.md": "freestiler-core/LICENSE.md",
             "LICENSE": "freestiler-core/LICENSE",
@@ -184,18 +141,12 @@ def git(*args: str, cwd: Path, binary: bool = False):
 
 
 def checkout(name: str, spec: dict, clone: Path, work: Path) -> Path:
-    """Upstream tree at the pinned commit, with the patch series applied."""
+    """Upstream tree at the pinned commit."""
     tree = work / name
-    if spec["patches"]:
-        git("worktree", "add", "--detach", str(tree), spec["commit"], cwd=clone)
-        patches = sorted(str(p) for p in (VENDOR / spec["patches"]).glob("*.patch"))
-        git("-c", "user.name=vendor", "-c", "user.email=vendor@localhost",
-            "am", "--quiet", *patches, cwd=tree)
-    else:
-        tree.mkdir()
-        archive = git("archive", "--format=tar", spec["commit"], cwd=clone, binary=True)
-        with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
-            tar.extractall(tree, filter="data")
+    tree.mkdir()
+    archive = git("archive", "--format=tar", spec["commit"], cwd=clone, binary=True)
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        tar.extractall(tree, filter="data")
     return tree
 
 
@@ -227,11 +178,6 @@ def build(name: str, spec: dict, tree: Path) -> tuple[dict[str, bytes], dict[str
 def describe(spec: dict) -> dict:
     out = {k: spec[k] for k in ("upstream", "tag", "commit", "crates", "license",
                                 "copyright", "licence_files", "change_notice")}
-    if spec["patches"]:
-        out["patches"] = [
-            {"patch": f"{spec['patches']}/{p.name}", "sha256": sha256(p.read_bytes())}
-            for p in sorted((VENDOR / spec["patches"]).glob("*.patch"))
-        ]
     out["omitted"] = spec["omit"]
     out["embedding"] = {
         "modules": {dst: module for dst, module, _ in spec["embed"].values()},
@@ -275,10 +221,6 @@ def check() -> int:
     errors += [f"unrecorded: {k}" for k in actual if k not in recorded]
     if tree_digest(recorded) != manifest["tree_sha256"]:
         errors.append("tree_sha256 does not match the recorded file list")
-    for spec in manifest["components"].values():
-        for entry in spec.get("patches", []):
-            if recorded.get(entry["patch"]) != entry["sha256"]:
-                errors.append(f"patch hash mismatch: {entry['patch']}")
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1
@@ -295,18 +237,11 @@ def regenerate(clones: dict[str, Path], write: bool) -> int:
     upstream: dict[str, str] = {}
     with tempfile.TemporaryDirectory() as tmp:
         work = Path(tmp)
-        worktrees = []
-        try:
-            for name, spec in COMPONENTS.items():
-                tree = checkout(name, spec, clones[name], work)
-                if spec["patches"]:
-                    worktrees.append((clones[name], tree))
-                files, hashes = build(name, spec, tree)
-                expected.update(files)
-                upstream.update(hashes)
-        finally:
-            for clone, tree in worktrees:
-                git("worktree", "remove", "--force", str(tree), cwd=clone)
+        for name, spec in COMPONENTS.items():
+            tree = checkout(name, spec, clones[name], work)
+            files, hashes = build(name, spec, tree)
+            expected.update(files)
+            upstream.update(hashes)
     if write:
         derived_roots = {
             dst for spec in COMPONENTS.values() for dst in spec["copy"].values()
@@ -325,7 +260,7 @@ def regenerate(clones: dict[str, Path], write: bool) -> int:
     errors = [f"differs from upstream: {k}" for k, v in expected.items() if actual.get(k) != sha256(v)]
     errors += [
         f"neither upstream-derived nor a local file: {k}" for k in actual
-        if k not in expected and k not in LOCAL and not k.startswith("patches/")
+        if k not in expected and k not in LOCAL
     ]
     if errors:
         print("\n".join(errors), file=sys.stderr)
@@ -338,17 +273,11 @@ def regenerate(clones: dict[str, Path], write: bool) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--check", action="store_true")
-    parser.add_argument("--netcdf-rust", type=Path)
     parser.add_argument("--freestiler", type=Path)
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
-    if args.netcdf_rust or args.freestiler:
-        if not (args.netcdf_rust and args.freestiler):
-            parser.error("--netcdf-rust and --freestiler are both required")
-        return regenerate(
-            {"hdf5": args.netcdf_rust.resolve(), "freestiler": args.freestiler.resolve()},
-            args.write,
-        )
+    if args.freestiler:
+        return regenerate({"freestiler": args.freestiler.resolve()}, args.write)
     return check()
 
 
