@@ -33,8 +33,36 @@ pub(crate) enum Writer<'a> {
     Lifetime(std::marker::PhantomData<&'a ()>),
 }
 
+/// Refuse, before any output is staged, attribute types a format cannot store
+/// exactly. Arrow IPC and GeoParquet store every contract type natively. The
+/// other formats take the v1 scalars plus float32 (FlatGeobuf `Float`,
+/// GeoPackage `FLOAT` stored as SQLite REAL, GeoJSON the exact float64 value
+/// of the float32); `Null`, lists, structs and non-millisecond timestamps
+/// refuse there.
+fn check_format_types(schema: &arrow_schema::Schema, c: &Contract, format: Format) -> Result<()> {
+    if matches!(format, Format::Arrow | Format::GeoParquet) {
+        return Ok(());
+    }
+    crate::exports::contract::require_case_insensitive_names(schema)?;
+    for (i, field) in schema.fields().iter().enumerate() {
+        let dtype = field.data_type();
+        if i != c.geometry
+            && !crate::exports::contract::is_v1_scalar(dtype)
+            && dtype != &arrow_schema::DataType::Float32
+        {
+            return Err(fail(format!(
+                "field {} has type {dtype}, which {format:?} cannot store exactly; \
+                 use GeoParquet or Arrow IPC, or convert it explicitly",
+                field.name()
+            )));
+        }
+    }
+    Ok(())
+}
+
 impl<'a> Writer<'a> {
     pub fn new(path: &Path, schema: SchemaRef, c: &'a Contract, format: Format) -> Result<Self> {
+        check_format_types(&schema, c, format)?;
         #[allow(unreachable_patterns)]
         match format {
             Format::Arrow => Ok(Self::Arrow(Box::new(
@@ -50,11 +78,17 @@ impl<'a> Writer<'a> {
                 let props = parquet::file::properties::WriterProperties::builder()
                     .set_compression(parquet::basic::Compression::SNAPPY)
                     .set_max_row_group_row_count(Some(65536))
+                    // The specification's (and pyarrow's) list layout: 3-level
+                    // LIST with the element named `element`.
+                    .set_coerce_types(true)
                     .build();
-                let writer = parquet::arrow::ArrowWriter::try_new(
+                // The root group pyarrow writes (`schema`, not arrow-rs's `arrow_schema`).
+                let writer = parquet::arrow::ArrowWriter::try_new_with_options(
                     File::create(path)?,
                     encoder.target_schema(),
-                    Some(props),
+                    parquet::arrow::arrow_writer::ArrowWriterOptions::new()
+                        .with_properties(props)
+                        .with_schema_root("schema".into()),
                 )?;
                 Ok(Self::Parquet(Box::new((encoder, writer))))
             }
@@ -116,6 +150,7 @@ impl<'a> Writer<'a> {
                         DataType::Int64 | DataType::Timestamp(..) => ColumnType::Long,
                         DataType::UInt64 => ColumnType::Long,
                         DataType::Float64 => ColumnType::Double,
+                        DataType::Float32 => ColumnType::Float,
                         DataType::Boolean => ColumnType::Bool,
                         DataType::Utf8 => ColumnType::String,
                         DataType::Binary => ColumnType::Binary,
@@ -321,6 +356,8 @@ fn json_value(a: &dyn Array, row: usize) -> Result<serde_json::Value> {
         }
         DataType::Timestamp(..) => as_array::<TimestampMillisecondArray>(a).value(row).into(),
         DataType::Float64 => as_array::<Float64Array>(a).value(row).into(),
+        // The exact float64 value of the float32 (2.6f32 is 2.5999999046325684).
+        DataType::Float32 => f64::from(as_array::<Float32Array>(a).value(row)).into(),
         DataType::Boolean => as_array::<BooleanArray>(a).value(row).into(),
         DataType::Utf8 => as_array::<StringArray>(a).value(row).into(),
         _ => return Err(fail("unsupported GeoJSON attribute")),
@@ -338,6 +375,7 @@ fn fgb_value(a: &dyn Array, row: usize) -> Result<geozero::ColumnValue<'_>> {
         ),
         DataType::Timestamp(..) => V::Long(as_array::<TimestampMillisecondArray>(a).value(row)),
         DataType::Float64 => V::Double(as_array::<Float64Array>(a).value(row)),
+        DataType::Float32 => V::Float(as_array::<Float32Array>(a).value(row)),
         DataType::Boolean => V::Bool(as_array::<BooleanArray>(a).value(row)),
         DataType::Utf8 => V::String(as_array::<StringArray>(a).value(row)),
         DataType::Binary => V::Binary(as_array::<BinaryArray>(a).value(row)),

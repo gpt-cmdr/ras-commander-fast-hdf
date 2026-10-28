@@ -169,6 +169,8 @@ geopackage = { version = "=0.10.0", optional = true, default-features = false, f
 # Reference for the predicate port in src/predicates.rs (tests only; not a
 # dependency of consumers).
 geo = { version = "0.29", default-features = false }
+# Rebuilds Arrow arrays in the export type round-trip tests.
+arrow-data = "=59.0.0"
 serde = { version = "1", features = ["derive"] }
 # float_roundtrip: the embedded freestiler supercluster tests compare golden
 # coordinates bit for bit (as upstream's dev-dependency does).
