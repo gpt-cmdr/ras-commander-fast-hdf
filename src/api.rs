@@ -14,8 +14,8 @@ pub struct Entrypoint {
     /// Type that owns the function (`ReadOnlyHdfSession`, `Topology`, `crs`, `catalog`).
     pub owner: &'static str,
     pub name: &'static str,
-    /// Smallest feature that enables it: `core` (always compiled), `catalog`, `hdf`, `mesh` or
-    /// `results`.
+    /// Smallest feature that enables it: `core` (always compiled), `catalog`, `hdf`, `mesh`,
+    /// `results` or `arrow`.
     pub feature: &'static str,
 }
 
@@ -151,6 +151,14 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "read_family_dataset", "hdf"),
     e("ReadOnlyHdfSession", "reference_point_geometry", "hdf"),
     e("ReadOnlyHdfSession", "mesh_corner_elevations", "hdf"),
+    // Canonical layers as Arrow record batches (feature `arrow`; additive, API 10).
+    e("ReadOnlyHdfSession", "mesh_area_names", "arrow"),
+    e("ReadOnlyHdfSession", "mesh_cells_layer", "arrow"),
+    e("ReadOnlyHdfSession", "mesh_faces_layer", "arrow"),
+    e("ReadOnlyHdfSession", "mesh_perimeters_layer", "arrow"),
+    e("ReadOnlyHdfSession", "simulation_start_ns", "arrow"),
+    e("ReadOnlyHdfSession", "mesh_summary_layer", "arrow"),
+    e("ReadOnlyHdfSession", "physical_cell_count", "arrow"),
 ];
 
 /// What this build of the engine offers.
@@ -179,6 +187,9 @@ pub fn capabilities() -> EngineCapabilities {
     }
     if cfg!(feature = "results") {
         features.push("results");
+    }
+    if cfg!(feature = "arrow") {
+        features.push("arrow");
     }
     let entrypoints = ENTRYPOINTS
         .iter()

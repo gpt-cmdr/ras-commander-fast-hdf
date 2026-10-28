@@ -30,6 +30,8 @@ a Rust library; maturin builds the same crate as the Python wheel, through
 | `exports-geojson`, `exports-flatgeobuf`, `exports-geoparquet`, `exports-geopackage` | One vector writer each (`export_ipc_file`, `validate_export_wkb`). |
 | `exports-pmtiles` | `export_pmtiles_ipc_file`. |
 | `exports-all` | The four writers above (not PMTiles). |
+| `arrow` | Canonical HEC-RAS layers as Arrow record batches (`arrow_layers`); implies `hdf`, `mesh`, `results`. No PyO3. |
+| `python-arrow` | `arrow_layer` and `layer_catalog`: the layers as Arrow C streams (PyCapsule) in Python; implies `python` and `arrow`. Release wheels add it with the exports features. |
 
 Without `python`, no PyO3 or NumPy is in the dependency tree.
 

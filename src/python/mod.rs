@@ -1,4 +1,7 @@
 mod analysis;
+#[cfg(feature = "python-arrow")]
+#[forbid(unsafe_code)]
+mod arrow_stream;
 mod domain;
 mod fim;
 #[allow(dead_code)] // pure-Rust kernels; parts are reached only from tests
@@ -204,6 +207,8 @@ fn ras_commander_fast_hdf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     }
     #[cfg(feature = "exports-geoparquet")]
     m.add_function(wrap_pyfunction!(export_geoparquet_ipc_files, m)?)?;
+    #[cfg(feature = "python-arrow")]
+    arrow_stream::register(m)?;
     #[cfg(feature = "exports-pmtiles")]
     m.add_function(wrap_pyfunction!(export_pmtiles_ipc_file, m)?)?;
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;

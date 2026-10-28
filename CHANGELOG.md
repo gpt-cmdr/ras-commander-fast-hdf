@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Canonical layer catalog and Arrow layers (features `arrow`, `python-arrow`). The engine
+  returns `mesh_cells`, `mesh_faces`, `mesh_perimeters` (alias `mesh_areas`) and each
+  stored 2D summary variable as Arrow record batches with WKB geometry. Python receives
+  them through the Arrow PyCapsule stream interface (`arrow_layer`, `layer_catalog`),
+  with no IPC files. The layers equal ras2cng's Python pipeline on 22 files from four
+  HEC-RAS models: rows, order, types, values and WKB. Layouts ras-commander would read
+  differently are refused. See `docs/reference/arrow-layers.md`. The `exports-*` writers
+  are frozen; terrio will own file formats.
+
 - Export contract v1 accepts the column types of ras2cng's archives. Arrow IPC and
   GeoParquet (plain and archive profile) store Float32, `Null` (all-null) columns,
   timezone-free Timestamp(Microsecond/Nanosecond), and `List` and `Struct` of supported
