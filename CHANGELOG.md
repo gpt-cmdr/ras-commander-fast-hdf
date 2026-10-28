@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.4 (2026-10-28)
 
 - `ReadOnlyHdfSession::hec_ras_file_type` classifies the stored root `File Type`
   attribute against `HEC_RAS_FILE_TYPES` (`HEC-RAS Geometry`, `HEC-RAS Results`):
