@@ -11,7 +11,7 @@
 //!   intermediate stage is bounded by the encoded-size bound of the filters
 //!   applied before it when writing. DEFLATE, shuffle, Fletcher-32, N-Bit and
 //!   scale-offset have such a bound; LZ4 (32004), SZIP and unknown filters do
-//!   not. hdf5-reader 0.10.0 then decodes the stages that come before such a
+//!   not. hdf5-reader 0.10 then decodes the stages that come before such a
 //!   filter in decoding order with only its 4 GiB per-filter ceiling; the
 //!   engine refuses the read instead (`UnsupportedFilter`, so `Unsupported`
 //!   with code `encoding`). The last filter of a pipeline is the first to be

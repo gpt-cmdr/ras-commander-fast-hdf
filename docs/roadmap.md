@@ -215,15 +215,15 @@ The engine is one crate, `ras-commander-fast-hdf` (library
 name is used on crates.io and PyPI. Because crates.io does not accept path or
 Git dependencies, the patched HDF5 reader was carried inside the crate,
 rebased on upstream 0.9.3 plus 14 patches (until the reader moved to
-crates.io 0.10.0, below). The Python bindings and the export
+crates.io 0.10.1, below). The Python bindings and the export
 writers are optional features. Rust consumers (terrio, RustGIS) can depend on
 a version instead of a Git revision.
 
 ### Upstream the hdf5-reader patches
 
 **Status:** done; upstream released them in 0.10.0 (roteiro-gis/netcdf-rust
-#102 to #109). `#111` (B-tree walks that enter only the selected chunks of a
-row/column gather) is merged upstream after 0.10.0.
+#102 to #109) and 0.10.1 (#111: B-tree walks that enter only the selected
+chunks of a row/column gather).
 
 The engine vendored a patched copy of `hdf5-reader` and `hdf5-core` from
 roteiro-gis/netcdf-rust. Against upstream 0.9.3, 14 patches were needed.
@@ -256,7 +256,7 @@ change, qualified on its own.
 
 ### Depend on hdf5-reader from crates.io
 
-**Status:** done; the engine depends on `hdf5-reader` 0.10.0 from crates.io.
+**Status:** done; the engine depends on `hdf5-reader` 0.10.1 from crates.io.
 
 The internal copy of the reader is gone. Its two local policy patches are
 applied by the engine (`src/hdf/reader.rs`) with the same refusals.

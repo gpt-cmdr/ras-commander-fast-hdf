@@ -25,14 +25,15 @@ now the `python` feature of the same crate; `python/` holds only the Python pack
 
 ## HDF5 reader
 
-HDF5 decoding uses the `hdf5-reader` and `hdf5-core` crates 0.10.0 from
+HDF5 decoding uses the `hdf5-reader` and `hdf5-core` crates 0.10.1 from
 [roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (`MIT OR
-Apache-2.0`, copyright Ian Norden; tag `v0.10.0`, commit
-`9076a070fc7a03f913881e18b77082e3bea30791`), as ordinary crates.io dependencies with the
+Apache-2.0`, copyright Ian Norden; tag `v0.10.1`, commit
+`957b10000b1bb52654a51881b3fb868a32f26b7e`), as ordinary crates.io dependencies with the
 reader's `rayon` and `lz4` features. Up to 0.2.3 the engine compiled a copy of the 0.9.3
-reader with 14 local patches into the crate. Twelve of them are upstream in 0.10.0:
+reader with 14 local patches into the crate. Twelve of them are upstream in 0.10.0 and
+0.10.1:
 
-| Old patch | Upstream 0.10.0 |
+| Old patch | Upstream 0.10.0 / 0.10.1 |
 |---|---|
 | 0001 v2/v3 shared message locations | #103 (`526a88b`) |
 | 0002 exact datatype bytes, raw attributes, `UnsupportedEncoding`, attribute bounds | #108 (`e6d374d`), #109 (`d343783`) |
@@ -45,7 +46,7 @@ reader with 14 local patches into the crate. Twelve of them are upstream in 0.10
 | 0010 one link walk per soft/external link | #104 (`9639349`) |
 | 0011 old-style group name cache, `Group::member_names` | #107 (`5242e51`) |
 | 0012 soft links in old-style groups | #103 (`8c1c6d8`) |
-| 0013 row/column gathers, uncached reads, cache defaults | #106 (`1be2681`) |
+| 0013 row/column gathers, uncached reads, cache defaults | #106 (`1be2681`); selected-chunk index lookups for gathers: #111 (`269fcae`, 0.10.1) |
 
 The other two were CLB qualification policies, not fixes. The engine now applies them
 itself, in `src/hdf/reader.rs`, with the same refusals:
