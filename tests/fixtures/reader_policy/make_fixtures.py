@@ -24,6 +24,10 @@ h5py libver="latest", "data" f32 shape (50, 101), maxshape (None, 101),
 chunks (1, 101), values row * 101 + col + 1: an extensible-array chunk index
 with 50 elements, more than its index block holds.
 
+ea_deep.h5: h5py libver="latest", "data" f32 shape (9000, 2), maxshape
+(None, 2), chunks (1, 2), values row * 2 + col + 1: 9000 chunks, so the index
+has super blocks and paged data blocks.
+
 Run: python tests/fixtures/reader_policy/make_fixtures.py
 """
 from pathlib import Path
@@ -93,8 +97,23 @@ def main() -> None:
             maxshape=(None, 5),
             chunks=(1, 5),
         )
+    # A deep extensible-array chunk index: 9000 chunks need super blocks, data
+    # blocks and paged data blocks. h5py (libhdf5) is the oracle: its read of
+    # every value is checked here and recorded as a SHA-256 in the manifest.
+    deep = (np.arange(9000 * 2, dtype="<f4").reshape(9000, 2) + 1)
+    with h5py.File(OUT / "ea_deep.h5", "w", libver="latest") as f:
+        f.create_dataset("data", data=deep, maxshape=(None, 2), chunks=(1, 2))
+    oracle = {}
+    for name in ("ea_deep.h5", "ea_latest.h5"):
+        with h5py.File(OUT / name, "r") as f:
+            values = f["data"][()]
+        rows, cols = values.shape
+        expected = (np.arange(rows * cols, dtype="<f4").reshape(rows, cols) + 1)
+        assert np.array_equal(values, expected), name
+        oracle[name] = hashlib.sha256(values.astype("<f4").tobytes()).hexdigest()
     manifest = {
         "generator": "make_fixtures.py",
+        "h5py_values_sha256": oracle,
         "h5py": h5py.__version__,
         "hdf5": h5py.version.hdf5_version,
         "files": {

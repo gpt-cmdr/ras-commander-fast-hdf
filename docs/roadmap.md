@@ -240,25 +240,27 @@ Grouping as proposed upstream:
 - **D. Raw encoding evidence API** (discuss first), preferably in a
   non-breaking shape.
 
-Two patches are CLB fail-closed policies and stay local: refusing unbounded
-filters, and refusing extensible-array indexes larger than the index block.
-The engine now applies both itself (`src/hdf/reader.rs`).
+Two patches were CLB fail-closed policies: refusing unbounded filters, which
+the engine now applies itself (`src/hdf/reader.rs`), and refusing
+extensible-array indexes larger than the index block, which is lifted (see
+below).
 
 ### Report the extensible-array silent-zeros bug upstream
 
-**Status:** fixed upstream in 0.10.0 (#102, #105); the engine still refuses.
+**Status:** done. Fixed upstream in 0.10.0 (#102, #105); the engine's refusal
+is lifted, and every value of its extensible-array fixtures (up to super blocks
+and paged data blocks) is checked against h5py.
 
 Upstream `hdf5-reader` 0.9.3 returns fill values (zeros), with no error, for
 extensible-array chunks 36 to 49 of a 50-chunk h5py dataset. The engine
 avoids it by refusing such indexes, which also refuses valid files. Upstream
-0.10.0 maps them as libhdf5 does. Lifting the engine's refusal is a separate
-change, qualified on its own.
+0.10.0 maps them as libhdf5 does, so the engine reads them.
 
 ### Depend on hdf5-reader from crates.io
 
 **Status:** done; the engine depends on `hdf5-reader` 0.10.1 from crates.io.
 
-The internal copy of the reader is gone. Its two local policy patches are
+The internal copy of the reader is gone. Its unbounded-filter policy is
 applied by the engine (`src/hdf/reader.rs`) with the same refusals.
 
 ### Reader-level limits for direct reader users

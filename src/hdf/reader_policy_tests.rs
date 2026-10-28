@@ -1,6 +1,8 @@
-//! The engine's read policies (src/hdf/reader.rs) refuse exactly what the
-//! reader the engine embedded up to 0.2.3 refused (its patches 0008 and 0014),
-//! with the same error kind, code, subject and message. Fixtures and their
+//! The engine's read policy (src/hdf/reader.rs) refuses exactly what the
+//! reader the engine embedded up to 0.2.3 refused with its patch 0008, with the
+//! same error kind, code, subject and message. Extensible-array chunk indexes
+//! past their index block (formerly refused by patch 0014) read as h5py reads
+//! them. Fixtures and their
 //! generator: tests/fixtures/reader_policy.
 use super::*;
 
@@ -117,19 +119,80 @@ fn a_final_lz4_stage_is_decoded_not_refused() {
     );
 }
 
+/// The SHA-256 h5py gave for every value of `name` (`manifest.json`, written by
+/// `make_fixtures.py`, which also checks the values against their formula).
+fn h5py_sha256(name: &str) -> String {
+    let manifest: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(fixture("manifest.json")).unwrap()).unwrap();
+    manifest["h5py_values_sha256"][name]
+        .as_str()
+        .unwrap()
+        .to_string()
+}
+
+fn f32_values(values: &NumericValues) -> &[f32] {
+    match values {
+        NumericValues::F32(v) => v,
+        other => panic!("{other:?}"),
+    }
+}
+
 #[test]
-fn extensible_arrays_past_the_index_block_are_refused() {
-    let gathers: &[(Slice, &[u64])] = &[
-        (Slice::new(35, 50, 1), &[0, 100]),
-        (Slice::new(0, 4, 1), &[3, 1]),
-        (Slice::new(2, 50, 7), &[100, 0, 50, 50]),
-    ];
-    assert_refused(
-        "ea_latest.h5",
-        NumericKind::F32,
-        gathers,
-        "unsupported non-inline extensible-array chunk index (unqualified block mapping)",
-    );
+fn extensible_arrays_past_the_index_block_read_as_h5py_reads_them() {
+    use sha2::{Digest, Sha256};
+    // ea_latest.h5: 50 chunks (beyond the index block); ea_deep.h5: 9000 chunks
+    // (super blocks and paged data blocks). Values are row * cols + col + 1.
+    for (name, rows, cols) in [("ea_latest.h5", 50u64, 101u64), ("ea_deep.h5", 9000, 2)] {
+        let value = |r: u64, c: u64| (r * cols + c + 1) as f32;
+        for threads in [1, 4] {
+            let s = ReadOnlyHdfSession::with_options(fixture(name), threads, true).unwrap();
+            let full = s.read_numeric("data", None).unwrap();
+            assert_eq!(full.shape, vec![rows, cols], "{name}");
+            let bytes: Vec<u8> = f32_values(&full.values)
+                .iter()
+                .flat_map(|v| v.to_le_bytes())
+                .collect();
+            let hex: String = Sha256::digest(&bytes)
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect();
+            assert_eq!(
+                hex,
+                h5py_sha256(name),
+                "{name}: every value as h5py reads it"
+            );
+            let part = s
+                .read_numeric(
+                    "data",
+                    Some(&[Slice::new(rows / 3, rows, 7), Slice::new(1, cols, 2)]),
+                )
+                .unwrap();
+            let want: Vec<f32> = (rows / 3..rows)
+                .step_by(7)
+                .flat_map(|r| (1..cols).step_by(2).map(move |c| value(r, c)))
+                .collect();
+            assert_eq!(f32_values(&part.values), want.as_slice(), "{name}: slice");
+            let columns = [cols - 1, 0, cols / 2, cols / 2];
+            let gathered = s
+                .gather_numeric(
+                    "data",
+                    NumericKind::F32,
+                    Slice::new(rows - 40, rows, 3),
+                    &columns,
+                )
+                .unwrap()
+                .unwrap();
+            let want: Vec<f32> = (rows - 40..rows)
+                .step_by(3)
+                .flat_map(|r| columns.iter().map(move |&c| value(r, c)))
+                .collect();
+            assert_eq!(
+                f32_values(&gathered.values),
+                want.as_slice(),
+                "{name}: gather"
+            );
+        }
+    }
 }
 
 #[test]

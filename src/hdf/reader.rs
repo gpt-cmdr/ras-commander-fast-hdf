@@ -1,10 +1,10 @@
-//! The engine's handle on the HDF5 reader, and the two read policies the
-//! engine applies on top of it.
+//! The engine's handle on the HDF5 reader, and the read policy the engine
+//! applies on top of it.
 //!
 //! The reader is the `hdf5-reader` crate (roteiro-gis/netcdf-rust), a
 //! general-purpose HDF5 decoder. Up to engine 0.2.3 a patched copy of it was
 //! compiled into this crate, and two of its patches were CLB qualification
-//! policies rather than fixes. They now live here, unchanged in effect:
+//! policies rather than fixes. One remains, here, unchanged in effect:
 //!
 //! - **Unbounded filters** (formerly reader patch 0008). A chunk is decoded
 //!   with a decoded-size limit. In a pipeline of several filters, an
@@ -17,20 +17,20 @@
 //!   with code `encoding`). The last filter of a pipeline is the first to be
 //!   decoded; its output is bounded by the chunk size, so it may be of any
 //!   kind.
-//! - **Large extensible-array chunk indexes** (formerly reader patch 0014).
-//!   An extensible-array chunk index with more elements than its index block
-//!   holds is refused (`UnsupportedEncoding`, "non-inline extensible-array
-//!   chunk index (unqualified block mapping)"). hdf5-reader 0.9.3 returned
-//!   fill values for chunks past the index block. Upstream fixed that mapping
-//!   in 0.10.0; lifting the refusal is a separate, qualified change.
+//!
+//! The other, the refusal of extensible-array chunk indexes with more elements
+//! than their index block (formerly reader patch 0014), is lifted: hdf5-reader
+//! 0.9.3 returned fill values for chunks past the index block, and 0.10.0 maps
+//! them as libhdf5 does (roteiro-gis/netcdf-rust#102, #105). Every value of
+//! the committed extensible-array fixtures (`tests/fixtures/reader_policy`,
+//! up to super blocks and paged data blocks) is checked against h5py.
 //!
 //! [`File`], [`Group`] and [`Dataset`] wrap the reader's types and do not
 //! dereference to them, so every dataset the engine reads goes through
-//! [`Dataset`]'s read methods, which apply both policies before the reader
+//! [`Dataset`]'s read methods, which apply the policy before the reader
 //! touches the chunk index or decodes a chunk. Metadata (shape, datatype,
 //! attributes) is not affected, as before. The verdict is computed from the
-//! dataset's (cached) object header and the extensible-array header, once
-//! per object address and file.
+//! dataset's (cached) object header, once per object address and file.
 //!
 //! The reader applied the policies while reading. Here they apply to the whole
 //! dataset before reading, so they are slightly stricter, never looser:
@@ -50,7 +50,7 @@
 //! Filtered fractal heaps (dense link or attribute storage written with an
 //! I/O filter pipeline) were also decoded with the old patch 0008 in force;
 //! they are not covered here. HEC-RAS does not write them.
-use h5::messages::layout::{ChunkIndexing, DataLayout};
+use h5::messages::layout::DataLayout;
 use h5::messages::HdfMessage;
 use hdf5_reader as h5;
 use std::collections::HashMap;
@@ -76,20 +76,15 @@ fn bounded_filter(id: u16) -> bool {
 enum Refusal {
     /// A filter without encoded-size bound is an intermediate stage.
     UnboundedFilter(u16),
-    /// The extensible-array chunk index extends past its index block.
-    ExtensibleArray,
 }
 
 impl Refusal {
-    /// The error the vendored reader raised (patches 0008 and 0014).
+    /// The error the vendored reader raised (patch 0008).
     fn error(self) -> Error {
         match self {
             Self::UnboundedFilter(id) => Error::UnsupportedFilter(format!(
                 "filter {id} has no qualified encoded-size bound in a bounded pipeline"
             )),
-            Self::ExtensibleArray => Error::UnsupportedEncoding(
-                "non-inline extensible-array chunk index (unqualified block mapping)".into(),
-            ),
         }
     }
 }
@@ -196,23 +191,12 @@ impl File {
                 _ => {}
             }
         }
-        let Some(DataLayout::Chunked {
-            address: index,
-            chunk_indexing,
-            ..
-        }) = layout
-        else {
+        let Some(DataLayout::Chunked { address: index, .. }) = layout else {
             return Ok(None);
         };
         // No chunk index: nothing is allocated and every read is fill.
         if h5::io::Cursor::is_undefined_offset(*index, self.superblock().offset_size) {
             return Ok(None);
-        }
-        // The reader reads the chunk index before it decodes any chunk.
-        if let Some(ChunkIndexing::ExtensibleArray { .. }) = chunk_indexing {
-            if self.extensible_array_past_index_block(*index)? {
-                return Ok(Some(Refusal::ExtensibleArray));
-            }
         }
         // Decoding runs from the last filter to the first; every filter but
         // the last is an intermediate stage.
@@ -224,61 +208,6 @@ impl File {
             }
         }
         Ok(None)
-    }
-
-    /// Whether the extensible-array header at `address` records more
-    /// elements than its index block holds. The header is read and validated
-    /// exactly as the reader reads it (same range, same errors for a bad
-    /// signature, version or checksum).
-    fn extensible_array_past_index_block(&self, address: u64) -> Result<bool> {
-        let sb = self.superblock();
-        let (offset_size, length_size) = (usize::from(sb.offset_size), usize::from(sb.length_size));
-        // Signature, version, client id, element size, max elements bits,
-        // index block elements, data block min elements, super block min
-        // data pointers, max data block page elements bits; six lengths
-        // (super blocks, super block size, data blocks, data block size, max
-        // index set, elements realized); index block address; checksum.
-        let len = 12 + 6 * length_size + offset_size + 4;
-        let buffer = self.storage().read_range(address, len)?;
-        let bytes = buffer.as_ref();
-        if bytes.len() < len {
-            return Err(Error::UnexpectedEof {
-                offset: address,
-                needed: len as u64,
-                available: bytes.len() as u64,
-            });
-        }
-        if bytes[..4] != *b"EAHD" {
-            return Err(Error::InvalidExtensibleArraySignature {
-                context: "header signature mismatch",
-            });
-        }
-        if bytes[4] != 0 {
-            return Err(Error::Other(format!(
-                "unsupported extensible array header version {}",
-                bytes[4]
-            )));
-        }
-        let index_block_elements = u64::from(bytes[8]);
-        let at = 12 + 5 * length_size;
-        let elements = bytes[at..at + length_size]
-            .iter()
-            .rev()
-            .fold(0u64, |n, &b| (n << 8) | u64::from(b));
-        let stored = u32::from_le_bytes([
-            bytes[len - 4],
-            bytes[len - 3],
-            bytes[len - 2],
-            bytes[len - 1],
-        ]);
-        let computed = h5::checksum::jenkins_lookup3(&bytes[..len - 4]);
-        if stored != computed {
-            return Err(Error::ChecksumMismatch {
-                expected: stored,
-                actual: computed,
-            });
-        }
-        Ok(elements > index_block_elements)
     }
 }
 

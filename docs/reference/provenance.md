@@ -48,21 +48,21 @@ reader with 14 local patches into the crate. Twelve of them are upstream in 0.10
 | 0012 soft links in old-style groups | #103 (`8c1c6d8`) |
 | 0013 row/column gathers, uncached reads, cache defaults | #106 (`1be2681`); selected-chunk index lookups for gathers: #111 (`269fcae`, 0.10.1) |
 
-The other two were CLB qualification policies, not fixes. The engine now applies them
-itself, in `src/hdf/reader.rs`, with the same refusals:
+The other two were CLB qualification policies, not fixes:
 
-- **Unbounded filters** (old 0008). In a pipeline of several filters, a filter without an
+- **Unbounded filters** (old 0008), applied by the engine. In a pipeline of several filters, a filter without an
   encoded-size bound (LZ4, SZIP or an unknown filter) that is decoded as an intermediate
   stage would be decoded without a size limit. The read is refused (`Unsupported`, code
   `encoding`).
-- **Large extensible-array chunk indexes** (old 0014). An extensible-array index with more
-  elements than its index block is refused (`Unsupported`, code `encoding`). Upstream
-  0.10.0 maps such indexes correctly (#102, #105); lifting the refusal is a separate,
-  qualified change.
+- **Large extensible-array chunk indexes** (old 0014). The 0.9.3 reader returned fill
+  values for chunks past the index block, so such indexes were refused. Upstream 0.10.0
+  maps them correctly (#102, #105), so they are read; every value of the committed
+  extensible-array fixtures is checked against h5py.
 
-All reads go through `src/hdf/reader.rs`, which checks both policies before the reader
+The unbounded-filter policy is applied by the engine itself, with the same refusals. All
+reads go through `src/hdf/reader.rs`, which checks it before the reader
 reads a dataset's chunk index or decodes a chunk. Metadata reads are not affected. The
-policies are judged per dataset rather than per chunk, so they are slightly stricter than
+policy is judged per dataset rather than per chunk, so it is slightly stricter than
 before (for example, a pipeline whose chunks all skip the unbounded filter is refused too).
 No HEC-RAS file is affected: HEC-RAS writes v1 B-tree chunk indexes and no LZ4 or unknown
 filters. The tests are `src/hdf/reader_policy_tests.rs`, with fixtures in

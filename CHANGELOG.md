@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Extensible-array chunk indexes with more elements than their index block
+  (HDF5 1.10+ files written with `libver="latest"`, chunked along an unlimited
+  dimension) are read instead of refused. hdf5-reader 0.9.3 returned fill values
+  for their chunks past the index block, so the engine refused them (`Unsupported`,
+  "non-inline extensible-array chunk index"); 0.10 maps them as libhdf5 does.
+  Every value of `tests/fixtures/reader_policy/ea_latest.h5` (50 chunks) and the
+  new `ea_deep.h5` (9,000 chunks: super blocks and paged data blocks) matches
+  h5py, in full reads, slices and row/column gathers. HEC-RAS does not write
+  this layout. Behaviour change, separate from the reader update.
+
 - The HDF5 reader is now the crates.io `hdf5-reader`/`hdf5-core` 0.10.1
   (roteiro-gis/netcdf-rust), a normal dependency, instead of a patched copy of
   0.9.3 compiled into the crate. Upstream 0.10.0 and 0.10.1 contain 12 of the 14
