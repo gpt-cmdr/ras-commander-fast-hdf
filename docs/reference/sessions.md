@@ -93,8 +93,8 @@ handle held by the caller must also be closed before replacing a file on Windows
 ## Cache settings (API 8 and later)
 
 `HdfSession` takes keyword-only `cache_bytes` (default 64 MiB) and `cache_slots` (default
-521), and provides `cache_stats()`. Defaults derive from the engine and vendored reader
-constants. Full reads above the byte limit bypass retention. Zero bytes disables both
+521), and provides `cache_stats()`. Defaults derive from the engine and reader
+(`hdf5-reader`) constants. Full reads above the byte limit bypass retention. Zero bytes disables both
 decoded-chunk retention and the optional 32 MiB hot-array copy, so zero means no data
 retention. Decoder scratch memory is additional to the configured retained cache and
 result-byte budgets.

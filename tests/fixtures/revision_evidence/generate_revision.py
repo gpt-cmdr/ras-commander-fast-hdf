@@ -40,8 +40,8 @@ for version in [2,3]:
  size=struct.unpack_from('<H',b,q-6)[0];assert len(payload)<=size
  b[q:q+size]=payload+bytes(size-len(payload))
  save('attribute'+str(version),b,kind='text',value=['hello'])
- b[q+1]=1;save('attribute'+str(version)+'_shared',b,kind='error',reason='shared attribute' if version==2 else 'shared datatype/dataspace',error='Unsupported')
- b[q+1]=128;save('attribute'+str(version)+'_reserved',b,kind='error',reason='reserved attribute flags',error='Corrupt')
+ b[q+1]=1;save('attribute'+str(version)+'_shared',b,kind='error',reason='shared datatype/dataspace',error='Unsupported')
+ b[q+1]=128;save('attribute'+str(version)+'_reserved',b,kind='error',reason='reserved flags',error='Corrupt')
 # Truncate the declared attribute payload, retaining the whole file and heap.
 vlen=attr('vlen_valid','hello',h5py.string_dtype('utf-8'),kind='unsupported',reason='nested/array/vlen/reference')
 b,q,d,v,ts,ds=parts(vlen);struct.pack_into('<H',b,q-6,v-q+10);save('vlen_reference_short_envelope',b,kind='error',error='Corrupt',reason='')

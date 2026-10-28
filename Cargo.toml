@@ -6,10 +6,11 @@ rust-version = "1.88"
 # The exports-geoparquet and exports-geopackage dependencies need Rust 1.95.
 authors = ["CLB Engineering Corporation"]
 description = "Native, read-only HEC-RAS project, plan and HDF5 results engine in pure Rust; also the Python extension behind ras-commander"
-# Our code is MIT. The package also carries the hdf5-reader/hdf5-core source
-# (MIT OR Apache-2.0, vendor/hdf5-*) and the freestiler-core source (MIT AND ISC,
-# vendor/freestiler-core) as internal modules; their licence texts are in vendor/.
-license = "MIT AND (MIT OR Apache-2.0) AND ISC"
+# Our code is MIT. The package also carries the freestiler-core source (MIT AND
+# ISC, vendor/freestiler-core) as an internal module; its licence texts are in
+# vendor/. The HDF5 reader (hdf5-reader, MIT OR Apache-2.0) is an ordinary
+# crates.io dependency and is not part of this package.
+license = "MIT AND ISC"
 repository = "https://github.com/gpt-cmdr/ras-commander-fast-hdf"
 homepage = "https://rascommander.info/fasthdf/"
 documentation = "https://docs.rs/ras-commander-fast-hdf"
@@ -28,14 +29,7 @@ include = [
     "/src/**/*.rs",
     "/src/exports/README.md",
     "/python/licenses/ras-commander-LICENSE.txt",
-    "/vendor/LICENSE-APACHE",
-    "/vendor/LICENSE-MIT",
-    "/vendor/LOCAL_PATCHES.md",
     "/vendor/PROVENANCE.json",
-    "/vendor/patches/*.patch",
-    "/vendor/hdf5-core/src/**/*.rs",
-    "/vendor/hdf5-reader/PROVENANCE.md",
-    "/vendor/hdf5-reader/src/**/*.rs",
     "/vendor/freestiler-core/COPYRIGHTS",
     "/vendor/freestiler-core/LICENSE",
     "/vendor/freestiler-core/LICENSE.md",
@@ -54,19 +48,15 @@ name = "ras_commander_fast_hdf"
 default = ["catalog"]
 # Project and plan text catalogue; standard library only.
 catalog = []
-# HDF5 reads (pure Rust; the embedded hdf5-reader). Upstream's reader features
-# "rayon" and "lz4" are both part of this feature.
+# HDF5 reads (pure Rust; the hdf5-reader crate). The reader's "rayon" and "lz4"
+# features are both part of this feature.
 hdf = [
+    "dep:hdf5-reader",
+    "hdf5-reader/rayon",
+    "hdf5-reader/lz4",
     "dep:ndarray",
     "dep:rayon",
     "dep:flate2",
-    "dep:thiserror",
-    "dep:memmap2",
-    "dep:libc",
-    "dep:lru",
-    "dep:parking_lot",
-    "dep:smallvec",
-    "dep:lz4_flex",
 ]
 # 2D mesh geometry and topology.
 mesh = ["hdf", "dep:robust"]
@@ -122,18 +112,14 @@ exports-all = [
 ]
 
 [dependencies]
-# Engine and embedded HDF5 reader (feature "hdf").
+# Engine and HDF5 reader (feature "hdf"). The reader is roteiro-gis/netcdf-rust's
+# hdf5-reader; the engine's own read policies on top of it are in src/hdf/reader.rs.
+hdf5-reader = { version = "=0.10.0", optional = true, default-features = false }
 ndarray = { version = "0.17", optional = true }
 rayon = { version = "1.10", optional = true }
-# zlib-rs for the engine; rust_backend as requested by the embedded reader.
+# The engine does not call flate2 itself: enabling zlib-rs here selects the
+# DEFLATE backend of the reader's flate2 (which asks for rust_backend).
 flate2 = { version = "1", optional = true, default-features = false, features = ["zlib-rs", "rust_backend"] }
-thiserror = { version = "2", optional = true }
-memmap2 = { version = "0.9", optional = true }
-libc = { version = "0.2", optional = true }
-lru = { version = "0.16.3", optional = true }
-parking_lot = { version = "0.12", optional = true }
-smallvec = { version = "1", optional = true }
-lz4_flex = { version = "0.11", optional = true }
 # Shewchuk's adaptive-precision orient2d (the predicate geo uses), for ring
 # validation (feature "mesh").
 robust = { version = "1.1", optional = true }

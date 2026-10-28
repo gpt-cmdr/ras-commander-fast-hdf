@@ -42,7 +42,7 @@ the shared pool. Default thread counts and parallel flags are unchanged.
 
 ## Reader-level caches
 
-The vendored generic reader caches old-style symbol-table names and addresses per
+The generic reader (`hdf5-reader`) caches old-style symbol-table names and addresses per
 file context. A name-to-address map avoids repeated linear scans. Entries never hold
 Arc<FileContext>, preventing a reference cycle. Heap name decoding reads a segment
 once on first enumeration and validates offsets, UTF-8 and null termination.
@@ -67,4 +67,4 @@ speedup can be claimed from the combined changes without an ablation measurement
 
 ## Clarifications
 
-Engine `group_members` validates child datasets on its first memoized call, retaining prior corruption verdicts; only vendor member_names remains lightweight. Numeric reads memoize the original error-producing kind proof and preserve error code/path/subject. Sessions with equal worker counts share throughput on the same pool, rather than obtaining independent thread capacity.
+Engine `group_members` validates child datasets on its first memoized call, retaining prior corruption verdicts; only the reader's member_names remains lightweight. Numeric reads memoize the original error-producing kind proof and preserve error code/path/subject. Sessions with equal worker counts share throughput on the same pool, rather than obtaining independent thread capacity.

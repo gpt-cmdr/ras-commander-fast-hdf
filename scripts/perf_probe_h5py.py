@@ -4,7 +4,7 @@ Fixtures are HEC-RAS plan HDF files with 2D results, supplied with
 ``--files PATH [PATH ...]`` or the RAS_PERF_FIXTURES environment variable.
 
 One ABBA block per repetition: engine cold, h5py fresh, h5py reused,
-engine reused. Raw vendored reader follows. Hashing is outside API timings.
+engine reused. Raw reader follows. Hashing is outside API timings.
 """
 import argparse
 import datetime

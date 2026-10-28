@@ -116,27 +116,17 @@ all-lines batch still report the corrupt sibling. A zero-byte cache deliberately
 disables the optional 32 MiB hot full-array copy as well as decoded-chunk retention:
 retaining that copy would defeat the caller's explicit no-retention policy.
 Non-inline extensible-array chunk indexes are conservatively refused until their
-block mapping is qualified; earlier versions could silently return fill values
-for allocated chunks beginning at index 36. This refusal applies to full and
-bounded reads. Inline-only EA indexes remain supported.
+block mapping is qualified; the reader the engine embedded up to 0.2.3 could
+silently return fill values for allocated chunks beginning at index 36. This
+refusal applies to full and bounded reads and row/column gathers, and is now
+applied by the engine itself (`src/hdf/reader.rs`). Inline-only EA indexes
+remain supported.
 
 The hot full-array copy is limited to 32 MiB **per dataset**. A session has no
 limit on the number of eligible datasets retaining such a copy and no aggregate
 hot-array byte budget. These copies are additional to the configured chunk cache;
 a Python session LRU bounds open files, not retained datasets within each file.
 A session-total hot-array budget or LRU is not implemented.
-
-For the embedded reader's old-group cache regression test, set the cache fixture from the
-repository root (the test is skipped if it is unset):
-
-```powershell
-$env:HDF5_READER_CACHE_FIXTURE = (Resolve-Path tests/fixtures/hdf_numeric/numeric_types_v1.h5).Path
-cargo test --manifest-path vendor/reader-tests/Cargo.toml
-```
-
-```sh
-HDF5_READER_CACHE_FIXTURE="$PWD/tests/fixtures/hdf_numeric/numeric_types_v1.h5" cargo test --manifest-path vendor/reader-tests/Cargo.toml
-```
 
 ## Absent-Location legacy mesh series (API 9)
 

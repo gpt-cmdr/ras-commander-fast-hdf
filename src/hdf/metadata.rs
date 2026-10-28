@@ -98,7 +98,7 @@ impl ReadOnlyHdfSession {
             .map_err(map_error)?
             .raw_attributes()
             .map_err(map_error)?
-            .into_iter()
+            .iter()
             .map(typed_attribute)
             .collect()
     }
@@ -124,13 +124,13 @@ impl ReadOnlyHdfSession {
         let Some(ds) = self.dataset_at(path)? else {
             return Ok(crate::Reported::unavailable("dataset absent"));
         };
-        let raw = ds.raw_attributes();
+        let raw = ds.raw_attributes().map_err(map_error)?;
         // Admit attributes one at a time and stop at the first that crosses the budget, before
         // any is copied or typed. (The reader has already parsed the object header's attribute
         // messages when the dataset was opened; see docs/reference/engine-api.md.)
         let mut used = 0usize;
-        for a in raw {
-            used = match used.checked_add(a.raw_data.len()) {
+        for a in raw.iter() {
+            used = match used.checked_add(a.message().raw_data.len()) {
                 Some(n) if n <= max_bytes => n,
                 _ => {
                     return Ok(crate::Reported::unsupported(
@@ -141,7 +141,6 @@ impl ReadOnlyHdfSession {
             };
         }
         raw.iter()
-            .cloned()
             .map(typed_attribute)
             .collect::<Result<Vec<_>>>()
             .map(crate::Reported::supported)
@@ -233,7 +232,7 @@ impl ReadOnlyHdfSession {
     }
     /// One exact dataset for the path-addressed readers: `None` when absent; a group path or
     /// an empty/`.`/`..` path is `InvalidRequest`.
-    fn dataset_at(&self, path: &str) -> Result<Option<crate::hdf5_reader::Dataset>> {
+    fn dataset_at(&self, path: &str) -> Result<Option<crate::hdf::reader::Dataset>> {
         let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
         if parts.is_empty() || parts.iter().any(|p| *p == "." || *p == "..") {
             return Err(Error::new(
@@ -329,9 +328,8 @@ impl ReadOnlyHdfSession {
         ))
     }
 }
-pub(super) fn typed_attribute(
-    a: crate::hdf5_reader::messages::attribute::AttributeMessage,
-) -> Result<TypedAttribute> {
+pub(super) fn typed_attribute(raw: &hdf5_reader::RawAttribute) -> Result<TypedAttribute> {
+    let a = raw.message();
     let count = a
         .dataspace
         .num_elements()
@@ -343,7 +341,7 @@ pub(super) fn typed_attribute(
             MetadataValue::corrupt(e.message)
         }
     };
-    let (attribute_type, datatype_label, value) = match proof::proof(&a.raw_datatype) {
+    let (attribute_type, datatype_label, value) = match proof::proof(raw.raw_datatype()) {
         Ok(p) => {
             let label = format!("{:?}", p.kind);
             let value = match proof::decode(&p, &a.raw_data, count) {
@@ -360,17 +358,17 @@ pub(super) fn typed_attribute(
     };
     let dataspace = Dataspace::from_message(&a.dataspace);
     let shape = match a.dataspace.dataspace_type {
-        crate::hdf5_reader::messages::dataspace::DataspaceType::Scalar => vec![],
-        crate::hdf5_reader::messages::dataspace::DataspaceType::Null => vec![0],
-        _ => a.dataspace.dims,
+        hdf5_reader::messages::dataspace::DataspaceType::Scalar => vec![],
+        hdf5_reader::messages::dataspace::DataspaceType::Null => vec![0],
+        _ => a.dataspace.dims.clone(),
     };
     Ok(TypedAttribute {
-        name: a.name,
+        name: a.name.clone(),
         shape,
         dataspace,
         attribute_type,
         datatype_label,
-        raw_bytes: a.raw_data,
+        raw_bytes: a.raw_data.clone(),
         value,
     })
 }

@@ -57,7 +57,6 @@ jobs:
           cache-bin: "false"
           workspaces: |
             . -> target
-            vendor/reader-tests -> vendor/reader-tests/target
       - uses: actions/setup-python@v6
         id: py310
         with:
@@ -92,7 +91,7 @@ jobs:
       - name: Engine tests (pure Rust)
         run: cargo test --locked --no-default-features --features catalog,hdf,mesh,results
       # Includes the malformed-input regressions, the committed encoding/revision
-      # evidence, the bridge and export tests, and the embedded reader's unit tests.
+      # evidence, the engine's reader-policy tests, and the bridge and export tests.
       - name: Tests (all features but extension-module)
         run: cargo test --locked --features "${{ env.TEST_FEATURES }}"
       - name: Clippy
@@ -103,8 +102,6 @@ jobs:
           cargo clippy --locked --no-default-features --features hdf --all-targets --no-deps -- -D warnings
           cargo clippy --locked --no-default-features --features catalog,hdf,mesh,results --all-targets --no-deps -- -D warnings
           cargo clippy --locked --features python --all-targets --no-deps -- -D warnings
-      - name: Embedded hdf5-reader upstream tests
-        run: cargo test --locked --manifest-path vendor/reader-tests/Cargo.toml
       - name: Embedded third-party source matches vendor/PROVENANCE.json
         shell: bash
         run: '"${{ steps.py313.outputs.python-path }}" scripts/vendor_sources.py --check'

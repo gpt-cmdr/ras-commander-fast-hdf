@@ -1,14 +1,6 @@
 //! JSON-lines measurement server. No engine instrumentation or semantic changes.
-// The probe times the HDF5 reader directly, so it compiles its own copy of the
-// vendored reader modules (the crate keeps them private), exactly as lib.rs does.
-#[path = "../vendor/hdf5-core/src/lib.rs"]
-#[rustfmt::skip]
-#[allow(unused, clippy::all)]
-mod hdf5_core;
-#[path = "../vendor/hdf5-reader/src/lib.rs"]
-#[rustfmt::skip]
-#[allow(unused, clippy::all)]
-mod hdf5_reader;
+// The probe times the HDF5 reader (the hdf5-reader crate the engine depends on)
+// directly, without the engine's read policies (src/hdf/reader.rs).
 use hdf5_reader::{H5Type, Hdf5File, SliceInfo, SliceInfoElem};
 use ras_commander_fast_hdf::hdf::{
     mesh_geometry::MeshGeometryField, NumericArray, NumericValues, ReadOnlyHdfSession, Slice,

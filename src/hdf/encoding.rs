@@ -1,8 +1,8 @@
+use super::reader::{Dataset, Error, File};
 use super::NumericKind as Native;
 use super::TypeClass;
-use crate::hdf5_reader::error::Error;
-use crate::hdf5_reader::storage::Storage;
-use crate::hdf5_reader::{ByteOrder, Dataset, Datatype, Hdf5File};
+use hdf5_reader::storage::Storage;
+use hdf5_reader::{ByteOrder, Datatype};
 fn classify(e: &Error) -> crate::ErrorKind {
     match e {
         Error::Context { source, .. } => classify(source),
@@ -258,7 +258,7 @@ fn v2_messages(chunk: &[u8], creation_order: bool, out: &mut Vec<Message>) -> cr
     Ok(())
 }
 
-fn datatype_payload(file: &Hdf5File, address: u64, depth: u8) -> crate::Result<Vec<u8>> {
+fn datatype_payload(file: &File, address: u64, depth: u8) -> crate::Result<Vec<u8>> {
     let sb = file.superblock();
     if sb.base_address != 0 {
         return Err(unsupported("non-zero superblock base address"));
@@ -291,7 +291,7 @@ fn datatype_payload(file: &Hdf5File, address: u64, depth: u8) -> crate::Result<V
     datatype_payload(file, target, depth + 1)
 }
 
-pub(crate) fn encoding(file: &Hdf5File, ds: &Dataset) -> crate::Result<EncodingDescriptor> {
+pub(crate) fn encoding(file: &File, ds: &Dataset) -> crate::Result<EncodingDescriptor> {
     let payload = datatype_payload(file, ds.address(), 0)?;
     let head = le(&payload, 0, 4)? as u32;
     let class = (head & 0x0f) as u8;
@@ -413,9 +413,20 @@ fn is_resource_limit(e: &Error) -> bool {
         _ => false,
     }
 }
+/// The reader's error text, except that `UnsupportedEncoding` keeps the
+/// wording of the reader the engine embedded up to 0.2.3 ("unsupported {0}"
+/// instead of upstream's "unsupported encoding: {0}"), so engine messages
+/// stay as they were.
+fn message(e: &Error) -> String {
+    match e {
+        Error::Context { path, source } => format!("{path}: {}", message(source)),
+        Error::UnsupportedEncoding(detail) => format!("unsupported {detail}"),
+        other => other.to_string(),
+    }
+}
 pub(crate) fn map_error(e: Error) -> crate::Error {
     let kind = classify(&e);
-    let mut result = crate::Error::new(kind, e.to_string());
+    let mut result = crate::Error::new(kind, message(&e));
     if is_resource_limit(&e) {
         result = result.with_code(crate::UnsupportedCode::ResourceLimit);
     } else if kind == crate::ErrorKind::Unsupported {
@@ -551,10 +562,10 @@ mod address_safety_tests {
             &self,
             _: u64,
             len: usize,
-        ) -> crate::hdf5_reader::error::Result<crate::hdf5_reader::storage::StorageBuffer> {
+        ) -> hdf5_reader::error::Result<hdf5_reader::storage::StorageBuffer> {
             let mut b = vec![0; len];
             b[0] = 1;
-            Ok(crate::hdf5_reader::storage::StorageBuffer::from_vec(b))
+            Ok(hdf5_reader::storage::StorageBuffer::from_vec(b))
         }
     }
     struct Short;
@@ -566,8 +577,8 @@ mod address_safety_tests {
             &self,
             _: u64,
             _: usize,
-        ) -> crate::hdf5_reader::error::Result<crate::hdf5_reader::storage::StorageBuffer> {
-            Ok(crate::hdf5_reader::storage::StorageBuffer::from_vec(vec![]))
+        ) -> hdf5_reader::error::Result<hdf5_reader::storage::StorageBuffer> {
+            Ok(hdf5_reader::storage::StorageBuffer::from_vec(vec![]))
         }
     }
     #[test]

@@ -1,0 +1,7 @@
+The published hdf5-core 0.10.0 crate package ships no licence file.
+These texts are copied unmodified from https://github.com/roteiro-gis/netcdf-rust at tag v0.10.0
+(commit 9076a070fc7a03f913881e18b77082e3bea30791, the commit recorded in the package's
+.cargo_vcs_info.json):
+  https://raw.githubusercontent.com/roteiro-gis/netcdf-rust/v0.10.0/LICENSE-MIT
+  https://raw.githubusercontent.com/roteiro-gis/netcdf-rust/v0.10.0/LICENSE-APACHE
+Retrieved 2026-10-28.

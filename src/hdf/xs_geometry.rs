@@ -369,10 +369,11 @@ pub(super) fn dataset_typed_attributes(
 ) -> Result<Vec<TypedAttribute>> {
     let ds = s.file.dataset(path).map_err(super::encoding::map_error)?;
     ds.raw_attributes()
+        .map_err(super::encoding::map_error)?
         .iter()
         .map(|a| {
-            budget(a.raw_data.len() as u64, max_bytes)?;
-            typed_attribute(a.clone())
+            budget(a.message().raw_data.len() as u64, max_bytes)?;
+            typed_attribute(a)
         })
         .collect()
 }

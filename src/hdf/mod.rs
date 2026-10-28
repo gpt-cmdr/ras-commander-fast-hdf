@@ -3,10 +3,12 @@
 //! Sessions share a process pool per explicit worker count; metadata/data caches are session-local.
 use crate::{Capability, UnsupportedCode};
 mod encoding;
-use crate::hdf5_reader::{Hdf5File, SliceInfo, SliceInfoElem};
+pub(crate) mod reader;
 use crate::{Error, ErrorKind, Result};
 use encoding::map_error;
 pub use encoding::{EncodingDescriptor, FloatLayout};
+use hdf5_reader::{SliceInfo, SliceInfoElem};
+use reader::File;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -150,7 +152,7 @@ pub struct GroupMembers {
 
 #[non_exhaustive]
 pub struct ReadOnlyHdfSession {
-    pub(crate) file: Hdf5File,
+    pub(crate) file: File,
     pub(crate) pool: crate::SessionPool,
     memo: memo::Memo,
     path: PathBuf,
@@ -176,7 +178,7 @@ impl ReadOnlyHdfSession {
     }
     pub fn with_options(path: impl AsRef<Path>, threads: usize, parallel: bool) -> Result<Self> {
         {
-            let defaults = crate::hdf5_reader::OpenOptions::default();
+            let defaults = hdf5_reader::OpenOptions::default();
             Self::with_cache_options(
                 path,
                 threads,
@@ -201,12 +203,12 @@ impl ReadOnlyHdfSession {
             ));
         }
         let pool = crate::SessionPool::new(threads)?;
-        let options = crate::hdf5_reader::OpenOptions {
+        let options = hdf5_reader::OpenOptions {
             chunk_cache_bytes,
             chunk_cache_slots,
             ..Default::default()
         };
-        let file = Hdf5File::open_with_options(path.as_ref(), options)
+        let file = File::open_with_options(path.as_ref(), options)
             .map_err(|e| map_error(e).with_path(path.as_ref().to_path_buf()))?;
         Ok(Self {
             file,
@@ -232,9 +234,9 @@ impl ReadOnlyHdfSession {
     ) -> Result<Self> {
         let name = name.into();
         let pool = crate::SessionPool::new(threads)?;
-        let options = crate::hdf5_reader::OpenOptions::default();
+        let options = hdf5_reader::OpenOptions::default();
         let chunk_cache_bytes = options.chunk_cache_bytes;
-        let file = Hdf5File::from_vec_with_options(data, options)
+        let file = File::from_vec_with_options(data, options)
             .map_err(|e| map_error(e).with_path(name.clone()))?;
         Ok(Self {
             file,
@@ -273,11 +275,8 @@ impl ReadOnlyHdfSession {
     pub fn group_members(&self, path: &str) -> Result<GroupMembers> {
         self.memo(format!("group_members:{:?}", (path,)), || {
             let group = self.file.group(path).map_err(map_error)?;
-            let (groups, datasets) = group.members().map_err(map_error)?;
-            Ok(GroupMembers {
-                groups: groups.into_iter().map(|g| g.name().to_owned()).collect(),
-                datasets: datasets.into_iter().map(|d| d.name().to_owned()).collect(),
-            })
+            let (groups, datasets) = group.member_lists().map_err(map_error)?;
+            Ok(GroupMembers { groups, datasets })
         })
     }
     pub fn group_attributes(&self, path: &str) -> Result<Vec<Attribute>> {
@@ -314,9 +313,9 @@ impl ReadOnlyHdfSession {
         // Non-text datasets keep the generic reader's own type-mismatch error.
         if matches!(
             ds.dtype(),
-            crate::hdf5_reader::Datatype::String { .. }
-                | crate::hdf5_reader::Datatype::VarLen {
-                    kind: crate::hdf5_reader::VarLenKind::String,
+            hdf5_reader::Datatype::String { .. }
+                | hdf5_reader::Datatype::VarLen {
+                    kind: hdf5_reader::VarLenKind::String,
                     ..
                 }
         ) {
@@ -334,15 +333,15 @@ impl ReadOnlyHdfSession {
                 ));
             }
         }
-        if matches!(ds.dtype(), crate::hdf5_reader::Datatype::String { .. })
+        if matches!(ds.dtype(), hdf5_reader::Datatype::String { .. })
             && Dataspace::of_dataset(&ds)?.is_null()
         {
             return Err(Error::unsupported(UnsupportedCode::Schema, NULL_DATASPACE));
         }
         let space_padded = matches!(
             ds.dtype(),
-            crate::hdf5_reader::Datatype::String {
-                padding: crate::hdf5_reader::StringPadding::SpacePad,
+            hdf5_reader::Datatype::String {
+                padding: hdf5_reader::StringPadding::SpacePad,
                 ..
             }
         );
@@ -375,19 +374,17 @@ impl ReadOnlyHdfSession {
                 Err(e) => return Err(e),
             };
             let (byte_order, signed) = match ds.dtype() {
-                crate::hdf5_reader::Datatype::FixedPoint {
+                hdf5_reader::Datatype::FixedPoint {
                     byte_order, signed, ..
                 } => (Some(byte_order), Some(*signed)),
-                crate::hdf5_reader::Datatype::FloatingPoint { byte_order, .. }
-                | crate::hdf5_reader::Datatype::Bitfield { byte_order, .. } => {
-                    (Some(byte_order), None)
-                }
+                hdf5_reader::Datatype::FloatingPoint { byte_order, .. }
+                | hdf5_reader::Datatype::Bitfield { byte_order, .. } => (Some(byte_order), None),
                 _ => (None, None),
             };
             let dataspace = Dataspace::of_dataset(&ds)?;
             let byte_order = byte_order.map(|b| match b {
-                crate::hdf5_reader::ByteOrder::LittleEndian => ByteOrder::Little,
-                crate::hdf5_reader::ByteOrder::BigEndian => ByteOrder::Big,
+                hdf5_reader::ByteOrder::LittleEndian => ByteOrder::Little,
+                hdf5_reader::ByteOrder::BigEndian => ByteOrder::Big,
             });
             Ok(NumericCapability {
                 max_shape: ds.max_dims().map(<[u64]>::to_vec),
@@ -652,10 +649,10 @@ impl ReadOnlyHdfSession {
             .unwrap_or(u64::MAX))
     }
 }
-fn attribute(a: crate::hdf5_reader::Attribute) -> Result<Attribute> {
+fn attribute(a: hdf5_reader::Attribute) -> Result<Attribute> {
     let strings = match &a.datatype {
-        crate::hdf5_reader::Datatype::String { .. } => Some(a.read_strings().map_err(map_error)?),
-        crate::hdf5_reader::Datatype::VarLen { .. } => a.decoded_strings.clone(),
+        hdf5_reader::Datatype::String { .. } => Some(a.read_strings().map_err(map_error)?),
+        hdf5_reader::Datatype::VarLen { .. } => a.decoded_strings.clone(),
         _ => None,
     };
     Ok(Attribute {
@@ -701,8 +698,10 @@ mod memo;
 
 #[cfg(test)]
 mod perf_contract_tests;
+#[cfg(test)]
+mod reader_policy_tests;
 
-pub use crate::hdf5_reader::{DEFAULT_CHUNK_CACHE_BYTES, DEFAULT_CHUNK_CACHE_SLOTS};
+pub use hdf5_reader::{DEFAULT_CHUNK_CACHE_BYTES, DEFAULT_CHUNK_CACHE_SLOTS};
 
 pub mod environment;
 pub mod families;

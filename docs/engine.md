@@ -15,8 +15,8 @@ ras-commander-fast-hdf = { version = "0.2", features = ["hdf", "mesh", "results"
 ```
 
 The Rust API is documented on [docs.rs](https://docs.rs/ras-commander-fast-hdf).
-Minimum Rust version: 1.88. The engine modules are `#![forbid(unsafe_code)]`;
-only the embedded HDF5 reader uses `unsafe` (read-only memory mapping and
+Minimum Rust version: 1.88. The whole crate is `#![forbid(unsafe_code)]`;
+only the HDF5 reader dependency uses `unsafe` (read-only memory mapping and
 chunk copies into preallocated buffers).
 
 ## Cargo features
@@ -24,7 +24,7 @@ chunk copies into preallocated buffers).
 | Feature | Adds | Dependencies |
 |---|---|---|
 | `catalog` (default) | Project (`.prj`) and plan (`.p##`) records, linked geometry/flow files, declared simulation windows | Standard library only |
-| `hdf` | Read-only HDF sessions; numeric, compound, string and attribute reads; capabilities; 1D geometry and results; structures; read families; time and units; CRS evidence | `hdf5-reader` and `hdf5-core` (embedded from `vendor/`), `ndarray`, `rayon`, `flate2`, `lz4_flex` and the reader's other pure-Rust dependencies |
+| `hdf` | Read-only HDF sessions; numeric, compound, string and attribute reads; capabilities; 1D geometry and results; structures; read families; time and units; CRS evidence | `hdf5-reader` 0.10.0 (with its `rayon` and `lz4` features) and its pure-Rust dependencies, `ndarray`, `rayon`, `flate2` (zlib-rs backend) |
 | `mesh` | 2D mesh topology and cell polygon assembly (implies `hdf`) | `robust` |
 | `results` | Bounded temporal reduction of result arrays (implies `hdf`) | none extra |
 
@@ -106,14 +106,14 @@ HEC-RAS 5.0.7), so ras-commander reads them with h5py.
 
 ## Licenses
 
-MIT. The embedded `hdf5-reader` and `hdf5-core` are modified copies of
-[netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) v0.9.3 (MIT OR
-Apache-2.0) with 14 local patches; the changes are listed in
-`vendor/LOCAL_PATCHES.md` and `vendor/hdf5-reader/PROVENANCE.md`. The
-`python` feature also embeds `freestiler-core` (MIT AND ISC; see
-`vendor/freestiler-core/PROVENANCE.md`). These are private modules, not part
-of the public API; `vendor/PROVENANCE.json` records their upstream commits and
-file hashes. `THIRD-PARTY-NOTICES.md` lists every crate linked with all
+MIT. The HDF5 reader is the crates.io `hdf5-reader` and `hdf5-core` 0.10.0
+from [netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (MIT OR
+Apache-2.0), an ordinary dependency; the engine's two read policies on top of
+it are in `src/hdf/reader.rs` (see [Provenance](reference/provenance.md#hdf5-reader)).
+The `python` feature embeds `freestiler-core` (MIT AND ISC; see
+`vendor/freestiler-core/PROVENANCE.md`) as a private module, not part of the
+public API; `vendor/PROVENANCE.json` records its upstream commit and file
+hashes. `THIRD-PARTY-NOTICES.md` lists every crate linked with all
 features enabled; regenerate it after any `Cargo.lock` change:
 
 ```bash

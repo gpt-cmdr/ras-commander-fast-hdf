@@ -23,8 +23,8 @@ precision, filters and fill values, scalar and empty arrays, owned output lifeti
 bounded thread counts and huge-stride handling.
 
 Formatting and strict all-feature, all-target Clippy pass. The catalogue-only normal
-dependency graph contains only this crate. The engine's own code forbids unsafe Rust; the
-vendored generic reader retains its separately licensed implementation.
+dependency graph contains only this crate. The crate forbids unsafe Rust; the generic
+HDF5 reader is the separately licensed `hdf5-reader` dependency.
 
 ## Real geometry and results
 
@@ -84,8 +84,7 @@ Latin-1 fallback, not all legacy Windows code pages.
 API review of this baseline found, and the engine now handles: huge-stride overflow and
 widening, unbounded thread requests, and malformed datatype verification being
 classified as unsupported rather than corrupt. The portable and real runs qualify the
-revised code. Generic reader provenance and patches are in `vendor/` (see
-[provenance.md](provenance.md)).
+revised code. Generic reader provenance is in [provenance.md](provenance.md#hdf5-reader).
 
 ## Remaining gaps in this baseline
 

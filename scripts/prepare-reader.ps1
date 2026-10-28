@@ -1,6 +1,7 @@
-# Verify the vendored third-party source (hdf5-reader/hdf5-core, freestiler-core)
-# against vendor/PROVENANCE.json; no downloads or machine paths. Rebuilding it from
-# upstream is scripts/vendor_sources.py.
+# Verify the vendored third-party source (freestiler-core) against
+# vendor/PROVENANCE.json; no downloads or machine paths. Rebuilding it from upstream
+# is scripts/vendor_sources.py. (The HDF5 reader is a crates.io dependency and is
+# no longer vendored; the script keeps its name for existing callers.)
 $ErrorActionPreference = 'Stop'
 $vendorRoot = Join-Path (Split-Path $PSScriptRoot -Parent) 'vendor'
 $manifest = Get-Content (Join-Path $vendorRoot 'PROVENANCE.json') -Raw | ConvertFrom-Json
