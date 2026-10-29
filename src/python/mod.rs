@@ -177,6 +177,9 @@ fn validate_export_wkb(
 
 #[pymodule]
 fn ras_commander_fast_hdf(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // Contained panics raise a Python exception carrying the message; do not
+    // also print Rust's default panic message.
+    panic_guard::install_quiet_hook();
     m.add("ENGINE_COMMIT", env!("RAS_ENGINE_COMMIT"))?;
     m.add(
         "ENGINE_FEATURES",
@@ -191,6 +194,10 @@ fn ras_commander_fast_hdf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("SESSION_SOURCES", true)?;
     m.add("CorruptDataError", m.py().get_type::<CorruptDataError>())?;
     panic_guard::register(m)?;
+    // Panic-injection hook for ras-commander's panic-containment tests; release
+    // wheels are built without "test-hooks".
+    #[cfg(feature = "test-hooks")]
+    m.add_function(wrap_pyfunction!(panic_guard::_panic_for_test, m)?)?;
     domain::register(m)?;
     fim::register(m)?;
     session::register(m)?;

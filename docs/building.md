@@ -30,6 +30,7 @@ a Rust library; maturin builds the same crate as the Python wheel, through
 | `exports-geojson`, `exports-flatgeobuf`, `exports-geoparquet`, `exports-geopackage` | One vector writer each (`export_ipc_file`, `validate_export_wkb`). |
 | `exports-pmtiles` | `export_pmtiles_ipc_file`. |
 | `exports-all` | The four writers above (not PMTiles). |
+| `test-hooks` | Panic-injection hooks for tests (`_panic_for_test` on the module and on `HdfSession`; implies `python`). CI test builds enable it; release wheels and crates do not. |
 
 Without `python`, no PyO3 or NumPy is in the dependency tree.
 
@@ -51,7 +52,9 @@ and later. Build the source distribution with
 
 For development, `maturin develop --release --features
 extension-module,exports-all,exports-pmtiles`, run in `python/`, builds and
-installs into the active virtual environment in one step.
+installs into the active virtual environment in one step. Add `test-hooks` to
+the features to run ras-commander's panic-containment tests
+(`tests/rust_engine_bridge/panic_guard_test.py`); they skip on a release wheel.
 
 `ENGINE_COMMIT` is the commit of this checkout, read by `build.rs` at build
 time. To build from a

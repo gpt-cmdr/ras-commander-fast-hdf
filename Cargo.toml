@@ -82,6 +82,9 @@ python = [
     "dep:pmtiles2",
     "dep:integer-encoding",
 ]
+# Panic-injection hooks for tests (`_panic_for_test` on the module and on
+# HdfSession). CI test builds enable it; release wheels and crates leave it off.
+test-hooks = ["python"]
 # Build a Python extension module (maturin enables this).
 extension-module = ["python", "pyo3/extension-module"]
 # Arrow IPC -> vector file writers, exposed through the Python bindings.
