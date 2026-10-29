@@ -1,6 +1,10 @@
 {
   "source": "synthetic h5py 3.15.1 (tests/generate_presence_fixtures.py)",
   "files": {
+    "presence_drop_attributes.h5": "04241601dc345935c70b7413ed5e772f069dc4f39762ec611d7b6d673d5f8582",
+    "presence_drop_info.h5": "7a06f8c1f6854e907d9ce0937f68149c98a3654e997c937440149414c5a19861",
+    "presence_drop_parts.h5": "7e258a8d17d23042ad8d341f68d8bcca9d9474df4e4c8263a872aacc2c6a8abe",
+    "presence_drop_points.h5": "f5614fe539b69e334d23744c9067bc05fa0e6b23b5581ce0a883e7cdef3b3b4c",
     "presence_empty.h5": "753ee516efbb76fb95ebc90ea6ad96df1a8c0ca98d35e35a707a404aa37b2e9d",
     "presence_incomplete.h5": "beb5bab9c7636079a9d3755a7e93774df9b484c16d15364139ae92378e4a281c",
     "presence_legacy_xs.h5": "ef2bad81cc05384dfe961ae7f05ca13253d6129eb113b4575dcc3fd2103e16fd",

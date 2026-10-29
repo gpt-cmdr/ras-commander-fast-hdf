@@ -457,30 +457,29 @@ verdict for every family of `presence::LAYER_FAMILIES`, in that order. The famil
 `LayerFamily::Geometry` (the packed `GeometryFamily`s), `ReferencePoints`,
 `RiverJunctions`, `PumpStations`, `PipeNodes`, `Meshes` and `MeshPerimeters`.
 
-The verdict is the family reader's:
+- `Absent { reason }` exactly when the family's reader reports canonical absence
+  (`Unavailable`), with the reader's reason. Those checks are, in the reader's order: the
+  family group is missing; for a packed 1D line family, its `... Info` dataset is missing; for
+  land-cover calibration regions, `Polygon Info` is missing; for a point family, both
+  `Attributes` and `Points` are missing.
+- `Stored` otherwise. That includes a family that stores some of its datasets but not all: its
+  reader refuses it (`NotFound`, `Unsupported` or `Corrupt`), so a caller that lists it shows
+  the refusal instead of treating a damaged file as having no such data.
+- Host errors (`Io`, `FileNotFound`) and `Internal` errors propagate. The verdict does not
+  depend on `max_bytes`.
+- `Meshes` is absent when `mesh_names` is `NotFound` (no `Geometry/2D Flow Areas` group).
+  `MeshPerimeters` is absent when meshes are absent or no mesh stores a `Perimeter`. When only
+  some do, it is stored, and `read_mesh_perimeter` refuses the others (`NotFound`).
 
-- `Absent { reason }` exactly when the reader reports canonical absence (`Unavailable`) or a
-  dataset it needs is missing (`NotFound`). The reason is the reader's.
-- `Stored` when the reader returns the data or refuses it (`Unsupported`, `Corrupt`, over
-  budget). Only reading the family says which.
-- Host errors (`Io`, `FileNotFound`) and `Internal` errors propagate.
+The readers are unchanged: `family_presence` repeats their canonical-absence checks and reads
+nothing more.
 
-Each reader (`one_d_line_family`, `geometry_family`, `reference_point_geometry`,
-`river_junctions`, `pump_stations`, `pipe_nodes`) starts with the same checks: canonical
-absence, then the existence of every dataset it reads unconditionally. So the verdict does not
-depend on dataset values or on `max_bytes`. A family missing a required dataset is `NotFound`
-before its other data is checked. Before this, a family that was missing a dataset could
-instead be refused by an earlier check (`Unsupported`, for example, when its `Attributes`
-had no `Name` column). Files that store every dataset read exactly as before. For
-`Meshes` the reader is `mesh_names` (absent when there is no `2D Flow Areas` group; a group
-with no mesh is refused, so stored). For `MeshPerimeters` it is `read_mesh_perimeter` for
-each mesh: absent when meshes are absent or any mesh has no `Perimeter`.
-
-Verification: `tests/family_presence.rs` compares the verdict with the full reads, at a
-1-byte and the default budget, for every family of every committed HDF5 fixture. With
+Verification: `tests/family_presence.rs` compares the verdict with every reader's full read, at
+a 1-byte and at the default budget, for every family of every committed HDF5 fixture. With
 `RAS_PRESENCE_CORPUS` set, it does the same for every HDF5 file in the golden corpus. Synthetic
-cases (generator `tests/generate_presence_fixtures.py`) cover each kind of absence and
-refusal.
+cases (generator `tests/generate_presence_fixtures.py`) drop each of `Attributes`, `Info`,
+`Parts` and `Points` from every family. `tests/fixtures/presence/outcomes.txt` pins every
+reader's exact outcome on them.
 
 ## Mesh identity comparison
 

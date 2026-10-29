@@ -940,13 +940,15 @@ impl ReadOnlyHdfSession {
         family: OneDLineFamily,
         max_bytes: usize,
     ) -> Result<Reported<OneDLineData>> {
-        // Canonical absence, then every dataset read below (see `presence`).
-        if let Some(reason) = self.one_d_line_prelude(family)? {
-            return Ok(Reported::unavailable(reason));
-        }
         let group = family.group_path();
+        if !self.has_group(group)? {
+            return Ok(Reported::unavailable("canonical 1D line family absent"));
+        }
         let prefix = family.prefix();
         let info_path = format!("{group}/{prefix} Info");
+        if !self.has_dataset(&info_path)? {
+            return Ok(Reported::unavailable("packed line datasets absent"));
+        }
         if family == OneDLineFamily::CrossSectionCutLines {
             self.xs_layout_guard()?;
         }
@@ -1071,11 +1073,19 @@ impl ReadOnlyHdfSession {
         group: &str,
         max_bytes: usize,
     ) -> Result<Reported<OneDPointData>> {
-        if let Some(reason) = self.point_family_prelude(group)? {
-            return Ok(Reported::unavailable(reason));
+        if !self.has_group(group)? {
+            return Ok(Reported::unavailable("canonical point family absent"));
         }
         let attr_path = format!("{group}/Attributes");
         let points_path = format!("{group}/Points");
+        match (
+            self.has_dataset(&attr_path)?,
+            self.has_dataset(&points_path)?,
+        ) {
+            (true, true) => {}
+            (false, false) => return Ok(Reported::unavailable("point family datasets absent")),
+            _ => return Err(corrupt("incomplete Attributes/Points pair")),
+        }
         let attributes = exact_compound(self, &attr_path, max_bytes)?;
         let points = exact_array(self, &points_path, max_bytes)?;
         if points.shape.len() != 2

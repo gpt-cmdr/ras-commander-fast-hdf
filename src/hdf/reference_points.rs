@@ -41,9 +41,10 @@ impl ReadOnlyHdfSession {
         max_bytes: usize,
     ) -> Result<Reported<ReferencePointGeometry>> {
         let root = "Geometry/Reference Points";
-        // Canonical absence, then every dataset read below (see `presence`).
-        if let Some(reason) = self.reference_point_prelude()? {
-            return Ok(Reported::unavailable(reason));
+        if !self.has_group(root)? {
+            return Ok(Reported::unavailable(
+                "canonical reference-point geometry absent",
+            ));
         }
         let attr_path = format!("{root}/Attributes");
         let attributes = exact_compound(self, &attr_path, max_bytes)?;

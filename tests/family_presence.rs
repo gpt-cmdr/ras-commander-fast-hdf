@@ -1,67 +1,76 @@
 #![cfg(all(feature = "hdf", feature = "mesh"))]
-//! `family_presence` gives the verdict of each family's full reader, from metadata only.
+//! `family_presence` gives the readers' canonical-absence verdict from metadata only, and the
+//! readers keep their own outcomes.
 //!
-//! The full-read verdict is the one a vector driver lists layers by: stored unless the reader
-//! reports canonical absence (`Reported::Unavailable`) or `NotFound`; host errors propagate.
-//! Synthetic cases (generator: tests/generate_presence_fixtures.py) have expected verdicts; every
-//! committed HDF5 fixture, and every file below `RAS_PRESENCE_CORPUS` when set, is compared.
-use ras_commander_fast_hdf::hdf::lines::GeometryFamily;
+//! A family is absent exactly when its reader reports `Reported::Unavailable` (for the mesh
+//! families, which have none: `mesh_names` is `NotFound`, or no mesh stores a `Perimeter`).
+//! A family with some of its datasets but not all is stored, and its reader refuses it.
+//! Synthetic cases (generator: tests/generate_presence_fixtures.py) pin every reader's exact
+//! outcome; every committed HDF5 fixture, and every file below `RAS_PRESENCE_CORPUS` when set,
+//! is compared.
 use ras_commander_fast_hdf::hdf::presence::{FamilyPresence, LayerFamily, LAYER_FAMILIES};
-use ras_commander_fast_hdf::hdf::xs_geometry::OneDLineFamily;
 use ras_commander_fast_hdf::hdf::{ReadOnlyHdfSession, DEFAULT_MAX_BYTES};
-use ras_commander_fast_hdf::{ErrorKind, Result};
+use ras_commander_fast_hdf::{Reported, Result};
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
-fn host(kind: ErrorKind) -> bool {
-    matches!(
-        kind,
-        ErrorKind::Io | ErrorKind::Internal | ErrorKind::FileNotFound
-    )
-}
-
-/// The full-read verdict: `Ok(true)` when stored.
-fn read_verdict<T>(r: Result<ras_commander_fast_hdf::Reported<T>>) -> Result<bool> {
-    verdict(r.map(|r| !r.is_unavailable()))
-}
-fn verdict(r: Result<bool>) -> Result<bool> {
+/// What a family's full read gives: `unavailable`, `supported`, a `Reported` refusal
+/// (`reported:<status>`), or the error kind and code (`not_found`, `unsupported/identity_layout`).
+fn outcome<T>(r: Result<Reported<T>>) -> String {
     match r {
-        Ok(stored) => Ok(stored),
-        Err(e) if e.kind == ErrorKind::NotFound => Ok(false),
-        Err(e) if host(e.kind) => Err(e),
-        Err(_) => Ok(true),
+        Ok(r) if r.is_unavailable() => "unavailable".into(),
+        Ok(r) if r.value().is_some() => "supported".into(),
+        Ok(r) => format!("reported:{}", r.capability().as_str()),
+        Err(e) => error(&e),
+    }
+}
+fn error(e: &ras_commander_fast_hdf::Error) -> String {
+    match e.code {
+        Some(code) => format!("{}/{}", e.kind.as_str(), code.as_str()),
+        None => e.kind.as_str().into(),
     }
 }
 
-fn full_read(s: &ReadOnlyHdfSession, family: LayerFamily, max_bytes: usize) -> Result<bool> {
+fn full_read(s: &ReadOnlyHdfSession, family: LayerFamily, max_bytes: usize) -> String {
     match family {
-        LayerFamily::OneDLine(f) => read_verdict(s.one_d_line_family(f, max_bytes)),
-        LayerFamily::Geometry(f) => read_verdict(s.geometry_family(f, max_bytes)),
-        LayerFamily::ReferencePoints => read_verdict(s.reference_point_geometry(max_bytes)),
-        LayerFamily::RiverJunctions => read_verdict(s.river_junctions(max_bytes)),
-        LayerFamily::PumpStations => read_verdict(s.pump_stations(max_bytes)),
-        LayerFamily::PipeNodes => read_verdict(s.pipe_nodes(max_bytes)),
-        LayerFamily::Meshes => verdict(s.mesh_names().map(|_| true)),
-        LayerFamily::MeshPerimeters => {
-            if !full_read(s, LayerFamily::Meshes, max_bytes)? {
-                return Ok(false);
-            }
-            let Ok(meshes) = s.mesh_names() else {
-                return Ok(true);
-            };
-            for mesh in meshes {
-                if !verdict(s.read_mesh_perimeter(&mesh, max_bytes).map(|_| true))? {
-                    return Ok(false);
-                }
-            }
-            Ok(true)
-        }
+        LayerFamily::OneDLine(f) => outcome(s.one_d_line_family(f, max_bytes)),
+        LayerFamily::Geometry(f) => outcome(s.geometry_family(f, max_bytes)),
+        LayerFamily::ReferencePoints => outcome(s.reference_point_geometry(max_bytes)),
+        LayerFamily::RiverJunctions => outcome(s.river_junctions(max_bytes)),
+        LayerFamily::PumpStations => outcome(s.pump_stations(max_bytes)),
+        LayerFamily::PipeNodes => outcome(s.pipe_nodes(max_bytes)),
+        LayerFamily::Meshes => match s.mesh_names() {
+            Ok(_) => "supported".into(),
+            Err(e) => error(&e),
+        },
+        LayerFamily::MeshPerimeters => match s.mesh_names() {
+            Err(e) => format!("meshes:{}", error(&e)),
+            Ok(meshes) => meshes
+                .iter()
+                .map(|m| match s.read_mesh_perimeter(m, max_bytes) {
+                    Ok(_) => "supported".to_owned(),
+                    Err(e) => error(&e),
+                })
+                .collect::<Vec<_>>()
+                .join(","),
+        },
         other => panic!("no full reader for {other:?}"),
     }
 }
 
-/// Compare every family of one file at a tiny and at the default budget.
-/// `None` when the file does not open (malformed fixtures).
+/// The canonical-absence verdict of a full-read outcome.
+fn absent(family: LayerFamily, outcome: &str) -> bool {
+    match family {
+        LayerFamily::Meshes => outcome == "not_found",
+        LayerFamily::MeshPerimeters => {
+            outcome == "meshes:not_found" || outcome.split(',').all(|o| o == "not_found")
+        }
+        _ => outcome == "unavailable",
+    }
+}
+
+/// Compare every family of one file at a tiny and at the default budget. `None` when the file
+/// does not open (malformed fixtures).
 fn compare(path: &Path) -> Option<usize> {
     let s = ReadOnlyHdfSession::open(path).ok()?;
     let presence = s.layer_family_presence().unwrap();
@@ -69,11 +78,11 @@ fn compare(path: &Path) -> Option<usize> {
     let mut stored = 0;
     for (family, p) in &presence {
         for max_bytes in [1, DEFAULT_MAX_BYTES] {
-            let full = full_read(&s, *family, max_bytes).unwrap();
+            let full = full_read(&s, *family, max_bytes);
             assert_eq!(
-                p.is_stored(),
-                full,
-                "{}: {} at max_bytes {max_bytes}: presence {p:?}",
+                !p.is_stored(),
+                absent(*family, &full),
+                "{}: {} at max_bytes {max_bytes}: presence {p:?}, full read {full}",
                 path.display(),
                 family.as_str()
             );
@@ -115,64 +124,66 @@ fn fixture(name: &str) -> ReadOnlyHdfSession {
     ReadOnlyHdfSession::open(dir.join(file)).unwrap()
 }
 
-fn stored_names(s: &ReadOnlyHdfSession) -> Vec<&'static str> {
+/// `family presence full-read` lines of every family of a fixture, full read at the default
+/// budget.
+fn table(name: &str) -> Vec<String> {
+    let s = fixture(name);
     s.layer_family_presence()
         .unwrap()
         .into_iter()
-        .filter(|(_, p)| p.is_stored())
-        .map(|(f, _)| f.as_str())
+        .map(|(f, p)| {
+            format!(
+                "{} {} {}",
+                f.as_str(),
+                if p.is_stored() { "stored" } else { "absent" },
+                full_read(&s, f, DEFAULT_MAX_BYTES)
+            )
+        })
         .collect()
 }
 
+const CASES: [&str; 8] = [
+    "presence_stored",
+    "presence_empty",
+    "presence_drop_attributes",
+    "presence_drop_info",
+    "presence_drop_parts",
+    "presence_drop_points",
+    "presence_incomplete",
+    "presence_legacy_xs",
+];
+
+/// Every synthetic case: `case family presence full-read`, pinned in
+/// `tests/fixtures/presence/outcomes.txt`. The readers are unchanged from engine 0.2.4, so the
+/// full-read column is also their outcome before `family_presence` existed. Regenerate with
+/// `PRESENCE_PRINT=1 cargo test --test family_presence -- --nocapture synthetic`.
 #[test]
-fn synthetic_cases_have_the_expected_verdicts() {
-    let all: Vec<_> = LAYER_FAMILIES.iter().map(|f| f.as_str()).collect();
-    assert_eq!(stored_names(&fixture("presence_stored")), all);
-    assert!(stored_names(&fixture("presence_empty")).is_empty());
-    assert_eq!(
-        stored_names(&fixture("presence_incomplete")),
-        [
-            // Optional Attributes absent: read.
-            OneDLineFamily::RiverFlowPaths.as_str(),
-            // Required Attributes absent, every packed dataset stored: refused.
-            OneDLineFamily::StorageAreaPolygons.as_str(),
-            // No Name column, every dataset stored: refused.
-            GeometryFamily::RefinementRegions.as_str(),
-            // Only one of Attributes/Points: corrupt.
-            "river_junctions",
-            "meshes",
-        ]
-    );
-    let s = fixture("presence_incomplete");
-    // Area B stores no Perimeter.
-    assert!(matches!(
-        s.family_presence(LayerFamily::MeshPerimeters).unwrap(),
-        FamilyPresence::Absent { reason } if reason.contains("Area B/Perimeter")
-    ));
-    // A missing required dataset is reported before any refusal of the data the reader reads
-    // first, so the verdict does not depend on dataset values or on the budget.
-    match s
-        .family_presence(LayerFamily::OneDLine(OneDLineFamily::StructureCenterlines))
-        .unwrap()
-    {
-        FamilyPresence::Absent { reason } => {
-            assert_eq!(
-                reason,
-                "required dataset Geometry/Structures/Centerline Parts absent"
-            )
+fn synthetic_cases_match_the_pinned_outcomes() {
+    let lines: Vec<String> = CASES
+        .iter()
+        .flat_map(|name| table(name).into_iter().map(move |l| format!("{name} {l}")))
+        .collect();
+    if std::env::var_os("PRESENCE_PRINT").is_some() {
+        for l in &lines {
+            println!("{l}");
         }
-        other => panic!("{other:?}"),
     }
-    let e = s
-        .geometry_family(GeometryFamily::Breaklines, DEFAULT_MAX_BYTES)
-        .unwrap_err();
-    assert_eq!(e.kind, ErrorKind::NotFound);
-    let legacy = fixture("presence_legacy_xs");
-    assert_eq!(stored_names(&legacy), ["meshes", "mesh_perimeters"]);
-    let e = legacy
-        .one_d_line_family(OneDLineFamily::CrossSectionCutLines, DEFAULT_MAX_BYTES)
-        .unwrap_err();
-    assert_eq!(e.kind, ErrorKind::NotFound, "{e}");
+    let pinned = std::fs::read_to_string(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/presence/outcomes.txt"),
+    )
+    .unwrap();
+    let pinned: Vec<&str> = pinned.lines().collect();
+    assert_eq!(lines, pinned);
+    // A family with some datasets but not all is never absent: absent is exactly the
+    // reader's Unavailable (NotFound of the mesh list, or no Perimeter in any mesh).
+    for l in &lines {
+        let f: Vec<&str> = l.split(' ').collect();
+        let absent = f[3] == "unavailable"
+            || f[3] == "meshes:not_found"
+            || (f[1] == "meshes" && f[3] == "not_found")
+            || (f[1] == "mesh_perimeters" && f[3].split(',').all(|o| o == "not_found"));
+        assert_eq!(f[2] == "absent", absent, "{l}");
+    }
 }
 
 #[test]
@@ -182,7 +193,6 @@ fn presence_agrees_with_full_reads_on_every_committed_fixture() {
         &PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures"),
         &mut files,
     );
-    assert!(files.len() > 100, "{} fixtures", files.len());
     let compared: Vec<usize> = files.iter().filter_map(|f| compare(f)).collect();
     assert!(compared.len() > 100, "{} fixtures open", compared.len());
     assert!(compared.iter().sum::<usize>() > 0);
@@ -201,4 +211,18 @@ fn presence_agrees_with_full_reads_on_the_corpus() {
         println!("{}\t{stored}", f.display());
     }
     println!("{} files", files.len());
+}
+
+#[test]
+fn reasons_are_the_readers() {
+    let s = fixture("presence_drop_info");
+    assert_eq!(
+        s.family_presence(LayerFamily::OneDLine(
+            ras_commander_fast_hdf::hdf::xs_geometry::OneDLineFamily::RiverCenterlines
+        ))
+        .unwrap(),
+        FamilyPresence::Absent {
+            reason: "packed line datasets absent".into()
+        }
+    );
 }

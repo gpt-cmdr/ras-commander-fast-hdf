@@ -116,8 +116,24 @@ def legacy_xs(f):
     f.require_group('Geometry/2D Flow Areas')                   # no mesh groups: refused, stored
 
 
+def dropping(name):
+    """Every packed, point and reference-point family without its `name` dataset."""
+    def build(f):
+        for group, prefix in list(LINES.values()) + list(GEOMETRY.values()):
+            packed(f, group, prefix, drop=(name,))
+        if name in ('Attributes', 'Points'):
+            for group in POINTS:
+                point_family(f, group, drop=(name,))
+            reference_points(f, drop=(name,))
+        if name == 'Points':
+            meshes(f, ['Area A', 'Area B'], perimeter=lambda n: False)  # no Perimeter at all
+    build.__doc__ = f'Each family without {name}.'
+    return build
+
+
 CASES = dict(presence_stored=stored, presence_empty=empty, presence_incomplete=incomplete,
-             presence_legacy_xs=legacy_xs)
+             presence_legacy_xs=legacy_xs,
+             **{f'presence_drop_{n.lower()}': dropping(n) for n in ('Attributes', 'Info', 'Parts', 'Points')})
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()

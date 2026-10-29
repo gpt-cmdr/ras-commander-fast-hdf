@@ -1,11 +1,12 @@
 //! Which layer families a file stores, from group membership and object headers only.
 //!
-//! Each family reader begins with a prelude, defined here, that decides canonical absence
-//! (`Reported::Unavailable`) and then requires every dataset the reader opens unconditionally
-//! (`NotFound` when one is missing), before it reads anything. [`ReadOnlyHdfSession::family_presence`]
-//! runs the same prelude and stops there, so its verdict is the reader's by construction:
-//! absent exactly when the reader reports canonical absence or a missing required dataset,
-//! stored when the reader returns data or refuses it (unsupported, corrupt, over budget).
+//! A family is absent exactly when its reader reports canonical absence
+//! (`Reported::Unavailable`): its group is missing, or the dataset the reader anchors on is.
+//! [`ReadOnlyHdfSession::family_presence`] makes those same checks, in the reader's order, and
+//! nothing else. A family that stores some of its datasets but not all is stored: its reader
+//! refuses it (`NotFound`, `Unsupported` or `Corrupt`, as before), and a caller that lists it
+//! shows that refusal instead of treating the file as having no such data. The readers are not
+//! changed. `tests/family_presence.rs` checks the verdict against the readers.
 use super::{
     lines::{GeometryFamily, GEOMETRY_FAMILIES},
     xs_geometry::{OneDLineFamily, ONE_D_LINE_FAMILIES, PIPE_LINE_FAMILIES},
@@ -96,11 +97,10 @@ impl LayerFamily {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum FamilyPresence {
-    /// The family's reader returns its data or refuses it (unsupported, corrupt, over
-    /// budget). Reading it is the only way to know which.
+    /// The family is not canonically absent. Its reader returns the data or refuses it
+    /// (incomplete, unsupported, corrupt or over budget); only reading it says which.
     Stored,
-    /// The reader reports canonical absence (`Reported::Unavailable`) or a dataset it needs is
-    /// missing (`NotFound`). `reason` is the reader's.
+    /// The family's reader reports canonical absence; `reason` is the reader's.
     Absent { reason: String },
 }
 
@@ -110,8 +110,7 @@ impl FamilyPresence {
     }
 }
 
-/// Errors of the host or the engine itself, which a presence check propagates rather than
-/// reports as a refusal of the family.
+/// Errors of the host or the engine itself, which a presence check propagates.
 fn host(e: &Error) -> bool {
     matches!(
         e.kind,
@@ -119,158 +118,124 @@ fn host(e: &Error) -> bool {
     )
 }
 
-/// The verdict of a prelude: canonical absence, a missing required dataset, or neither.
-fn verdict(prelude: Result<Option<&'static str>>) -> Result<FamilyPresence> {
-    match prelude {
+/// `Some(reason)`: canonically absent. An error from a check the reader also makes first
+/// means the reader refuses the family, so it is stored; host errors propagate.
+fn verdict(absence: Result<Option<&'static str>>) -> Result<FamilyPresence> {
+    match absence {
         Ok(Some(reason)) => Ok(FamilyPresence::Absent {
             reason: reason.into(),
         }),
         Ok(None) => Ok(FamilyPresence::Stored),
-        Err(e) if e.kind == ErrorKind::NotFound => Ok(FamilyPresence::Absent { reason: e.message }),
         Err(e) if host(&e) => Err(e),
-        // The reader stops here with the same refusal.
         Err(_) => Ok(FamilyPresence::Stored),
     }
 }
 
 impl ReadOnlyHdfSession {
-    /// Require `group/name` for each name: `NotFound` for the first one missing.
-    fn require_datasets(&self, group: &str, names: &[&str]) -> Result<()> {
-        for name in names {
-            let path = format!("{group}/{name}");
-            if !self.has_dataset(&path)? {
-                return Err(Error::new(
-                    ErrorKind::NotFound,
-                    format!("required dataset {path} absent"),
-                ));
-            }
-        }
-        Ok(())
-    }
-    /// Prelude of [`Self::one_d_line_family`]: `Some(reason)` when canonically absent.
-    pub(super) fn one_d_line_prelude(
-        &self,
-        family: OneDLineFamily,
-    ) -> Result<Option<&'static str>> {
+    /// The canonical-absence checks of [`Self::one_d_line_family`], in its order.
+    fn one_d_line_absence(&self, family: OneDLineFamily) -> Result<Option<&'static str>> {
         let group = family.group_path();
         if !self.has_group(group)? {
             return Ok(Some("canonical 1D line family absent"));
         }
-        let prefix = family.prefix();
-        if !self.has_dataset(&format!("{group}/{prefix} Info"))? {
+        if !self.has_dataset(&format!("{group}/{} Info", family.prefix()))? {
             return Ok(Some("packed line datasets absent"));
         }
-        self.require_datasets(
-            group,
-            &[&format!("{prefix} Parts"), &format!("{prefix} Points")],
-        )?;
         Ok(None)
     }
-    /// Prelude of [`Self::geometry_family`]: `Some(reason)` when canonically absent. Reference
-    /// points pass (the reader refuses them as not packed).
-    pub(super) fn geometry_family_prelude(
-        &self,
-        family: GeometryFamily,
-    ) -> Result<Option<&'static str>> {
-        let group = family.group_path();
-        if !self.has_group(group)? {
+    /// The canonical-absence checks of [`Self::geometry_family`], in its order. Reference
+    /// points are refused by that reader when their group exists.
+    fn geometry_family_absence(&self, family: GeometryFamily) -> Result<Option<&'static str>> {
+        if !self.has_group(family.group_path())? {
             return Ok(Some("canonical geometry family absent"));
         }
-        if family == GeometryFamily::ReferencePoints {
-            return Ok(None);
-        }
-        let prefix = family.prefix();
-        // Land cover metadata without calibration polygons is not a region family.
         if family == GeometryFamily::CalibrationRegions
-            && !self.has_dataset(&format!("{group}/Polygon Info"))?
+            && !self.has_dataset(&format!("{}/Polygon Info", family.group_path()))?
         {
             return Ok(Some("calibration polygons absent"));
         }
-        self.require_datasets(
-            group,
-            &[
-                "Attributes",
-                &format!("{prefix} Info"),
-                &format!("{prefix} Parts"),
-                &format!("{prefix} Points"),
-            ],
-        )?;
         Ok(None)
     }
-    /// Prelude of [`Self::reference_point_geometry`].
-    pub(super) fn reference_point_prelude(&self) -> Result<Option<&'static str>> {
-        let root = "Geometry/Reference Points";
-        if !self.has_group(root)? {
+    /// The canonical-absence check of [`Self::reference_point_geometry`].
+    fn reference_point_absence(&self) -> Result<Option<&'static str>> {
+        if !self.has_group("Geometry/Reference Points")? {
             return Ok(Some("canonical reference-point geometry absent"));
         }
-        self.require_datasets(root, &["Attributes", "Points"])?;
         Ok(None)
     }
-    /// Prelude of the point families (`river_junctions`, `pump_stations`, `pipe_nodes`). Only
-    /// one of `Attributes` and `Points` stored is Corrupt, which the reader refuses.
-    pub(super) fn point_family_prelude(&self, group: &str) -> Result<Option<&'static str>> {
+    /// The canonical-absence checks of the point families (`river_junctions`,
+    /// `pump_stations`, `pipe_nodes`). Only one of `Attributes` and `Points` is Corrupt
+    /// there, so stored.
+    fn point_family_absence(&self, group: &str) -> Result<Option<&'static str>> {
         if !self.has_group(group)? {
             return Ok(Some("canonical point family absent"));
         }
-        match (
-            self.has_dataset(&format!("{group}/Attributes"))?,
-            self.has_dataset(&format!("{group}/Points"))?,
-        ) {
-            (true, true) => Ok(None),
-            (false, false) => Ok(Some("point family datasets absent")),
-            _ => Err(Error::new(
-                ErrorKind::Corrupt,
-                "incomplete Attributes/Points pair",
-            )),
-        }
+        let attributes = self.has_dataset(&format!("{group}/Attributes"))?;
+        let points = self.has_dataset(&format!("{group}/Points"))?;
+        Ok((!attributes && !points).then_some("point family datasets absent"))
     }
 
     /// Whether the file stores `family`, from group membership and object headers only: no
     /// dataset values are read, at the same cost for every family, whatever its size.
     ///
-    /// The verdict is the family reader's (each reader runs the same checks first):
-    /// [`FamilyPresence::Absent`] exactly when it reports canonical absence or a dataset it
-    /// needs is missing (`NotFound`); [`FamilyPresence::Stored`] when it returns the data or
-    /// refuses it. A stored family can still be refused when read; only reading it says so.
-    /// For [`LayerFamily::Meshes`] the reader is `mesh_names` (absent: no `2D Flow Areas`
-    /// group); for [`LayerFamily::MeshPerimeters`] it is `read_mesh_perimeter` for every mesh
-    /// (absent when meshes are absent or any one stores no `Perimeter`; stored when the mesh
-    /// list is refused). The verdict does not depend on a byte budget: a family over budget is
-    /// stored. Errors of the host (`Io`, `FileNotFound`) and `Internal` errors propagate.
+    /// [`FamilyPresence::Absent`] exactly when the family's reader reports canonical absence
+    /// (`Reported::Unavailable`). Every other family is [`FamilyPresence::Stored`], including
+    /// one that stores some of its datasets but not all: its reader refuses it (`NotFound`,
+    /// `Unsupported` or `Corrupt`), and listing it lets a caller show that refusal rather than
+    /// treat a damaged file as having no such data. Errors of the host (`Io`, `FileNotFound`)
+    /// and `Internal` errors propagate. The readers are unchanged and the verdict does not
+    /// depend on a byte budget.
+    ///
+    /// The mesh families have no `Unavailable` report: [`LayerFamily::Meshes`] is absent when
+    /// `mesh_names` is `NotFound` (no `Geometry/2D Flow Areas` group), and
+    /// [`LayerFamily::MeshPerimeters`] is absent when meshes are or when no mesh stores a
+    /// `Perimeter`. When some meshes store one and others do not, it is stored, and
+    /// `read_mesh_perimeter` refuses the others (`NotFound`).
     pub fn family_presence(&self, family: LayerFamily) -> Result<FamilyPresence> {
         match family {
-            LayerFamily::OneDLine(f) => verdict(self.one_d_line_prelude(f)),
-            LayerFamily::Geometry(f) => verdict(self.geometry_family_prelude(f)),
-            LayerFamily::ReferencePoints => verdict(self.reference_point_prelude()),
-            LayerFamily::RiverJunctions => verdict(self.point_family_prelude("Geometry/Junctions")),
+            LayerFamily::OneDLine(f) => verdict(self.one_d_line_absence(f)),
+            LayerFamily::Geometry(f) => verdict(self.geometry_family_absence(f)),
+            LayerFamily::ReferencePoints => verdict(self.reference_point_absence()),
+            LayerFamily::RiverJunctions => verdict(self.point_family_absence("Geometry/Junctions")),
             LayerFamily::PumpStations => {
-                verdict(self.point_family_prelude("Geometry/Pump Stations"))
+                verdict(self.point_family_absence("Geometry/Pump Stations"))
             }
-            LayerFamily::PipeNodes => verdict(self.point_family_prelude("Geometry/Pipe Nodes")),
-            LayerFamily::Meshes => verdict(self.mesh_names().map(|_| None)),
+            LayerFamily::PipeNodes => verdict(self.point_family_absence("Geometry/Pipe Nodes")),
+            LayerFamily::Meshes => match self.mesh_names() {
+                Err(e) if e.kind == ErrorKind::NotFound => {
+                    Ok(FamilyPresence::Absent { reason: e.message })
+                }
+                Err(e) if host(&e) => Err(e),
+                _ => Ok(FamilyPresence::Stored),
+            },
             LayerFamily::MeshPerimeters => {
-                let meshes = match verdict(self.mesh_names().map(|_| None))? {
-                    FamilyPresence::Stored => match self.mesh_names() {
-                        Ok(meshes) => meshes,
-                        // The mesh list is refused: so is every perimeter read.
-                        Err(_) => return Ok(FamilyPresence::Stored),
-                    },
-                    absent => return Ok(absent),
+                if !self.family_presence(LayerFamily::Meshes)?.is_stored() {
+                    return Ok(FamilyPresence::Absent {
+                        reason: "no Geometry/2D Flow Areas group".into(),
+                    });
+                }
+                let meshes = match self.mesh_names() {
+                    Ok(meshes) => meshes,
+                    Err(e) if host(&e) => return Err(e),
+                    // The mesh list is refused, and so is every perimeter read.
+                    Err(_) => return Ok(FamilyPresence::Stored),
                 };
                 for mesh in meshes {
                     // read_mesh_perimeter refuses such a name before it reads anything.
                     if mesh.is_empty() || mesh.contains(['/', '\\']) {
-                        continue;
+                        return Ok(FamilyPresence::Stored);
                     }
-                    // read_mesh_perimeter's first step: the dataset's numeric metadata.
                     let path = format!("{MESH_GROUP}/{mesh}/Perimeter");
-                    if let FamilyPresence::Absent { reason } =
-                        verdict(self.numeric_capability(&path).map(|_| None))?
-                    {
-                        return Ok(FamilyPresence::Absent { reason });
+                    match self.has_dataset(&path) {
+                        Ok(false) => {}
+                        Err(e) if host(&e) => return Err(e),
+                        // Stored, or refused when read.
+                        _ => return Ok(FamilyPresence::Stored),
                     }
                 }
-                Ok(FamilyPresence::Stored)
+                Ok(FamilyPresence::Absent {
+                    reason: "no 2D flow area stores a Perimeter".into(),
+                })
             }
         }
     }
@@ -328,16 +293,14 @@ mod measure {
         };
         (s, bytes, reads)
     }
-    /// The listing a vector driver made before: each family read whole (metadata budget for
-    /// families, the whole-read budget for perimeters), stored unless absent or NotFound.
+    /// The same listing by full reads: each family read whole (metadata budget for families,
+    /// the whole-read budget for perimeters), absent only when canonically absent.
     fn full_listing(s: &ReadOnlyHdfSession) -> Vec<bool> {
         use crate::hdf::DEFAULT_MAX_BYTES as M;
         fn v<T>(r: Result<crate::Reported<T>>) -> bool {
-            match r {
-                Ok(r) => !r.is_unavailable(),
-                Err(e) => e.kind != ErrorKind::NotFound,
-            }
+            !matches!(r, Ok(r) if r.is_unavailable())
         }
+        let meshes = !matches!(s.mesh_names(), Err(e) if e.kind == ErrorKind::NotFound);
         LAYER_FAMILIES
             .iter()
             .map(|&f| match f {
@@ -347,18 +310,19 @@ mod measure {
                 LayerFamily::RiverJunctions => v(s.river_junctions(M)),
                 LayerFamily::PumpStations => v(s.pump_stations(M)),
                 LayerFamily::PipeNodes => v(s.pipe_nodes(M)),
-                LayerFamily::Meshes => {
-                    !matches!(s.mesh_names(), Err(e) if e.kind == ErrorKind::NotFound)
+                LayerFamily::Meshes => meshes,
+                LayerFamily::MeshPerimeters => {
+                    meshes
+                        && match s.mesh_names() {
+                            Err(_) => true,
+                            Ok(names) => names.iter().any(|m| {
+                                !matches!(
+                                    s.read_mesh_perimeter(m, crate::hdf::DEFAULT_READ_MAX_BYTES),
+                                    Err(e) if e.kind == ErrorKind::NotFound
+                                )
+                            }),
+                        }
                 }
-                LayerFamily::MeshPerimeters => match s.mesh_names() {
-                    Err(e) => e.kind != ErrorKind::NotFound,
-                    Ok(meshes) => meshes.iter().all(|m| {
-                        !matches!(
-                            s.read_mesh_perimeter(m, crate::hdf::DEFAULT_READ_MAX_BYTES),
-                            Err(e) if e.kind == ErrorKind::NotFound
-                        )
-                    }),
-                },
             })
             .collect()
     }

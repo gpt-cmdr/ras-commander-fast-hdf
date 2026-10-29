@@ -45,7 +45,7 @@ impl GeometryFamily {
             Self::CalibrationRegions => "Geometry/Land Cover (Manning's n)",
         }
     }
-    pub(super) fn prefix(self) -> &'static str {
+    fn prefix(self) -> &'static str {
         if matches!(self, Self::RefinementRegions | Self::CalibrationRegions) {
             "Polygon"
         } else {
@@ -104,11 +104,10 @@ impl ReadOnlyHdfSession {
         family: GeometryFamily,
         max_bytes: usize,
     ) -> Result<Reported<GeometryFamilyData>> {
-        // Canonical absence, then every dataset read below (see `presence`).
-        if let Some(reason) = self.geometry_family_prelude(family)? {
-            return Ok(Reported::unavailable(reason));
-        }
         let group = family.group_path();
+        if !self.has_group(group)? {
+            return Ok(Reported::unavailable("canonical geometry family absent"));
+        }
         if family == GeometryFamily::ReferencePoints {
             return Ok(Reported::unsupported(
                 UnsupportedCode::NotImplemented,
@@ -116,6 +115,12 @@ impl ReadOnlyHdfSession {
             ));
         }
         let prefix = family.prefix();
+        // Land cover metadata without calibration polygons is not a region family.
+        if family == GeometryFamily::CalibrationRegions
+            && !self.has_dataset(&format!("{group}/Polygon Info"))?
+        {
+            return Ok(Reported::unavailable("calibration polygons absent"));
+        }
         let attr_path = format!("{group}/Attributes");
         let attributes = exact_compound(self, &attr_path, max_bytes)?;
         let names = attributes
