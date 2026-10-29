@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- Reference results joined to their geometry (Rust only, additive within API 10):
+  `ReadOnlyHdfSession::reference_line_results` and `reference_point_results` return
+  each `Geometry/Reference Lines` or `Geometry/Reference Points` feature with the
+  (dataset, column) pairs of its result series, and every joined dataset's exact stored
+  values, in one call. The join uses only the column-to-geometry links the
+  `reference_line_results`/`reference_point_results` read families already prove; a
+  qualified series whose link is Unsupported or Corrupt refuses the whole join with that
+  status, absent geometry is Unavailable, and datasets the family does not qualify are
+  listed in `omitted`. On the five corpus plans with reference geometry and results
+  (HEC-RAS 7.0.1 BaldEagleDamBrk p03/p18, Weise p01, AustinOyster p01 and eBFE
+  1101001306 p01), all 700 linked columns equal an independent h5py Name-axis join
+  (`tests/reference_results_oracle.py`); the eBFE 6.x plan's reference lines are refused
+  (its `Internal Faces` table has no integer columns to cross-check the link). No
+  existing API, binding or Python behaviour changes.
+
 ## 0.2.4 (2026-10-28)
 
 - `ReadOnlyHdfSession::hec_ras_file_type` classifies the stored root `File Type`

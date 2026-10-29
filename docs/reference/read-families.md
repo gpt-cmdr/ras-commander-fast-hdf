@@ -184,6 +184,40 @@ python tests/generate_reference_points_oracle.py --fixture-dir /path/to/refpoint
 RAS_REFERENCE_POINTS_ORACLE=oracle.json RAS_REFERENCE_POINTS_FIXTURES=/path/to/refpoint-fixtures cargo test --no-default-features --features catalog,hdf,mesh,results --test reference_points -- --include-ignored --nocapture
 ```
 
+## Reference results joined to geometry
+
+`reference_line_results(max_bytes)` and `reference_point_results(max_bytes)` (Rust only)
+return `Reported<ReferenceLineResults>` / `Reported<ReferencePointResults>`: the exact
+geometry (`geometry_family(ReferenceLines)` or `reference_point_geometry`), every joined
+result dataset (its `FamilyDataset` descriptor and whole stored `[time, column]` values,
+unconverted), one entry per geometry feature in row order with the `(dataset, column)`
+pairs linked to it, and `omitted` (path, capability) for datasets not joined.
+
+The join adds no matching of its own. A numeric dataset is joined only when its read
+capability and its `geometry_link` are Supported; each column goes to the feature whose
+Attributes row its `geometry_locations` identity names. The whole join is refused, with
+that status, when a qualified dataset's link is Unsupported, Unavailable or Corrupt, or a
+dataset fails with Unsupported(identity_layout) or Corrupt (reference-point series prove
+their identities while qualifying); geometry that is absent or refused gives the join the
+geometry's status. Datasets the family does not qualify for other reasons (for example
+point summaries or unobserved variables, Unsupported(schema)) are listed in `omitted`,
+never dropped silently. Name axes are not listed. Values are read only once the whole
+join is proven; `max_bytes` bounds each consulted dataset independently.
+
+`tests/reference_results.rs` checks every reference-line and reference-point fixture
+(valid, reordered, per-area, and each unprovable layout). On real files,
+`tests/reference_results_oracle.py` joins the same series to geometry rows with h5py from
+the Name axis alone (global `<name>|<area>`, per-area `<name>` plus the path's area) and
+records digests of each row's coordinates and each linked column. On the five corpus plans
+with reference geometry and results, all 700 linked columns match; the eBFE 6.x plan's
+lines are refused (IdentityLayout: no integer `Internal Faces` columns), as listed in the
+test.
+
+```sh
+python tests/reference_results_oracle.py --fixture-dir /path/to/reference-plans --output oracle.json
+RAS_REFERENCE_RESULTS_ORACLE=oracle.json RAS_REFERENCE_RESULTS_FIXTURES=/path/to/reference-plans cargo test --no-default-features --features catalog,hdf,mesh,results --test reference_results -- --include-ignored --nocapture
+```
+
 ## Environmental and sediment qualification rules
 
 Environmental qualification requires polygon arrays in an observed nonempty
