@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- 1D summaries whose two axes have the same length (for example `Summary Output/Storage
+  Areas/Maximum Water Surface (2, 2)` in a plan with exactly two storage areas) now take
+  the element axis from stored `Row N:  name` (or `RowN`) attributes when these label
+  exactly rows `0..len-1`. Before, only `Variable_Unit`/`Variables` declarations broke
+  the tie and these variables were `Unsupported(identity_layout)`. Proven on HEC-RAS
+  7.0.1 Beaver_LS_SAConn p01 (corpus `hec701r/Beaver_LS_SAConn.p01`): identical to h5py;
+  no other summary variable in the 147-file corpus changes capability. Behaviour change
+  within API 11.
+
 ## 0.2.4 (2026-10-28)
 
 - `ReadOnlyHdfSession::hec_ras_file_type` classifies the stored root `File Type`
