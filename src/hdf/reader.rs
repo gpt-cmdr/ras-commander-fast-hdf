@@ -116,8 +116,8 @@ impl File {
     ) -> Result<Self> {
         h5::Hdf5File::open_with_options(path, options).map(Self::wrap)
     }
-    /// A file over any storage backend (tests count the bytes it reads).
-    #[cfg(test)]
+    /// A file over any storage backend (the presence measurement counts the bytes it reads).
+    #[cfg(all(test, feature = "mesh"))]
     pub(crate) fn from_storage_with_options(
         storage: h5::storage::DynStorage,
         options: h5::OpenOptions,
