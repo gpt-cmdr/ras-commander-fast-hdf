@@ -182,12 +182,16 @@ models. It is the main remaining engine cost of
 
 ### Global cap on in-flight chunk decoding
 
-**Status:** planned.
+**Status:** done (unreleased).
 
 Each worker decodes at most 256 MiB per chunk, and each call may use up to
-2 GiB, but there is no cap across workers or concurrent calls. A global
-in-flight decode budget would bound memory under parallel reads of hostile or
-unusual files.
+2 GiB. All reads in progress now also share one in-flight decode budget
+(`hdf::DecodeBudget`, 4 GiB and a 30 s longest wait by default), across
+workers, concurrent calls and sessions. A read reserves its values plus its
+workers' chunk buffers before allocating; over the budget it waits a bounded
+time (never on a pool worker thread) or is refused with `resource_limit`. Sessions can share their own budget,
+and environment variables set the process-wide one. See
+[engine-api.md](reference/engine-api.md#in-flight-decode-budget-additive-within-api-10).
 
 ### Faster DEFLATE decoding for whole chunks
 

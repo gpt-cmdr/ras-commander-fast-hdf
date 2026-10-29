@@ -86,6 +86,15 @@ Since engine API 10, `read_numeric`, `read_numeric_batch` and `read_topology` (u
 required-native (`native`) mode raises `FastHdfError`. The engine's additive `*_bounded`
 variants are not bound yet.
 
+Every read also draws on the engine's process-wide in-flight decode budget (4 GiB, 30 s
+longest wait by default; see
+[engine-api.md](engine-api.md#in-flight-decode-budget-additive-within-api-10)). A read over
+it raises `UnsupportedError` with `engine_code` `resource_limit`, like the per-call budget.
+Set `RAS_FAST_HDF_DECODE_BUDGET_BYTES` and `RAS_FAST_HDF_DECODE_BUDGET_WAIT_MS` before the
+first read to change it; an invalid value makes sessions fail to open with `ValueError`.
+`capabilities()["decode_budget"]` reports `max_bytes`, `wait_ms`, `in_flight_bytes`,
+`peak_in_flight_bytes`, `waits` and `refusals` (or `error` for an invalid setting).
+
 ### Mesh cell assembly
 
 Mesh inputs are two-dimensional NumPy arrays: coordinates are `float64` and

@@ -50,6 +50,11 @@
 //! Filtered fractal heaps (dense link or attribute storage written with an
 //! I/O filter pipeline) were also decoded with the old patch 0008 in force;
 //! they are not covered here. HEC-RAS does not write them.
+//!
+//! Every read also reserves its estimated memory from the file's in-flight
+//! decode budget ([`super::decode_budget`]) after the policy admits it and
+//! before the reader allocates, and holds it until the read returns.
+use super::decode_budget::{DecodeBudget, Reservation};
 use h5::messages::layout::DataLayout;
 use h5::messages::HdfMessage;
 use hdf5_reader as h5;
@@ -89,11 +94,12 @@ impl Refusal {
     }
 }
 
-/// Per-file policy verdicts and raw attribute lists, by object address.
-#[derive(Default)]
+/// Per-file policy verdicts and raw attribute lists, by object address, and
+/// the decode budget the file's reads draw on.
 struct Shared {
     verdicts: Mutex<HashMap<u64, Option<Refusal>>>,
     raw_attributes: Mutex<HashMap<u64, Arc<[h5::RawAttribute]>>>,
+    budget: Mutex<Arc<DecodeBudget>>,
 }
 
 /// An open HDF5 file.
@@ -104,17 +110,22 @@ pub(crate) struct File {
 }
 
 impl File {
-    fn wrap(inner: h5::Hdf5File) -> Self {
+    fn wrap(inner: h5::Hdf5File, budget: Arc<DecodeBudget>) -> Self {
         Self {
             inner,
-            shared: Arc::default(),
+            shared: Arc::new(Shared {
+                verdicts: Mutex::default(),
+                raw_attributes: Mutex::default(),
+                budget: Mutex::new(budget),
+            }),
         }
     }
     pub(crate) fn open_with_options(
         path: impl AsRef<std::path::Path>,
         options: h5::OpenOptions,
+        budget: Arc<DecodeBudget>,
     ) -> Result<Self> {
-        h5::Hdf5File::open_with_options(path, options).map(Self::wrap)
+        h5::Hdf5File::open_with_options(path, options).map(|f| Self::wrap(f, budget))
     }
     /// A file over any storage backend (the presence measurement counts the bytes it reads).
     #[cfg(all(test, feature = "mesh"))]
@@ -122,10 +133,27 @@ impl File {
         storage: h5::storage::DynStorage,
         options: h5::OpenOptions,
     ) -> Result<Self> {
-        h5::Hdf5File::from_storage_with_options(storage, options).map(Self::wrap)
+        let budget = DecodeBudget::global()?;
+        h5::Hdf5File::from_storage_with_options(storage, options).map(|f| Self::wrap(f, budget))
     }
-    pub(crate) fn from_vec_with_options(data: Vec<u8>, options: h5::OpenOptions) -> Result<Self> {
-        h5::Hdf5File::from_vec_with_options(data, options).map(Self::wrap)
+    pub(crate) fn from_vec_with_options(
+        data: Vec<u8>,
+        options: h5::OpenOptions,
+        budget: Arc<DecodeBudget>,
+    ) -> Result<Self> {
+        h5::Hdf5File::from_vec_with_options(data, options).map(|f| Self::wrap(f, budget))
+    }
+    /// The decode budget this file's reads draw on.
+    pub(crate) fn decode_budget(&self) -> Arc<DecodeBudget> {
+        self.shared
+            .budget
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+    /// Draw later reads (including on datasets already opened) from `budget`.
+    pub(crate) fn set_decode_budget(&self, budget: Arc<DecodeBudget>) {
+        *self.shared.budget.lock().unwrap_or_else(|e| e.into_inner()) = budget;
     }
     pub(crate) fn dataset(&self, path: &str) -> Result<Dataset> {
         Ok(Dataset {
@@ -150,7 +178,9 @@ impl File {
     }
     /// A file over a storage backend of the engine's own.
     pub(crate) fn from_storage(storage: h5::storage::DynStorage) -> Result<Self> {
-        h5::Hdf5File::from_storage_with_options(storage, h5::OpenOptions::default()).map(Self::wrap)
+        let budget = DecodeBudget::global()?;
+        h5::Hdf5File::from_storage_with_options(storage, h5::OpenOptions::default())
+            .map(|f| Self::wrap(f, budget))
     }
 
     /// The raw attributes of the object at `address`, parsed once per file
@@ -347,41 +377,109 @@ impl Dataset {
         self.inner.chunks().is_some()
     }
 
+    /// Memory a read of `elements` elements (as `T`) holds while it runs: the
+    /// returned values (at the larger of the stored and the returned element
+    /// size) plus, for a chunked dataset, a stored and a decoded chunk buffer
+    /// for each of up to `workers` decoding workers (no more workers than
+    /// chunks). A chunk buffer counts at most the reader's chunk limit, since
+    /// the reader refuses larger chunks before allocating them.
+    fn decode_estimate<T>(&self, elements: u64, workers: usize) -> u64 {
+        let stored = h5::dtype_element_size(self.inner.dtype()).unwrap_or(0) as u64;
+        let element = stored.max(std::mem::size_of::<T>() as u64);
+        let values = elements.saturating_mul(element);
+        let Some(dims) = self.inner.chunks() else {
+            return values;
+        };
+        let chunk_bytes = dims
+            .iter()
+            .fold(stored, |n, &d| n.saturating_mul(u64::from(d)))
+            .min(h5::DEFAULT_MAX_CHUNK_BYTES as u64);
+        let chunks = self
+            .inner
+            .shape()
+            .iter()
+            .zip(&dims)
+            .fold(1u64, |n, (&extent, &d)| {
+                n.saturating_mul(if d == 0 {
+                    0
+                } else {
+                    extent.div_ceil(u64::from(d))
+                })
+            });
+        let workers = (workers.max(1) as u64).min(chunks);
+        values.saturating_add(workers.saturating_mul(chunk_bytes.saturating_mul(2)))
+    }
+
+    /// Reserve [`Self::decode_estimate`] from the file's decode budget. An
+    /// empty or uncountable selection reserves nothing (the reader reads no
+    /// chunk, or reports the overflow itself). On a rayon worker thread the
+    /// read does not wait for budget (see [`super::decode_budget`]).
+    fn reserve<T>(&self, elements: Option<u64>, workers: usize) -> Result<Reservation> {
+        let bytes = match elements {
+            Some(n) if n > 0 => self.decode_estimate::<T>(n, workers),
+            _ => 0,
+        };
+        self.file
+            .decode_budget()
+            .reserve(bytes, rayon::current_thread_index().is_none())
+            .map_err(Error::ResourceLimit)
+    }
+    /// [`Self::reserve`] for a whole-dataset read; `context` adds the dataset
+    /// name to the error, as [`Self::admit_all`] does.
+    fn reserve_all<T>(&self, workers: usize, context: bool) -> Result<Reservation> {
+        let result = self.reserve::<T>(self.inner.num_elements().ok(), workers);
+        if context {
+            result.map_err(|e| e.with_context(self.inner.name()))
+        } else {
+            result
+        }
+    }
+
     pub(crate) fn read_array<T: h5::H5Type>(&self) -> Result<ndarray::ArrayD<T>> {
         self.admit_all(true)?;
+        let _budget = self.reserve_all::<T>(1, true)?;
         self.inner.read_array()
     }
     /// Non-chunked datasets fall back to [`Self::read_array`] in the reader,
     /// which names the dataset in errors; chunked parallel reads do not.
     pub(crate) fn read_array_parallel<T: h5::H5Type>(&self) -> Result<ndarray::ArrayD<T>> {
         self.admit_all(!self.chunked())?;
+        let _budget = self.reserve_all::<T>(rayon::current_num_threads(), !self.chunked())?;
         self.inner.read_array_parallel()
     }
     pub(crate) fn read_array_uncached<T: h5::H5Type>(&self) -> Result<ndarray::ArrayD<T>> {
         self.admit_all(true)?;
+        let _budget = self.reserve_all::<T>(1, true)?;
         self.inner.read_array_uncached()
     }
     pub(crate) fn read_array_uncached_parallel<T: h5::H5Type>(&self) -> Result<ndarray::ArrayD<T>> {
         self.admit_all(!self.chunked())?;
+        let _budget = self.reserve_all::<T>(rayon::current_num_threads(), !self.chunked())?;
         self.inner.read_array_uncached_parallel()
     }
     pub(crate) fn read_slice<T: h5::H5Type>(
         &self,
         selection: &h5::SliceInfo,
     ) -> Result<ndarray::ArrayD<T>> {
-        self.admit(selected(selection, self.inner.shape()))?;
+        let elements = selected(selection, self.inner.shape());
+        self.admit(elements)?;
+        let _budget = self.reserve::<T>(elements, 1)?;
         self.inner.read_slice(selection)
     }
     pub(crate) fn read_slice_parallel<T: h5::H5Type>(
         &self,
         selection: &h5::SliceInfo,
     ) -> Result<ndarray::ArrayD<T>> {
-        self.admit(selected(selection, self.inner.shape()))?;
+        let elements = selected(selection, self.inner.shape());
+        self.admit(elements)?;
+        let _budget = self.reserve::<T>(elements, rayon::current_num_threads())?;
         self.inner.read_slice_parallel(selection)
     }
     /// The policies apply only to selections the reader would read; it
     /// rejects others (and non-2-D or non-chunked datasets) first.
-    fn admit_gather(&self, rows: (u64, u64, u64), columns: &[u64]) -> Result<()> {
+    /// Returns the number of elements gathered (`None` when the reader will
+    /// reject the selection itself).
+    fn admit_gather(&self, rows: (u64, u64, u64), columns: &[u64]) -> Result<Option<u64>> {
         let shape = self.inner.shape();
         if shape.len() != 2
             || rows.2 == 0
@@ -389,17 +487,20 @@ impl Dataset {
             || rows.1 > shape[0]
             || columns.iter().any(|&c| c >= shape[1])
         {
-            return Ok(());
+            return Ok(None);
         }
         let rows = (rows.1 - rows.0).div_ceil(rows.2);
-        self.admit(rows.checked_mul(columns.len() as u64))
+        let elements = rows.checked_mul(columns.len() as u64);
+        self.admit(elements)?;
+        Ok(elements)
     }
     pub(crate) fn read_rows_columns_chunked<T: h5::H5Type>(
         &self,
         rows: (u64, u64, u64),
         columns: &[u64],
     ) -> Result<Option<ndarray::ArrayD<T>>> {
-        self.admit_gather(rows, columns)?;
+        let elements = self.admit_gather(rows, columns)?;
+        let _budget = self.reserve::<T>(elements, 1)?;
         self.inner.read_rows_columns_chunked(rows, columns)
     }
     pub(crate) fn read_rows_columns_chunked_in_pool<T: h5::H5Type>(
@@ -408,13 +509,15 @@ impl Dataset {
         columns: &[u64],
         pool: &rayon::ThreadPool,
     ) -> Result<Option<ndarray::ArrayD<T>>> {
-        self.admit_gather(rows, columns)?;
+        let elements = self.admit_gather(rows, columns)?;
+        let _budget = self.reserve::<T>(elements, pool.current_num_threads())?;
         self.inner
             .read_rows_columns_chunked_in_pool(rows, columns, pool)
     }
     /// Raw stored element bytes; the reader names the dataset in errors.
     pub(crate) fn read_raw_bytes(&self) -> Result<Vec<u8>> {
         self.admit_all(true)?;
+        let _budget = self.reserve_all::<u8>(1, true)?;
         self.inner.read_raw_bytes()
     }
     /// Decoded strings. Datasets of other types keep the reader's type error.
@@ -429,6 +532,7 @@ impl Dataset {
         ) {
             self.admit_all(true)?;
         }
+        let _budget = self.reserve_all::<u8>(1, true)?;
         self.inner.read_strings()
     }
 }

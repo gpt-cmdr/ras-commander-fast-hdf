@@ -2,9 +2,13 @@
 //! The source must remain immutable while a session is open (memory-mapped reader).
 //! Sessions share a process pool per explicit worker count; metadata/data caches are session-local.
 use crate::{Capability, UnsupportedCode};
+pub mod decode_budget;
 mod encoding;
 pub(crate) mod reader;
 use crate::{Error, ErrorKind, Result};
+pub use decode_budget::{
+    DecodeBudget, DecodeBudgetStats, DEFAULT_DECODE_BUDGET_BYTES, DEFAULT_DECODE_BUDGET_WAIT,
+};
 use encoding::map_error;
 pub use encoding::{EncodingDescriptor, FloatLayout};
 use hdf5_reader::{SliceInfo, SliceInfoElem};
@@ -208,7 +212,7 @@ impl ReadOnlyHdfSession {
             chunk_cache_slots,
             ..Default::default()
         };
-        let file = File::open_with_options(path.as_ref(), options)
+        let file = File::open_with_options(path.as_ref(), options, DecodeBudget::global()?)
             .map_err(|e| map_error(e).with_path(path.as_ref().to_path_buf()))?;
         Ok(Self {
             file,
@@ -236,7 +240,7 @@ impl ReadOnlyHdfSession {
         let pool = crate::SessionPool::new(threads)?;
         let options = hdf5_reader::OpenOptions::default();
         let chunk_cache_bytes = options.chunk_cache_bytes;
-        let file = File::from_vec_with_options(data, options)
+        let file = File::from_vec_with_options(data, options, DecodeBudget::global()?)
             .map_err(|e| map_error(e).with_path(name.clone()))?;
         Ok(Self {
             file,
@@ -261,6 +265,17 @@ impl ReadOnlyHdfSession {
     #[cfg(feature = "mesh")]
     pub(crate) fn parallel_enabled(&self) -> bool {
         self.parallel
+    }
+    /// The in-flight decode budget this session's reads draw on: the
+    /// process-wide [`DecodeBudget::global`] unless set with
+    /// [`Self::set_decode_budget`].
+    pub fn decode_budget(&self) -> std::sync::Arc<DecodeBudget> {
+        self.file.decode_budget()
+    }
+    /// Draw this session's later reads from `budget`. Give several sessions
+    /// the same `Arc` to cap their reads together.
+    pub fn set_decode_budget(&self, budget: std::sync::Arc<DecodeBudget>) {
+        self.file.set_decode_budget(budget);
     }
     /// Worker count of this session-owned pool (also used by mesh assembly).
     pub fn thread_count(&self) -> usize {
@@ -710,6 +725,8 @@ pub mod corner_elevations;
 mod memo;
 mod sniff;
 
+#[cfg(test)]
+mod decode_budget_tests;
 #[cfg(test)]
 mod perf_contract_tests;
 #[cfg(test)]

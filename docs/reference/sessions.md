@@ -21,6 +21,10 @@ module-level functions remain available and still accept list inputs; since API 
 element and index outputs are NumPy arrays too.
 
 Numeric reads above 2 GiB of decoded values are refused by the engine (engine API 10).
+All reads in progress, across sessions and threads, also share the engine's in-flight
+decode budget (4 GiB by default). A read that would exceed it waits (up to 30 s by default;
+parallel reads inside a session's pool do not wait) or is refused with `resource_limit`; see
+[engine-api.md](engine-api.md#in-flight-decode-budget-additive-within-api-10).
 
 ## Sessions as the source of typed reads
 
