@@ -30,6 +30,15 @@
   over budget now refuses the unit evidence (`Unsupported(ResourceLimit)`) instead of
   reporting the units without a quantity name; at the 64 MiB default no HEC-RAS file is
   affected.
+- Layer family presence (Rust, additive within API 10): `family_presence(LayerFamily)` and
+  `layer_family_presence()` say which line, polygon, point and mesh families a file stores,
+  from group membership and object headers only, with no dataset values read. The verdict
+  is the family reader's: absent exactly when the reader reports canonical absence or a
+  dataset it needs is missing (`NotFound`); stored when it reads or refuses the family.
+  Behaviour change: `one_d_line_family`, `geometry_family` and `reference_point_geometry` now
+  check that every dataset they need exists before reading any. A family missing one is
+  `NotFound` even when an earlier check would have refused it (`Unsupported`, `Corrupt`).
+  Files that store every dataset read exactly as before.
 
 ## 0.2.4 (2026-10-28)
 

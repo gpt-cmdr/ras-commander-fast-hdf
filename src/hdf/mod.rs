@@ -687,6 +687,7 @@ pub mod lines;
 mod location;
 pub mod mesh_geometry;
 pub mod mesh_identity;
+pub mod presence;
 pub mod reference_points;
 
 pub mod mesh_results;
