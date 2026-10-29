@@ -43,7 +43,8 @@ Engine errors map to Python exceptions by kind:
 The RAS text bindings raise `TextParseError`, `TextNotFoundError` and
 `TextEditError` (all `ValueError`). A contained Rust panic raises
 `NativePanicError` (`RuntimeError`); under ras-commander it is re-raised as
-`fast_hdf.FastHdfPanicError`. ras-commander treats every one of these as a
+`fast_hdf.FastHdfPanicError`. The exception carries the panic message; nothing
+is printed to stderr unless `RUST_BACKTRACE` is set (to anything but `0`). ras-commander treats every one of these as a
 refusal: `auto` falls back to h5py, `native` raises `FastHdfError`.
 
 ## Sessions

@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Release wheels no longer contain the panic-injection test hooks
+  (`_panic_for_test` on the module and on `HdfSession`). They are built only
+  with the new `test-hooks` Cargo feature, which CI test builds enable; the CI
+  wheel smoke test checks that release-feature wheels do not have them.
+  ras-commander's panic-containment tests skip when the hooks are absent.
+  `API_VERSION` stays 11: no binding ras-commander uses outside its tests
+  changed.
+- A contained Rust panic no longer prints Rust's default panic message to
+  stderr. The extension installs a quiet panic hook when it is imported; the
+  Python exception (`NativePanicError`, or ras-commander's `FastHdfPanicError`)
+  still carries the message. Set `RUST_BACKTRACE` (not `0`) to get the default
+  message and a backtrace on stderr.
+
 ## 0.2.4 (2026-10-28)
 
 - `ReadOnlyHdfSession::hec_ras_file_type` classifies the stored root `File Type`

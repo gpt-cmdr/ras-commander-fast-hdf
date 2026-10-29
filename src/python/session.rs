@@ -163,7 +163,9 @@ impl HdfSession {
                 "face_ids"=>lines.face_ids.into_pyarray(py)))
         })
     }
-    /// Test hook: panic inside an engine call while the session lock is held.
+    /// Test hook (feature `test-hooks`): panic inside an engine call while the
+    /// session lock is held.
+    #[cfg(feature = "test-hooks")]
     fn _panic_for_test(&self, py: Python<'_>) -> PyResult<()> {
         crate::python::panic_guard::guard(|| {
             self.with(py, |_| -> crate::Result<()> {

@@ -22,8 +22,9 @@ env:
   CARGO_TERM_COLOR: always
   WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles
   # Everything the wheel compiles except extension-module, which leaves Python
-  # symbols for the interpreter to provide and so cannot link a test binary.
-  TEST_FEATURES: python,exports-all,exports-pmtiles
+  # symbols for the interpreter to provide and so cannot link a test binary,
+  # plus the panic-injection test hooks (test-hooks), which release wheels omit.
+  TEST_FEATURES: python,exports-all,exports-pmtiles,test-hooks
 
 jobs:
   test:
