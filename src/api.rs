@@ -84,6 +84,13 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "dataset_units", "hdf"),
     e("ReadOnlyHdfSession", "dataset_units_attribute", "hdf"),
     e("ReadOnlyHdfSession", "unit_system_evidence", "hdf"),
+    e("ReadOnlyHdfSession", "dataset_units_bounded", "hdf"),
+    e(
+        "ReadOnlyHdfSession",
+        "dataset_units_attribute_bounded",
+        "hdf",
+    ),
+    e("ReadOnlyHdfSession", "unit_system_evidence_bounded", "hdf"),
     e("ReadOnlyHdfSession", "result_units", "hdf"),
     e("ReadOnlyHdfSession", "mesh_names", "hdf"),
     e("ReadOnlyHdfSession", "mesh_name_diagnostics", "hdf"),

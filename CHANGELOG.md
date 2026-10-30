@@ -22,6 +22,14 @@
   7.0.1 Beaver_LS_SAConn p01 (corpus `hec701r/Beaver_LS_SAConn.p01`): identical to h5py;
   no other summary variable in the 147-file corpus changes capability. Behaviour change
   within API 11.
+- Budgeted unit reads (Rust, additive within API 10): `dataset_units_bounded`,
+  `dataset_units_attribute_bounded` and `unit_system_evidence_bounded` take `max_bytes`,
+  the largest stored attribute payload consulted, like `result_units`. The unbudgeted
+  calls keep `DEFAULT_MAX_BYTES` and their results. The Python `dataset_unit_evidence`
+  takes an optional `max_bytes` (default 64 MiB, unchanged). A `Variable Name` attribute
+  over budget now refuses the unit evidence (`Unsupported(ResourceLimit)`) instead of
+  reporting the units without a quantity name; at the 64 MiB default no HEC-RAS file is
+  affected.
 
 ## 0.2.4 (2026-10-28)
 

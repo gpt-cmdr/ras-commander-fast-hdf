@@ -197,8 +197,12 @@ uses `metadata_max_bytes` for the same geometry, identity and profile-name valid
 no budgeted metadata, so it has only the returned-bytes `max_bytes`. Low-level
 `dataset_units`, `dataset_units_attribute` and `unit_system_evidence` use
 `DEFAULT_MAX_BYTES`; the deprecated `initial_2d_inventory()` and `dataset_unit_evidence`
-aliases do too. An attribute over budget is reported `Unsupported(ResourceLimit)` without its
-bytes. `max_bytes` bounds selected result bytes before allocation; HDF whole-chunk inflation
+aliases do too. `dataset_units_bounded(path, max_bytes)`,
+`dataset_units_attribute_bounded(path, max_bytes)` and
+`unit_system_evidence_bounded(group, max_bytes)` take an explicit budget (the Python
+`dataset_unit_evidence(path, dataset, max_bytes=67108864)` passes it on). An attribute over
+budget is reported `Unsupported(ResourceLimit)` without its bytes; when that attribute is
+`Variable Name`, the whole unit evidence is refused so the quantity name is never dropped. `max_bytes` bounds selected result bytes before allocation; HDF whole-chunk inflation
 is a separate storage cost.
 
 ### Whole-read budgets (API 10)
