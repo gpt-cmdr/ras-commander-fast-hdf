@@ -25,6 +25,8 @@ SRC = Path(sys.argv[1])
 THRESHOLD = float(sys.argv[2]) if len(sys.argv) > 2 else 100.0
 OUT = Path(__file__).resolve().parents[1] / "docs" / "images"
 OUT.mkdir(parents=True, exist_ok=True)
+# The release measured in the "new" columns (labels only).
+RELEASE = os.environ.get("PERF_RELEASE_LABEL", "0.111.0")
 
 THEMES = {
     "light": dict(surface="#fcfcfb", text="#0b0b0b", text2="#52514e", grid="#e4e3df",
@@ -109,7 +111,7 @@ def headline_chart(theme):
     ax.set_xlim(lo / 2, hi * 10)
     ax.set_xlabel("Repeat-call time on the largest test model (log scale)", color=t["text2"], fontsize=9)
     handles = [plt.Rectangle((0, 0), 1, 1, color=t["base"]), plt.Rectangle((0, 0), 1, 1, color=t["new"])]
-    leg = ax.legend(handles, ["0.106.1 (before the engine)", "0.110.1 (default auto mode)"],
+    leg = ax.legend(handles, ["0.106.1 (before the engine)", f"{RELEASE} (default auto mode)"],
                     loc="lower center", bbox_to_anchor=(0.5, 1.0), ncol=2, frameon=False, fontsize=8.5)
     for text in leg.get_texts():
         text.set_color(t["text"])
@@ -121,7 +123,7 @@ def headline_chart(theme):
 
 
 def polygon_chart(theme):
-    """get_mesh_cell_polygons by mesh size: 0.106.1 vs 0.110.1 h5py vs 0.110.1 auto (warm)."""
+    """get_mesh_cell_polygons by mesh size: 0.106.1 vs the release in h5py and auto mode (warm)."""
     t = THEMES[theme]
     data = sorted((r for r in rows if r["method"] == "HdfMesh.get_mesh_cell_polygons"),
                   key=lambda r: r["rows"])
@@ -130,8 +132,8 @@ def polygon_chart(theme):
     style(ax, t)
     h = 0.26
     series = ((h + 0.03, "base_h5py", t["base"], "0.106.1 (before the engine)"),
-              (0.0, "new_h5py", t["text2"], "0.110.1, h5py mode"),
-              (-h - 0.03, "new_auto", t["new"], "0.110.1 (default auto mode)"))
+              (0.0, "new_h5py", t["text2"], f"{RELEASE}, h5py mode"),
+              (-h - 0.03, "new_auto", t["new"], f"{RELEASE} (default auto mode)"))
     for i, r in enumerate(data):
         for off, key, color, name in series:
             v = r[key]
@@ -161,14 +163,14 @@ for theme in THEMES:
     polygon_chart(theme)
 
 print(f"## Headline (baseline >= {THRESHOLD:g} ms on the largest model)\n")
-print("| Method | Largest test model (rows) | 0.106.1 (before the engine) | 0.110.1 h5py | 0.110.1 `auto` | Speed-up vs 0.106.1 | Native vs h5py, 0.110.1 |")
+print(f"| Method | Largest test model (rows) | 0.106.1 (before the engine) | {RELEASE} h5py | {RELEASE} `auto` | Speed-up vs 0.106.1 | Native vs h5py, {RELEASE} |")
 print("|---|---|---:|---:|---:|---:|---:|")
 for r in headline:
     rows_txt = f"{r['rows']:,}" if isinstance(r.get("rows"), int) else ""
     print(f"| `{label(r['method'])}` | {r['fixture']} ({rows_txt}) | {ms(r['base_h5py'])} | {ms(r['new_h5py'])} | "
           f"{ms(r['new_auto'])} | **{ratio(r['base_h5py'], r['new_auto'])}** | {ratio(r['new_h5py'], r['new_auto'])} |")
 print(f"\n## Small calls (baseline < {THRESHOLD:g} ms)\n")
-print("| Method | Largest test model (rows) | 0.106.1 (before the engine) | 0.110.1 h5py | 0.110.1 `auto` |")
+print(f"| Method | Largest test model (rows) | 0.106.1 (before the engine) | {RELEASE} h5py | {RELEASE} `auto` |")
 print("|---|---|---:|---:|---:|")
 for r in small:
     rows_txt = f"{r['rows']:,}" if isinstance(r.get("rows"), int) else ""
