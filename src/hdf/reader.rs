@@ -148,6 +148,10 @@ impl File {
     pub(crate) fn storage(&self) -> &dyn h5::Storage {
         self.inner.storage()
     }
+    /// A file over a storage backend of the engine's own.
+    pub(crate) fn from_storage(storage: h5::storage::DynStorage) -> Result<Self> {
+        h5::Hdf5File::from_storage_with_options(storage, h5::OpenOptions::default()).map(Self::wrap)
+    }
 
     /// The raw attributes of the object at `address`, parsed once per file
     /// (the reader parses the object header again on every call).
