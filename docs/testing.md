@@ -100,6 +100,9 @@ Each suite also writes a JSON-lines record per case (`RAS_ROUTE1_RESULTS`,
 `RAS_ROUTE2_RESULTS`, ...), from which ras-commander's documentation table of
 qualified methods is generated.
 
+`scripts/release-gate/` holds the Windows release-gate scripts that run all of
+these, plus the ordinary suite in each mode, from a pinned environment.
+
 ### What a release must show
 
 - Every route, extents, non-HDF, fluvial and quarantine suite passes in all
