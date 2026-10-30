@@ -50,7 +50,8 @@ asks Git only when the package directory is itself a Git checkout, and rejects a
 classes (including the `NativeAnalysis` class, excluding exception classes), so optional
 feature builds report only what was registered. ras-commander's tests check this set
 against an explicit expected list (79 entry points at API 11 from engine 0.2.3, 78
-before; including the `_panic_for_test` hook). Unreleased: release-feature builds add
+before; including the `_panic_for_test` hook, which from the next release is present only
+in `test-hooks` builds). Unreleased: release-feature builds add
 `export_geoparquet_ipc_files` (80), so that list needs the new name before such a wheel
 is qualified.
 
@@ -215,7 +216,15 @@ panic therefore never disables a session: later reads, `closed` and `close()` ke
 including on process-cached sessions.
 
 `_panic_for_test(message)` and `HdfSession._panic_for_test()` inject a panic for tests
-(used by ras-commander's `tests/rust_engine_bridge/panic_guard_test.py`).
+(used by ras-commander's `tests/rust_engine_bridge/panic_guard_test.py`). They exist only
+in builds with the `test-hooks` Cargo feature, which CI test builds enable and release
+wheels leave off; the ras-commander tests skip when the hooks are absent.
+
+The extension installs a quiet panic hook when it is imported. A contained panic prints
+nothing to stderr; its message is in the Python exception
+(`native extension panicked: <message>`). Set `RUST_BACKTRACE` (to anything but `0`) to
+get Rust's default panic message and backtrace on stderr as well. The hook belongs to the
+extension's own copy of the Rust standard library, so other extensions are not affected.
 
 Aborts (stack overflow, allocation failure) cannot be caught in-process. The engine
 prevents those on file input with read budgets and malformed-input hardening (see

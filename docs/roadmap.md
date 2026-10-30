@@ -339,10 +339,13 @@ constructors are where such a source would be accepted.
 
 ### Test hooks and panic messages in release wheels
 
-**Status:** planned; waiting for a maintainer decision.
+**Status:** done (unreleased).
 
 The panic-injection test hooks (`_panic_for_test` on the module and on
-`HdfSession`) ship in release wheels, and a contained panic still prints
-Rust's default panic message to stderr. The recommendation is to build the
-hooks only behind a `test-hooks` Cargo feature that release wheels leave off,
-and to install a quiet panic hook in the extension.
+`HdfSession`) are built only with the `test-hooks` Cargo feature. CI test
+builds enable it; release wheels leave it off, and the wheel smoke test checks
+that the hooks are absent. The extension installs a quiet panic hook, so a
+contained panic no longer prints Rust's default message to stderr; the Python
+exception still carries the message, and `RUST_BACKTRACE` restores the
+output for debugging. ras-commander's panic tests skip when the hooks are
+absent.
