@@ -30,6 +30,11 @@
   over budget now refuses the unit evidence (`Unsupported(ResourceLimit)`) instead of
   reporting the units without a quantity name; at the 64 MiB default no HEC-RAS file is
   affected.
+- Layer family presence (Rust, additive within API 10): `family_presence(LayerFamily)` and
+  `layer_family_presence()` say which line, polygon, point and mesh families a file stores,
+  from group membership and object headers only, with no dataset values read. A family is
+  absent exactly when its reader reports canonical absence. A family that stores some of
+  its datasets but not all is stored, and its reader refuses it. The readers are unchanged.
 
 ## 0.2.4 (2026-10-28)
 

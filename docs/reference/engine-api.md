@@ -447,6 +447,40 @@ point-layer dispatch (see [read-families.md](read-families.md)). A land-cover gr
 calibration polygons is Unavailable for this family. These geometry readers do not promote
 unqualified result time-series groups in `plan_capabilities`.
 
+## Layer family presence (additive within API 10)
+
+`family_presence(family) -> FamilyPresence` says whether a file stores a layer family, from
+group membership and object headers only. It reads no dataset values, so it costs the same
+for a family of ten features and one of a million. `layer_family_presence()` gives the
+verdict for every family of `presence::LAYER_FAMILIES`, in that order. The families are
+`LayerFamily::OneDLine` (every `OneDLineFamily`, pipe conduits included),
+`LayerFamily::Geometry` (the packed `GeometryFamily`s), `ReferencePoints`,
+`RiverJunctions`, `PumpStations`, `PipeNodes`, `Meshes` and `MeshPerimeters`.
+
+- `Absent { reason }` exactly when the family's reader reports canonical absence
+  (`Unavailable`), with the reader's reason. Those checks are, in the reader's order: the
+  family group is missing; for a packed 1D line family, its `... Info` dataset is missing; for
+  land-cover calibration regions, `Polygon Info` is missing; for a point family, both
+  `Attributes` and `Points` are missing.
+- `Stored` otherwise. That includes a family that stores some of its datasets but not all: its
+  reader refuses it (`NotFound`, `Unsupported` or `Corrupt`), so a caller that lists it shows
+  the refusal instead of treating a damaged file as having no such data.
+- Host errors (`Io`, `FileNotFound`) and `Internal` errors propagate. The verdict does not
+  depend on `max_bytes`.
+- `Meshes` is absent when `mesh_names` is `NotFound` (no `Geometry/2D Flow Areas` group).
+  `MeshPerimeters` is absent when meshes are absent or no mesh stores a `Perimeter`. When only
+  some do, it is stored, and `read_mesh_perimeter` refuses the others (`NotFound`).
+
+The readers are unchanged: `family_presence` repeats their canonical-absence checks and reads
+nothing more.
+
+Verification: `tests/family_presence.rs` compares the verdict with every reader's full read, at
+a 1-byte and at the default budget, for every family of every committed HDF5 fixture. With
+`RAS_PRESENCE_CORPUS` set, it does the same for every HDF5 file in the golden corpus. Synthetic
+cases (generator `tests/generate_presence_fixtures.py`) drop each of `Attributes`, `Info`,
+`Parts` and `Points` from every family. `tests/fixtures/presence/outcomes.txt` pins every
+reader's exact outcome on them.
+
 ## Mesh identity comparison
 
 `compare_mesh_identity(other, area, metadata_max_bytes, max_bytes)` compares stored Cells
