@@ -86,6 +86,35 @@ fn label_rows(labels: &[ColumnLabel]) -> Vec<u64> {
         .map(|(i, _)| i as u64)
         .collect()
 }
+/// Whether `Row0`..`RowN` / `Row N:  name` attributes label exactly rows `0..rows` (each
+/// index once, none outside, one convention), so axis 0 is the row axis.
+fn rows_labelled_exactly(attrs: &[TypedAttribute], rows: u64) -> bool {
+    let mut plain = std::collections::BTreeSet::new();
+    let mut named = std::collections::BTreeSet::new();
+    for a in attrs {
+        let Some(rest) = a.name.strip_prefix("Row") else {
+            continue;
+        };
+        if let Ok(i) = rest.parse::<u64>() {
+            if !plain.insert(i) {
+                return false;
+            }
+        } else if let Some((idx, _)) = rest.strip_prefix(' ').and_then(|r| r.split_once(':')) {
+            match idx.trim().parse::<u64>() {
+                Ok(i) if named.insert(i) => {}
+                _ => return false,
+            }
+        } else {
+            return false;
+        }
+    }
+    let set = match (plain.is_empty(), named.is_empty()) {
+        (false, true) => plain,
+        (true, false) => named,
+        _ => return false,
+    };
+    set.len() as u64 == rows && set.iter().copied().eq(0..rows)
+}
 /// `Row0`..`RowN` (names, optional shared `Units`) or `Row N:  name` = unit attributes.
 fn attribute_row_labels(attrs: &[TypedAttribute], rows: u64) -> Option<Vec<ColumnLabel>> {
     let text = |a: &TypedAttribute| match &a.value {
@@ -215,11 +244,16 @@ impl ReadOnlyHdfSession {
                         };
                         let shape = cap.shape.clone();
                         // Element axis: the axis whose length is the element count; when both
-                        // axes match, declared per-row labels decide (rows on axis 0).
+                        // axes match, declared per-row labels decide (rows on axis 0): either a
+                        // `Variable_Unit`/`Variables` declaration or `Row N:` attributes that
+                        // label exactly rows 0..len-1.
                         let axis = count.and_then(|n| match shape.as_slice() {
                             [a] if *a == n => Some(0),
                             [a, b] if *a == n && *b == n => match declared {
                                 Some(k) if k == *a && k > 1 => Some(1),
+                                None if *a > 1 && rows_labelled_exactly(&attributes, *a) => {
+                                    Some(1)
+                                }
                                 _ => None,
                             },
                             [_, b] if *b == n => Some(1),
@@ -462,5 +496,42 @@ mod tests {
         assert!(label_rows(&l).is_empty());
         assert_eq!(l[2].unit.as_deref(), Some("cfs"));
         assert!(attribute_row_labels(&[a("Row0", "x")], 2).is_none());
+    }
+    #[test]
+    fn exact_row_attributes_decide_a_square_summary() {
+        let a = |name: &str| TypedAttribute {
+            name: name.into(),
+            shape: vec![],
+            dataspace: crate::hdf::Dataspace::Scalar,
+            attribute_type: crate::hdf::AttributeType::Compound,
+            datatype_label: String::new(),
+            raw_bytes: vec![],
+            value: MetadataValue::Strings(vec!["ft".into()]),
+        };
+        // HEC-RAS 7.0.1 Beaver_LS_SAConn p01: two storage areas, `Row 0:  WSEL`/`Row 1:  Time`.
+        assert!(rows_labelled_exactly(
+            &[a("Row 0:  WSEL"), a("Row 1:  Time")],
+            2
+        ));
+        assert!(rows_labelled_exactly(
+            &[a("Row0"), a("Row1"), a("Units")],
+            2
+        ));
+        assert!(!rows_labelled_exactly(&[a("Row 0:  WSEL")], 2));
+        assert!(!rows_labelled_exactly(
+            &[a("Row 0:  WSEL"), a("Row 2:  Time")],
+            2
+        ));
+        assert!(!rows_labelled_exactly(
+            &[a("Row 0:  A"), a("Row 1:  B"), a("Row 2:  C")],
+            2
+        ));
+        assert!(!rows_labelled_exactly(&[a("Row 0:  A"), a("Row 0:  B")], 1));
+        assert!(!rows_labelled_exactly(&[a("Row0"), a("Row 1:  Time")], 2));
+        assert!(!rows_labelled_exactly(
+            &[a("Rows"), a("Row0"), a("Row1")],
+            2
+        ));
+        assert!(!rows_labelled_exactly(&[a("Units")], 2));
     }
 }

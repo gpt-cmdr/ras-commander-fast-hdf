@@ -110,7 +110,9 @@ Unsupported with a typed code, contradictory storage is Corrupt. `metadata_max_b
   Areas/Attributes` rows). Rank-1 counters (`Last Iteration`, `Maximum Iteration`) use axis
   0; XS-major tables such as `Maximum Velocity Flow Distribution (sections, 23)` use axis 0;
   `(rows, sections)` extremes use axis 1. When both axes match, declared per-row labels
-  decide; otherwise the variable is Unsupported(identity_layout) for element selection
+  decide: `Variable_Unit`/`Variables` pairs, or `Row N:  name` / `RowN` attributes that
+  label exactly rows `0..len-1` (one convention, no gaps, no extra indices; for example
+  `Maximum Water Surface (2, 2)` in a plan with two storage areas); otherwise the variable is Unsupported(identity_layout) for element selection
   and readable only whole. Storage-area column order is NOT asserted, so storage-area
   selections carry no element Identity.
 - Row labels are proven from `Variable_Unit`/`Variables` pairs whose count equals the stored
