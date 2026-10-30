@@ -247,6 +247,17 @@ impl ReadOnlyHdfSession {
             chunk_cache_bytes,
         })
     }
+    /// A one-worker session over an already open file, named `name`.
+    pub(crate) fn over_file(file: File, name: PathBuf) -> Result<Self> {
+        Ok(Self {
+            file,
+            memo: memo::Memo::default(),
+            pool: crate::SessionPool::new(1)?,
+            path: name,
+            parallel: false,
+            chunk_cache_bytes: hdf5_reader::OpenOptions::default().chunk_cache_bytes,
+        })
+    }
     #[cfg(feature = "mesh")]
     pub(crate) fn parallel_enabled(&self) -> bool {
         self.parallel
@@ -687,6 +698,7 @@ pub mod lines;
 mod location;
 pub mod mesh_geometry;
 pub mod mesh_identity;
+pub mod presence;
 pub mod reference_points;
 pub mod reference_results;
 
@@ -696,6 +708,7 @@ pub mod catalogue_results;
 pub mod corner_elevations;
 
 mod memo;
+mod sniff;
 
 #[cfg(test)]
 mod perf_contract_tests;

@@ -312,7 +312,7 @@ compact/virtual layout.
 unsteady_time_axis(path, max_bytes=67108864)
 unsteady_row_times(path, rows, max_bytes=67108864)
 result_units(path, max_bytes=67108864)
-dataset_unit_evidence(path, dataset)
+dataset_unit_evidence(path, dataset, max_bytes=67108864)
 ```
 
 Time dictionaries keep `raw_strings`, `raw_ms_strings`, `raw_ms`, `days`,
@@ -330,7 +330,7 @@ Unit dictionaries include `status`, `text`, `raw_bytes`, `capability`,
 `source_attribute`, `quantity_name` and `unit_system_kind` where relevant. `result_units`
 returns `variables` (family, area, variable, dataset, units) and `unit_system` evidence
 (source group, kind, value). `dataset_unit_evidence` delegates the engine's
-`dataset_units`, keeping its Python name. Known quantity labels and exact source text come
+`dataset_units_bounded` with `max_bytes`, keeping its Python name. Known quantity labels and exact source text come
 from the engine; the binding does not normalize units, infer CRS, resolve unit-system
 conflicts or convert numeric values.
 

@@ -14,6 +14,34 @@
   Python exception (`NativePanicError`, or ras-commander's `FastHdfPanicError`)
   still carries the message. Set `RUST_BACKTRACE` (not `0`) to get the default
   message and a backtrace on stderr.
+- 1D summaries whose two axes have the same length (for example `Summary Output/Storage
+  Areas/Maximum Water Surface (2, 2)` in a plan with exactly two storage areas) now take
+  the element axis from stored `Row N:  name` (or `RowN`) attributes when these label
+  exactly rows `0..len-1`. Before, only `Variable_Unit`/`Variables` declarations broke
+  the tie and these variables were `Unsupported(identity_layout)`. Proven on HEC-RAS
+  7.0.1 Beaver_LS_SAConn p01 (corpus `hec701r/Beaver_LS_SAConn.p01`): identical to h5py;
+  no other summary variable in the 147-file corpus changes capability. Behaviour change
+  within API 11.
+- Budgeted unit reads (Rust, additive within API 10): `dataset_units_bounded`,
+  `dataset_units_attribute_bounded` and `unit_system_evidence_bounded` take `max_bytes`,
+  the largest stored attribute payload consulted, like `result_units`. The unbudgeted
+  calls keep `DEFAULT_MAX_BYTES` and their results. The Python `dataset_unit_evidence`
+  takes an optional `max_bytes` (default 64 MiB, unchanged). A `Variable Name` attribute
+  over budget now refuses the unit evidence (`Unsupported(ResourceLimit)`) instead of
+  reporting the units without a quantity name; at the 64 MiB default no HEC-RAS file is
+  affected.
+- Layer family presence (Rust, additive within API 10): `family_presence(LayerFamily)` and
+  `layer_family_presence()` say which line, polygon, point and mesh families a file stores,
+  from group membership and object headers only, with no dataset values read. A family is
+  absent exactly when its reader reports canonical absence. A family that stores some of
+  its datasets but not all is stored, and its reader refuses it. The readers are unchanged.
+- `ReadOnlyHdfSession::hec_ras_file_type_of_bytes(data, name)` (Rust, additive within API 10)
+  classifies the root `File Type` of an HDF5 file held in memory without copying all of it:
+  only the first 64 KiB and the 4 KiB pages the reader asks for beyond them are copied, and a
+  result is kept only when every byte read was copied, so it equals `from_bytes` then
+  `hec_ras_file_type`. On the golden corpus it copies at most 72 KiB per file (8.1 MB for
+  591 MB). It lets callers such as terrio check an upload before opening it, without a second
+  copy of the file.
 - Reference results joined to their geometry (Rust only, additive within API 10):
   `ReadOnlyHdfSession::reference_line_results` and `reference_point_results` return
   each `Geometry/Reference Lines` or `Geometry/Reference Points` feature with the

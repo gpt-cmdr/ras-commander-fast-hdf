@@ -548,13 +548,17 @@ pub(crate) fn dataset_units<'py>(
     Ok(d)
 }
 #[pyfunction]
+#[pyo3(signature=(path,dataset,max_bytes=67108864))]
 fn dataset_unit_evidence<'py>(
     py: Python<'py>,
     path: crate::python::session::Source,
     dataset: &str,
+    max_bytes: usize,
 ) -> PyResult<Bound<'py, PyDict>> {
     crate::python::panic_guard::guard(|| {
-        let u = path.run(py, |engine_session| engine_session.dataset_units(dataset))?;
+        let u = path.run(py, |engine_session| {
+            engine_session.dataset_units_bounded(dataset, max_bytes)
+        })?;
         dataset_units(py, &u.units, &u.source, &u.quantity_name)
     })
 }

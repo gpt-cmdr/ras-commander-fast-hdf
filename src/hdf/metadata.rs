@@ -154,6 +154,30 @@ impl ReadOnlyHdfSession {
             )),
         }
     }
+    /// [`Self::hec_ras_file_type`] of an HDF5 file held in memory, without opening a session
+    /// over it and without copying all of it. `name` names the file in error messages.
+    ///
+    /// The reader needs storage it owns, so the bytes it reads are copied: the first 64 KiB,
+    /// then each 4 KiB page it asked for outside them, until it reads the attribute without
+    /// asking for any other. A result is kept only when every byte read was copied, so it is
+    /// the result of [`Self::from_bytes`] then `hec_ras_file_type`, error kinds and messages
+    /// included. HEC-RAS files need the first 64 KiB and, when HEC-RAS moved the root
+    /// attributes later in the file, a few pages more; never more than the whole file.
+    pub fn hec_ras_file_type_of_bytes(
+        data: &[u8],
+        name: impl Into<std::path::PathBuf>,
+    ) -> Result<StoredFileType> {
+        Self::sniff_file_type(data, name.into()).0
+    }
+    /// [`Self::hec_ras_file_type_of_bytes`] and the bytes it copied for its last run.
+    fn sniff_file_type(data: &[u8], name: std::path::PathBuf) -> (Result<StoredFileType>, u64) {
+        super::sniff::read_sparse(data, |storage| {
+            super::reader::File::from_storage(storage)
+                .map_err(|e| map_error(e).with_path(name.clone()))
+                .and_then(|file| Self::over_file(file, name.clone()))
+                .and_then(|session| session.hec_ras_file_type())
+        })
+    }
     pub fn typed_group_attributes(&self, path: &str) -> Result<Vec<TypedAttribute>> {
         self.file
             .group(path)
@@ -433,4 +457,72 @@ pub(super) fn typed_attribute(raw: &hdf5_reader::RawAttribute) -> Result<TypedAt
         raw_bytes: a.raw_data.clone(),
         value,
     })
+}
+
+#[cfg(test)]
+mod sniff_tests {
+    use super::*;
+    use std::path::Path;
+
+    fn fixture(relative: &str) -> Vec<u8> {
+        std::fs::read(
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/fixtures")
+                .join(relative),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn only_the_ranges_the_reader_reads_are_copied() {
+        use super::super::sniff::FIRST_BYTES;
+        // Root attributes in the root object header: the first 64 KiB hold them.
+        let small = fixture("terrio_io/pipes.h5");
+        let (r, copied) = ReadOnlyHdfSession::sniff_file_type(&small, "pipes.h5".into());
+        assert!(r.unwrap().is_hec_ras());
+        assert_eq!(copied, (small.len() as u64).min(FIRST_BYTES));
+        // A user block: the superblock is found past the first copy, and the reader then
+        // refuses the file (it does not apply a base address), exactly as it does whole.
+        let data = fixture("file_type/userblock.h5");
+        let (r, copied) = ReadOnlyHdfSession::sniff_file_type(&data, "userblock.h5".into());
+        assert!(copied > FIRST_BYTES, "{copied}");
+        assert_eq!(r.unwrap_err().kind, crate::ErrorKind::Unsupported);
+        // Without the user block, the same bytes are read.
+        let rest = &data[128 * 1024..];
+        let (r, copied) = ReadOnlyHdfSession::sniff_file_type(rest, "userblock.h5".into());
+        assert_eq!(r.unwrap(), StoredFileType::HecRas("HEC-RAS Results".into()));
+        assert_eq!(copied, rest.len() as u64);
+        // Dense root attributes after 80 KiB of data: a few pages past the first copy.
+        for (name, expected) in [
+            ("late_dense_attributes.h5", Some("HEC-RAS Geometry")),
+            ("late_dense_absent.h5", None),
+        ] {
+            let data = fixture(&format!("file_type/{name}"));
+            let (r, copied) = ReadOnlyHdfSession::sniff_file_type(&data, name.into());
+            assert!(
+                copied > FIRST_BYTES && copied < data.len() as u64,
+                "{name}: {copied}"
+            );
+            match (r.unwrap(), expected) {
+                (StoredFileType::HecRas(t), Some(e)) => assert_eq!(t, e),
+                (StoredFileType::Absent, None) => {}
+                (other, _) => panic!("{name}: {other:?}"),
+            }
+        }
+    }
+
+    /// Opt-in: the bytes each file of `RAS_SNIFF_CORPUS` (`;`-separated) needs, and the same
+    /// result as a session over the whole file.
+    #[test]
+    #[ignore = "requires RAS_SNIFF_CORPUS"]
+    fn sniff_copy_on_corpus_files() {
+        for path in std::env::var("RAS_SNIFF_CORPUS").unwrap().split(';') {
+            let data = std::fs::read(path).unwrap();
+            let (r, copied) = ReadOnlyHdfSession::sniff_file_type(&data, path.into());
+            let full = ReadOnlyHdfSession::from_bytes(data.clone(), path, 1, false)
+                .and_then(|s| s.hec_ras_file_type());
+            assert_eq!(format!("{r:?}"), format!("{full:?}"), "{path}");
+            println!("{path}\t{}\t{copied}\t{r:?}", data.len());
+        }
+    }
 }

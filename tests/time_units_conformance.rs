@@ -696,3 +696,76 @@ fn unit_source_priority_and_ambiguity_are_explicit() {
     assert!(is_unsupported(&num.units));
     assert_eq!(num.units.raw_bytes(), Some(&5i32.to_le_bytes()[..]));
 }
+
+fn over_budget(e: &UnitsEvidence) -> bool {
+    matches!(
+        e.capability(),
+        Capability::Unsupported {
+            code: ras_commander_fast_hdf::UnsupportedCode::ResourceLimit,
+            ..
+        }
+    ) && e.raw_bytes().is_none()
+        && e.value().is_none()
+}
+
+#[test]
+fn bounded_unit_reads_refuse_attributes_over_the_budget() {
+    const XS: &str =
+        "Results/Unsteady/Output/Output Blocks/Base Output/Unsteady Time Series/Cross Sections";
+    let s = open("units_full");
+    let ws = format!("{XS}/Water Surface");
+    // `ft` is 2 stored bytes: within a 2-byte budget, refused below it.
+    assert_eq!(
+        declared(&s.dataset_units_attribute_bounded(&ws, 2).unwrap()),
+        "ft"
+    );
+    assert!(over_budget(
+        &s.dataset_units_attribute_bounded(&ws, 1).unwrap()
+    ));
+    let d = s.dataset_units_bounded(&ws, 1).unwrap();
+    assert!(over_budget(&d.units), "{d:?}");
+    assert_eq!(d.source, UnitsSource::UnitsAttribute);
+    assert_eq!(
+        declared(&s.dataset_units_bounded(&ws, 2).unwrap().units),
+        "ft"
+    );
+    // `US Customary` is 12 stored bytes.
+    let sys = s.unit_system_evidence_bounded("/", 11).unwrap();
+    assert!(over_budget(&sys.value));
+    assert_eq!(sys.kind, None);
+    assert_eq!(
+        s.unit_system_evidence_bounded("/", 12).unwrap().kind,
+        Some(UnitSystemKind::UsCustomary)
+    );
+    // The unbudgeted reads keep DEFAULT_MAX_BYTES and their results.
+    assert_eq!(
+        s.dataset_units(&ws).unwrap(),
+        s.dataset_units_bounded(&ws, DEFAULT_MAX_BYTES).unwrap()
+    );
+    assert_eq!(
+        s.dataset_units_attribute(&ws).unwrap(),
+        s.dataset_units_attribute_bounded(&ws, DEFAULT_MAX_BYTES)
+            .unwrap()
+    );
+    // A missing dataset is still NotFound, whatever the budget.
+    let e = s.dataset_units_bounded("Results/missing", 0).unwrap_err();
+    assert_eq!(e.kind, ErrorKind::NotFound);
+
+    // `Variable Name` (`Stage`, 5 bytes) over budget refuses the evidence: the quantity name
+    // is never dropped while `Variable Units` (`Feet`, 4 bytes) still fits.
+    let s = open("units_real_layouts");
+    let ws = format!("{XS}/Water Surface");
+    let d = s.dataset_units_bounded(&ws, 4).unwrap();
+    assert!(over_budget(&d.units), "{d:?}");
+    assert_eq!(d.quantity_name, None);
+    let d = s.dataset_units_bounded(&ws, 5).unwrap();
+    assert_eq!(
+        (declared(&d.units), d.quantity_name.as_deref()),
+        ("Feet", Some("Stage"))
+    );
+    // result_units passes its budget through the same rule.
+    let r = s.result_units(4).unwrap();
+    assert!(over_budget(
+        &find(&r, UnitsFamily::CrossSectionUnsteady, "Water Surface").units
+    ));
+}

@@ -197,8 +197,12 @@ uses `metadata_max_bytes` for the same geometry, identity and profile-name valid
 no budgeted metadata, so it has only the returned-bytes `max_bytes`. Low-level
 `dataset_units`, `dataset_units_attribute` and `unit_system_evidence` use
 `DEFAULT_MAX_BYTES`; the deprecated `initial_2d_inventory()` and `dataset_unit_evidence`
-aliases do too. An attribute over budget is reported `Unsupported(ResourceLimit)` without its
-bytes. `max_bytes` bounds selected result bytes before allocation; HDF whole-chunk inflation
+aliases do too. `dataset_units_bounded(path, max_bytes)`,
+`dataset_units_attribute_bounded(path, max_bytes)` and
+`unit_system_evidence_bounded(group, max_bytes)` take an explicit budget (the Python
+`dataset_unit_evidence(path, dataset, max_bytes=67108864)` passes it on). An attribute over
+budget is reported `Unsupported(ResourceLimit)` without its bytes; when that attribute is
+`Variable Name`, the whole unit evidence is refused so the quantity name is never dropped. `max_bytes` bounds selected result bytes before allocation; HDF whole-chunk inflation
 is a separate storage cost.
 
 ### Whole-read budgets (API 10)
@@ -280,6 +284,20 @@ terrain and land-cover files say `HEC Terrain` and `HEC Land Cover`), and `Absen
 attribute. Any other shape or type is `Unsupported`; a damaged payload is `Corrupt`. The value
 says the file is HEC-RAS's, not whether it is a geometry or a plan file: plans before 6.4 can say
 `HEC-RAS Geometry`, and 6.4+ geometry files say `HEC-RAS Results`.
+
+`ReadOnlyHdfSession::hec_ras_file_type_of_bytes(data, name)` (additive within API 10) gives the
+same result for an HDF5 file held in memory, without a session over it and without copying all
+of it. The reader needs storage it owns, so the bytes it reads are copied. It copies the first
+64 KiB, then each 4 KiB page the reader asks for outside them, and reads again, until a read
+asks for nothing it does not hold. Only that read's result is kept, so it is the result of
+`from_bytes` then `hec_ras_file_type`, error kinds and messages included. On the 139 HDF5 files
+of the golden corpus (591 MB) it copies 8.1 MB in all, at most 72 KiB for one file, and gives
+the session's result for every file (`tests/file_type_bytes.rs` checks every committed fixture;
+`sniff_copy_on_corpus_files` is the opt-in corpus check). A file with a user block is refused,
+as it is by a session: pass the bytes after the user block.
+
+A session over shared bytes with no copy at all (`Arc<[u8]>`) needs `hdf5-reader` to serve views
+of bytes it does not own. That is proposed upstream and is not part of this engine release.
 
 The two small committed malformed attribute fixtures run in the default tests; their
 generator requires h5py/NumPy only and is not needed at test runtime.
@@ -442,6 +460,40 @@ exceed `max_bytes`. Reference points use `reference_point_geometry` and its dedi
 point-layer dispatch (see [read-families.md](read-families.md)). A land-cover group with no
 calibration polygons is Unavailable for this family. These geometry readers do not promote
 unqualified result time-series groups in `plan_capabilities`.
+
+## Layer family presence (additive within API 10)
+
+`family_presence(family) -> FamilyPresence` says whether a file stores a layer family, from
+group membership and object headers only. It reads no dataset values, so it costs the same
+for a family of ten features and one of a million. `layer_family_presence()` gives the
+verdict for every family of `presence::LAYER_FAMILIES`, in that order. The families are
+`LayerFamily::OneDLine` (every `OneDLineFamily`, pipe conduits included),
+`LayerFamily::Geometry` (the packed `GeometryFamily`s), `ReferencePoints`,
+`RiverJunctions`, `PumpStations`, `PipeNodes`, `Meshes` and `MeshPerimeters`.
+
+- `Absent { reason }` exactly when the family's reader reports canonical absence
+  (`Unavailable`), with the reader's reason. Those checks are, in the reader's order: the
+  family group is missing; for a packed 1D line family, its `... Info` dataset is missing; for
+  land-cover calibration regions, `Polygon Info` is missing; for a point family, both
+  `Attributes` and `Points` are missing.
+- `Stored` otherwise. That includes a family that stores some of its datasets but not all: its
+  reader refuses it (`NotFound`, `Unsupported` or `Corrupt`), so a caller that lists it shows
+  the refusal instead of treating a damaged file as having no such data.
+- Host errors (`Io`, `FileNotFound`) and `Internal` errors propagate. The verdict does not
+  depend on `max_bytes`.
+- `Meshes` is absent when `mesh_names` is `NotFound` (no `Geometry/2D Flow Areas` group).
+  `MeshPerimeters` is absent when meshes are absent or no mesh stores a `Perimeter`. When only
+  some do, it is stored, and `read_mesh_perimeter` refuses the others (`NotFound`).
+
+The readers are unchanged: `family_presence` repeats their canonical-absence checks and reads
+nothing more.
+
+Verification: `tests/family_presence.rs` compares the verdict with every reader's full read, at
+a 1-byte and at the default budget, for every family of every committed HDF5 fixture. With
+`RAS_PRESENCE_CORPUS` set, it does the same for every HDF5 file in the golden corpus. Synthetic
+cases (generator `tests/generate_presence_fixtures.py`) drop each of `Attributes`, `Info`,
+`Parts` and `Points` from every family. `tests/fixtures/presence/outcomes.txt` pins every
+reader's exact outcome on them.
 
 ## Mesh identity comparison
 

@@ -84,6 +84,16 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "dataset_units", "hdf"),
     e("ReadOnlyHdfSession", "dataset_units_attribute", "hdf"),
     e("ReadOnlyHdfSession", "unit_system_evidence", "hdf"),
+    e("ReadOnlyHdfSession", "dataset_units_bounded", "hdf"),
+    e(
+        "ReadOnlyHdfSession",
+        "dataset_units_attribute_bounded",
+        "hdf",
+    ),
+    e("ReadOnlyHdfSession", "unit_system_evidence_bounded", "hdf"),
+    e("ReadOnlyHdfSession", "family_presence", "hdf"),
+    e("ReadOnlyHdfSession", "layer_family_presence", "hdf"),
+    e("LayerFamily", "as_str", "hdf"),
     e("ReadOnlyHdfSession", "result_units", "hdf"),
     e("ReadOnlyHdfSession", "mesh_names", "hdf"),
     e("ReadOnlyHdfSession", "mesh_name_diagnostics", "hdf"),
@@ -153,6 +163,7 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "mesh_corner_elevations", "hdf"),
     // Additive within API 10 (terrio HECRAS driver; not called by ras-commander).
     e("ReadOnlyHdfSession", "hec_ras_file_type", "hdf"),
+    e("ReadOnlyHdfSession", "hec_ras_file_type_of_bytes", "hdf"),
     e("StoredFileType", "is_hec_ras", "hdf"),
     e("ReadOnlyHdfSession", "pipe_nodes", "hdf"),
     // Additive within API 10: reference results joined to their geometry features.

@@ -201,6 +201,15 @@ pub(super) fn evidence(
         .with_raw_bytes(raw),
     })
 }
+fn is_over_budget(e: &UnitsEvidence) -> bool {
+    matches!(
+        e.capability(),
+        crate::Capability::Unsupported {
+            code: UnsupportedCode::ResourceLimit,
+            ..
+        }
+    )
+}
 fn declared(e: &UnitsEvidence) -> Option<String> {
     e.value().cloned()
 }
@@ -210,6 +219,15 @@ fn unit_evidence_from_attrs(
     allow_labels: bool,
 ) -> Result<DatasetUnits> {
     let quantity = evidence(attrs, VARIABLE_NAME, max_bytes)?;
+    // A quantity name over budget is not read, so it cannot be reported as missing: the
+    // whole evidence is refused instead.
+    if is_over_budget(&quantity) {
+        return Ok(DatasetUnits {
+            units: quantity,
+            source: UnitsSource::None,
+            quantity_name: None,
+        });
+    }
     let mut quantity_name = declared(&quantity);
     for (name, source) in [
         (UNITS_ATTRIBUTE, UnitsSource::UnitsAttribute),
@@ -305,8 +323,18 @@ impl ReadOnlyHdfSession {
     /// Below a structure group the label rule is never applied, so descriptive same-named
     /// attributes cannot be misreported as units. The source attribute is reported; nothing is
     /// inferred or converted. Unavailable only when none exists.
+    ///
+    /// Uses [`DEFAULT_MAX_BYTES`](super::DEFAULT_MAX_BYTES); see
+    /// [`Self::dataset_units_bounded`].
     pub fn dataset_units(&self, dataset: &str) -> Result<DatasetUnits> {
-        self.unit_evidence_bounded(dataset, super::DEFAULT_MAX_BYTES, labels_allowed(dataset))
+        self.dataset_units_bounded(dataset, super::DEFAULT_MAX_BYTES)
+    }
+    /// [`Self::dataset_units`] with an explicit budget: `max_bytes` bounds the stored payload
+    /// of each attribute consulted. An attribute over budget is not decoded; the evidence is
+    /// `Unsupported(ResourceLimit)` without its bytes (also when it is `Variable Name`, so a
+    /// quantity name is never silently dropped).
+    pub fn dataset_units_bounded(&self, dataset: &str, max_bytes: usize) -> Result<DatasetUnits> {
+        self.unit_evidence_bounded(dataset, max_bytes, labels_allowed(dataset))
     }
     #[deprecated(note = "renamed dataset_units (same DatasetUnits result, structure-guarded)")]
     pub fn dataset_unit_evidence(&self, dataset: &str) -> Result<DatasetUnits> {
@@ -334,19 +362,36 @@ impl ReadOnlyHdfSession {
         )
     }
     /// Exact `Units` attribute of a dataset only (Unavailable when the dataset has none).
+    /// Uses [`DEFAULT_MAX_BYTES`](super::DEFAULT_MAX_BYTES).
     pub fn dataset_units_attribute(&self, dataset: &str) -> Result<UnitsEvidence> {
+        self.dataset_units_attribute_bounded(dataset, super::DEFAULT_MAX_BYTES)
+    }
+    /// [`Self::dataset_units_attribute`] with an explicit budget: a `Units` attribute whose
+    /// stored payload exceeds `max_bytes` is `Unsupported(ResourceLimit)` without its bytes.
+    pub fn dataset_units_attribute_bounded(
+        &self,
+        dataset: &str,
+        max_bytes: usize,
+    ) -> Result<UnitsEvidence> {
         let ds = self.file.dataset(dataset).map_err(map_error)?;
         evidence(
             &ds.raw_attributes().map_err(map_error)?,
             UNITS_ATTRIBUTE,
-            super::DEFAULT_MAX_BYTES,
+            max_bytes,
         )
     }
     /// Exact `Units System` attribute of a group (Absent when the group has none).
+    /// Uses [`DEFAULT_MAX_BYTES`](super::DEFAULT_MAX_BYTES).
     pub fn unit_system_evidence(&self, group: &str) -> Result<UnitSystemEvidence> {
-        self.unit_system_bounded(group, super::DEFAULT_MAX_BYTES)
+        self.unit_system_evidence_bounded(group, super::DEFAULT_MAX_BYTES)
     }
-    fn unit_system_bounded(&self, group: &str, max_bytes: usize) -> Result<UnitSystemEvidence> {
+    /// [`Self::unit_system_evidence`] with an explicit budget: a `Units System` attribute whose
+    /// stored payload exceeds `max_bytes` is `Unsupported(ResourceLimit)` without its bytes.
+    pub fn unit_system_evidence_bounded(
+        &self,
+        group: &str,
+        max_bytes: usize,
+    ) -> Result<UnitSystemEvidence> {
         let attrs = self
             .file
             .group(group)
@@ -419,7 +464,7 @@ impl ReadOnlyHdfSession {
         }
         let mut unit_system = Vec::new();
         for source in UNIT_SYSTEM_SOURCES {
-            if let Some(e) = absent_ok(self.unit_system_bounded(source, max_bytes))? {
+            if let Some(e) = absent_ok(self.unit_system_evidence_bounded(source, max_bytes))? {
                 unit_system.push(e);
             }
         }
