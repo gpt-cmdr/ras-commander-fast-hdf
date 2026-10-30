@@ -1,6 +1,41 @@
 # Changelog
 
-## Unreleased
+## 0.2.5 (2026-10-30)
+
+Robustness and coverage release. The engine API stays 10 (additions only) and the Python
+extension `API_VERSION` stays 11, so ras-commander's `>=0.2.4,<0.3` pin and every Cargo
+`^0.2` user accept it. Two defaults change behaviour: every dataset read now draws on a
+process-wide 4 GiB in-flight decode budget (below), and release wheels no longer ship the
+private panic test hooks.
+
+What can now fail or wait that did not in 0.2.4 (all refusals are `ErrorKind::Unsupported`
+with code `resource_limit`, in Python `UnsupportedError` with `engine_code ==
+"resource_limit"`; ras-commander's `auto` mode falls back to h5py, `native` and `required`
+raise):
+
+- A single read whose estimate (values plus two chunk buffers per decoding worker) exceeds
+  4 GiB is refused at once. With the default 2 GiB per-call budget this needs very large
+  chunks on many workers; with an explicit `max_bytes` above 4 GiB on the `*_bounded`
+  reads it is the expected result. Raise `RAS_FAST_HDF_DECODE_BUDGET_BYTES` or give the
+  session its own budget (`set_decode_budget`) for such reads.
+- A read on a caller's thread waits while other reads hold the budget, for at most 30 s
+  (`RAS_FAST_HDF_DECODE_BUDGET_WAIT_MS`), and is then refused. A read on a session's
+  parallel worker threads does not wait; it is refused at once when the budget is full.
+  Before, these reads allocated regardless.
+- An invalid `RAS_FAST_HDF_DECODE_BUDGET_*` value makes session opening fail with
+  `InvalidRequest` (`ValueError`); unset, nothing changes.
+- A `Variable Name` attribute larger than the unit-evidence budget (64 MiB by default)
+  refuses the unit evidence instead of returning units without a quantity name. No
+  HEC-RAS file is affected at the default.
+- `_panic_for_test` (module and `HdfSession`) is absent from release wheels
+  (`AttributeError`); it was a private test hook.
+
+The final release gate on 4013987 (ras-commander main 29a2085ef: the routed native-vs-h5py
+stages and the full test suite in h5py, `auto` and `required` modes) passed all 11 stages
+with 0 failures, 0 errors and no routed case different, so no gated HEC-RAS read hits the
+budget at its defaults.
+
+Changes:
 
 - Release wheels no longer contain the panic-injection test hooks
   (`_panic_for_test` on the module and on `HdfSession`). They are built only

@@ -65,7 +65,7 @@ No code changes are needed. To choose the engine, set
 
 | Item | Status |
 |---|---|
-| Version | **0.2.4** (on PyPI and crates.io), Python extension `API_VERSION` 11. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
+| Version | **0.2.5** (on PyPI and crates.io), Python extension `API_VERSION` 11. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
 | Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 are qualified; Linux wheels cover glibc 2.17 or later (`manylinux2014`) and musl (`musllinux_1_2`, Alpine). macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. ras-commander 0.107.1 and later install the engine on these three platforms; elsewhere they use h5py. |
 | Equivalence with h5py | Identical results to h5py on 201 public ras-commander method cases across 137 HEC-RAS 5.x–7.x result and geometry files: 3,800 method × file pairs in three modes, plus 1,428 calls replayed from the example notebooks. Methods the corpus has not exercised natively stay on h5py in `auto` mode. |
 | Speed | On the largest test models, against the last release before the engine (ras-commander 0.106.1): cell polygons 46× faster, mesh time series 7–8×, per-cell and per-face summaries 10–16×, fluvial-pluvial boundary over 700× on an 18,066-cell mesh (ras-commander 0.110.1 with engine 0.2.3). Small calls stay within a few milliseconds. See [Performance](#performance). |
