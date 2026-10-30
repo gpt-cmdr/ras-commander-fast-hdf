@@ -285,6 +285,20 @@ attribute. Any other shape or type is `Unsupported`; a damaged payload is `Corru
 says the file is HEC-RAS's, not whether it is a geometry or a plan file: plans before 6.4 can say
 `HEC-RAS Geometry`, and 6.4+ geometry files say `HEC-RAS Results`.
 
+`ReadOnlyHdfSession::hec_ras_file_type_of_bytes(data, name)` (additive within API 10) gives the
+same result for an HDF5 file held in memory, without a session over it and without copying all
+of it. The reader needs storage it owns, so the bytes it reads are copied. It copies the first
+64 KiB, then each 4 KiB page the reader asks for outside them, and reads again, until a read
+asks for nothing it does not hold. Only that read's result is kept, so it is the result of
+`from_bytes` then `hec_ras_file_type`, error kinds and messages included. On the 139 HDF5 files
+of the golden corpus (591 MB) it copies 8.1 MB in all, at most 72 KiB for one file, and gives
+the session's result for every file (`tests/file_type_bytes.rs` checks every committed fixture;
+`sniff_copy_on_corpus_files` is the opt-in corpus check). A file with a user block is refused,
+as it is by a session: pass the bytes after the user block.
+
+A session over shared bytes with no copy at all (`Arc<[u8]>`) needs `hdf5-reader` to serve views
+of bytes it does not own. That is proposed upstream and is not part of this engine release.
+
 The two small committed malformed attribute fixtures run in the default tests; their
 generator requires h5py/NumPy only and is not needed at test runtime.
 

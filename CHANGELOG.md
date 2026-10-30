@@ -35,6 +35,13 @@
   from group membership and object headers only, with no dataset values read. A family is
   absent exactly when its reader reports canonical absence. A family that stores some of
   its datasets but not all is stored, and its reader refuses it. The readers are unchanged.
+- `ReadOnlyHdfSession::hec_ras_file_type_of_bytes(data, name)` (Rust, additive within API 10)
+  classifies the root `File Type` of an HDF5 file held in memory without copying all of it:
+  only the first 64 KiB and the 4 KiB pages the reader asks for beyond them are copied, and a
+  result is kept only when every byte read was copied, so it equals `from_bytes` then
+  `hec_ras_file_type`. On the golden corpus it copies at most 72 KiB per file (8.1 MB for
+  591 MB). It lets callers such as terrio check an upload before opening it, without a second
+  copy of the file.
 
 ## 0.2.4 (2026-10-28)
 

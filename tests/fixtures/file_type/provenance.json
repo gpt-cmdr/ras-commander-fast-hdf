@@ -1,0 +1,8 @@
+{
+  "source": "synthetic h5py 3.15.1 (tests/generate_file_type_fixtures.py)",
+  "files": {
+    "late_dense_absent.h5": "3325a0bc8a51e8b7350076b1ecf9b472d4962b24449bd4bb4538aa1af067624d",
+    "late_dense_attributes.h5": "b275fad1ca02e950b17dfec0d8e6c5a71436f95c1f418344328cdd9144d59b11",
+    "userblock.h5": "9c15f2c1e083a3b04fc524ad0510179d2fafca2f1defb826b0785c8af2169946"
+  }
+}
