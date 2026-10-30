@@ -14,7 +14,10 @@ P="$PY -m pytest --import-mode=importlib -q -p no:cacheprovider -p no:faulthandl
 # main suites leave them out. One --ignore per folder: --ignore-glob="*/rust_*" is
 # matched against the native path, so on Windows (backslashes) it excluded nothing.
 RUST_IGNORES=$(for d in "$CLONE"/tests/rust_*/; do printf ' --ignore=%s' "${d%/}"; done)
-{ $PY -c 'import ras_commander,ras_commander_fast_hdf as n,pandas,numpy,h5py; print(ras_commander.__file__, n.__file__, n.API_VERSION, n.ENGINE_COMMIT, "pandas", pandas.__version__, "numpy", numpy.__version__, "h5py", h5py.__version__)'
+# Packaging tests read the installed distribution metadata, so refresh the editable
+# install from the checkout under test (offline: setuptools is in the venv).
+uv pip install -q --python $PY --no-deps --no-build-isolation -e "$CLONE" > $L/editable-install.log 2>&1 || { echo "editable install of $CLONE failed"; cat $L/editable-install.log; exit 1; }
+{ $PY -c 'import importlib.metadata as m,ras_commander,ras_commander_fast_hdf as n,pandas,numpy,h5py; print(ras_commander.__file__, "metadata", m.version("ras-commander"), n.__file__, n.API_VERSION, n.ENGINE_COMMIT, "pandas", pandas.__version__, "numpy", numpy.__version__, "h5py", h5py.__version__)'
   git -c safe.directory='*' -C $CLONE rev-parse HEAD; git -c safe.directory='*' -C $CLONE status --short; } > $L/env.txt 2>&1
 merge() { cat $1.gw* > $1 2>/dev/null; rm -f $1.gw*; }
 for st in $STAGES; do
