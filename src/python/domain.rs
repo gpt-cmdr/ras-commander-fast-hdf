@@ -158,8 +158,16 @@ fn capabilities(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
             .map(|e| Ok(dict!(py,"owner"=>e.owner,"name"=>e.name,"feature"=>e.feature)))
             .collect::<PyResult<Vec<_>>>()?;
         let engine_capabilities = dict!(py,"api_version"=>engine.api_version,"features"=>engine.features,"entrypoints"=>entrypoints);
+        // The process-wide in-flight decode budget (additive key).
+        let decode_budget = match crate::hdf::DecodeBudget::global() {
+            Ok(budget) => {
+                let s = budget.stats();
+                dict!(py,"max_bytes"=>s.max_bytes,"wait_ms"=>u64::try_from(s.wait.as_millis()).unwrap_or(u64::MAX),"in_flight_bytes"=>s.in_flight_bytes,"peak_in_flight_bytes"=>s.peak_in_flight_bytes,"waits"=>s.waits,"refusals"=>s.refusals)
+            }
+            Err(e) => dict!(py,"error"=>e.message),
+        };
         Ok(
-            dict!(py,"engine_api_version"=>crate::API_VERSION,"engine_capabilities"=>engine_capabilities,"default_max_bytes"=>crate::hdf::DEFAULT_MAX_BYTES,"api_version"=>crate::python::API_VERSION,"engine_commit"=>env!("RAS_ENGINE_COMMIT"),"engine_features"=>env!("RAS_ENGINE_FEATURES").split(',').collect::<Vec<_>>(),"bindings"=>crate::python::REGISTERED_BINDINGS.get().ok_or_else(||pyo3::exceptions::PyRuntimeError::new_err("module registration incomplete"))?),
+            dict!(py,"engine_api_version"=>crate::API_VERSION,"engine_capabilities"=>engine_capabilities,"default_max_bytes"=>crate::hdf::DEFAULT_MAX_BYTES,"decode_budget"=>decode_budget,"api_version"=>crate::python::API_VERSION,"engine_commit"=>env!("RAS_ENGINE_COMMIT"),"engine_features"=>env!("RAS_ENGINE_FEATURES").split(',').collect::<Vec<_>>(),"bindings"=>crate::python::REGISTERED_BINDINGS.get().ok_or_else(||pyo3::exceptions::PyRuntimeError::new_err("module registration incomplete"))?),
         )
     })
 }

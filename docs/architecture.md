@@ -101,6 +101,9 @@ in `auto` mode. See [Testing and qualification](testing.md).
   release builds keep integer-overflow checks on.
 - Every read is budgeted before allocation (2 GiB of decoded values per call by
   default). Larger reads are refused; ras-commander then reads them in chunks.
+  All reads in progress also share one in-flight decode budget (4 GiB by
+  default, across worker threads, calls and sessions); a read over it waits a
+  bounded time or is refused, never allocated.
 - A panic that escapes despite this becomes an ordinary Python exception
   (`src/python/panic_guard.rs`), so `auto` falls back instead of the process
   crashing.

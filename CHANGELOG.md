@@ -56,6 +56,25 @@
   (`tests/reference_results_oracle.py`); the eBFE 6.x plan's reference lines are refused
   (its `Internal Faces` table has no integer columns to cross-check the link). No
   existing API, binding or Python behaviour changes.
+- In-flight decode budget (additive within API 10; `API_VERSION` 11 unchanged).
+  Every dataset read now reserves its estimated memory (the values it returns
+  plus a stored and a decoded chunk buffer per decoding worker) from a shared
+  byte budget before the reader allocates, and releases it when it returns. A
+  read larger than the budget is refused at once, and a read that cannot get
+  budget within the wait time is refused, both as `Unsupported` with code
+  `resource_limit` (ras-commander's `auto` mode falls back to h5py). Reads that
+  run on a rayon worker thread (a session's parallel reads) never wait, so a
+  pool cannot deadlock; they are admitted or refused at once. Defaults:
+  4 GiB and 30 s, so ordinary reads never wait. Admission and release are
+  lock-free (one compare-and-swap); only a read that waits takes a lock.
+  Sessions share the process-wide
+  `hdf::DecodeBudget::global()` unless given their own with
+  `ReadOnlyHdfSession::set_decode_budget`; `RAS_FAST_HDF_DECODE_BUDGET_BYTES`
+  and `RAS_FAST_HDF_DECODE_BUDGET_WAIT_MS` set the process-wide one, and
+  `capabilities()["decode_budget"]` reports it. New Rust API: `DecodeBudget`
+  (`new`, `global`, `set_global`, `stats`), `DecodeBudgetStats`,
+  `DEFAULT_DECODE_BUDGET_BYTES`, `DEFAULT_DECODE_BUDGET_WAIT`,
+  `ReadOnlyHdfSession::decode_budget` / `set_decode_budget`.
 
 ## 0.2.4 (2026-10-28)
 

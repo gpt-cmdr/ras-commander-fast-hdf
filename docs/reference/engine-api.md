@@ -228,6 +228,43 @@ could make the host allocate `declared dims x element size` and abort.
 Legacy whole reads above 2 GiB fail with `ResourceLimit` instead of allocating. Callers that
 need more pass a larger explicit budget.
 
+### In-flight decode budget (additive within API 10)
+
+The per-call budgets above bound one read. The in-flight decode budget bounds the memory
+held by **all reads in progress** together, across a session's worker threads and across
+concurrent calls and sessions (`hdf::DecodeBudget`, `src/hdf/decode_budget.rs`).
+
+- Every dataset read reserves an estimate before the reader allocates anything, and holds
+  it until the read returns. The estimate is the decoded values the read returns (selected
+  elements times the larger of the stored and the returned element size), plus, for a
+  chunked dataset, a stored and a decoded chunk buffer for each decoding worker (at most one
+  worker per chunk; a chunk buffer counts at most the reader's 256 MiB chunk limit). Values
+  already returned to the caller are not counted.
+- A read whose estimate alone is larger than the budget is refused at once. Otherwise the
+  read waits until enough budget is free, for at most the budget's wait time, and is then
+  refused. Both refusals are `ErrorKind::Unsupported` with `code = ResourceLimit`, so
+  ras-commander's `auto` mode falls back to h5py. A read is never allocated over the budget.
+- A read that starts on a rayon worker thread (a session's parallel reads run inside its
+  pool) never waits: it is admitted if the budget has room and refused otherwise. A blocked
+  worker could deadlock the pool, because while a worker waits in a parallel join, rayon may
+  run another read on it, below which the read holding the budget can no longer finish.
+- Defaults: `hdf::DEFAULT_DECODE_BUDGET_BYTES` (4 GiB, twice the per-call default) and
+  `hdf::DEFAULT_DECODE_BUDGET_WAIT` (30 s). A read waits only while other reads already hold
+  gigabytes, so ordinary reads never wait.
+- Admission and release are lock-free (one compare-and-swap on the in-flight count); only a
+  read that has to wait takes the budget's lock and sleeps on its condition variable, and a
+  release notifies only when a read is waiting.
+- Every session draws on the process-wide budget, `DecodeBudget::global()`, unless given its
+  own with `ReadOnlyHdfSession::set_decode_budget(Arc<DecodeBudget>)`. Give several sessions
+  the same `Arc` to cap them together. `DecodeBudget::new(max_bytes, wait)` makes one;
+  `DecodeBudget::set_global` replaces the process-wide one for sessions opened afterwards.
+  `DecodeBudget::stats()` reports the budget, the bytes in flight, the peak, and the
+  numbers of waits and refusals.
+- The environment variables `RAS_FAST_HDF_DECODE_BUDGET_BYTES` (whole bytes, at least 1) and
+  `RAS_FAST_HDF_DECODE_BUDGET_WAIT_MS` (whole milliseconds) set the process-wide budget when
+  it is first used. An invalid value is an `InvalidRequest` error when a session is opened,
+  never a silent default.
+
 ## Identity
 
 `hdf::Identity {source: PathBuf, table: String, row: u64}` locates a described object by

@@ -169,6 +169,13 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     // Additive within API 10: reference results joined to their geometry features.
     e("ReadOnlyHdfSession", "reference_line_results", "hdf"),
     e("ReadOnlyHdfSession", "reference_point_results", "hdf"),
+    // Additive within API 10: the in-flight decode budget.
+    e("ReadOnlyHdfSession", "decode_budget", "hdf"),
+    e("ReadOnlyHdfSession", "set_decode_budget", "hdf"),
+    e("DecodeBudget", "new", "hdf"),
+    e("DecodeBudget", "global", "hdf"),
+    e("DecodeBudget", "set_global", "hdf"),
+    e("DecodeBudget", "stats", "hdf"),
 ];
 
 /// What this build of the engine offers.
