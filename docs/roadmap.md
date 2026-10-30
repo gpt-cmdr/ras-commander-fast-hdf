@@ -301,12 +301,17 @@ The driver's output field names stay as implemented.
 
 ### Reference line and reference point result joins
 
-**Status:** in progress (a separate engine PR based on `main` after the 0.2.0
-restructure; not part of 0.2.0).
+**Status:** done (unreleased; Rust only).
 
-Join stored reference line and reference point results to their geometry in
-the engine, so terrio and other Rust consumers get result-bearing reference
-features without reassembling them from separate reads.
+The column-to-geometry links came first (#12, #32): each reference-line and
+reference-point result column is linked to its geometry Attributes row, and the
+link is proven or refused. `ReadOnlyHdfSession::reference_line_results` and
+`reference_point_results` now return each feature with its linked series and the
+stored values in one call, built only from those proven links, so terrio and other
+Rust consumers get result-bearing reference features without reassembling them.
+They are not Python bindings: ras-commander already reads these series natively.
+A layer form (for example in the Arrow layer catalog, draft #41) can expose the
+join later. See [read-families.md](reference/read-families.md).
 
 ### Depth
 

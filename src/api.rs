@@ -166,6 +166,9 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "hec_ras_file_type_of_bytes", "hdf"),
     e("StoredFileType", "is_hec_ras", "hdf"),
     e("ReadOnlyHdfSession", "pipe_nodes", "hdf"),
+    // Additive within API 10: reference results joined to their geometry features.
+    e("ReadOnlyHdfSession", "reference_line_results", "hdf"),
+    e("ReadOnlyHdfSession", "reference_point_results", "hdf"),
 ];
 
 /// What this build of the engine offers.
