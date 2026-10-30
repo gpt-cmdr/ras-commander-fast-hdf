@@ -1,6 +1,6 @@
 //! Bounded metadata decoding with raw per-attribute and member encoding proof.
 use super::metadata_proof as proof;
-use super::{encoding::map_error, ReadOnlyHdfSession};
+use super::{encoding::map_error, DecodeBudget, ReadOnlyHdfSession};
 use super::{AttributeType, Dataspace, StringCharset, StringPadding};
 use crate::{Capability, UnsupportedCode};
 use crate::{Error, ErrorKind, Result};
@@ -172,8 +172,11 @@ impl ReadOnlyHdfSession {
     /// [`Self::hec_ras_file_type_of_bytes`] and the bytes it copied for its last run.
     fn sniff_file_type(data: &[u8], name: std::path::PathBuf) -> (Result<StoredFileType>, u64) {
         super::sniff::read_sparse(data, |storage| {
-            super::reader::File::from_storage(storage)
-                .map_err(|e| map_error(e).with_path(name.clone()))
+            DecodeBudget::global()
+                .and_then(|budget| {
+                    super::reader::File::from_storage(storage, budget)
+                        .map_err(|e| map_error(e).with_path(name.clone()))
+                })
                 .and_then(|file| Self::over_file(file, name.clone()))
                 .and_then(|session| session.hec_ras_file_type())
         })

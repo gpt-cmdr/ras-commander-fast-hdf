@@ -65,7 +65,9 @@
   `resource_limit` (ras-commander's `auto` mode falls back to h5py). Reads that
   run on a rayon worker thread (a session's parallel reads) never wait, so a
   pool cannot deadlock; they are admitted or refused at once. Defaults:
-  4 GiB and 30 s, so ordinary reads never wait. Sessions share the process-wide
+  4 GiB and 30 s, so ordinary reads never wait. Admission and release are
+  lock-free (one compare-and-swap); only a read that waits takes a lock.
+  Sessions share the process-wide
   `hdf::DecodeBudget::global()` unless given their own with
   `ReadOnlyHdfSession::set_decode_budget`; `RAS_FAST_HDF_DECODE_BUDGET_BYTES`
   and `RAS_FAST_HDF_DECODE_BUDGET_WAIT_MS` set the process-wide one, and

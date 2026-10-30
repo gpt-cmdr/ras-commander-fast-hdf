@@ -132,8 +132,8 @@ impl File {
     pub(crate) fn from_storage_with_options(
         storage: h5::storage::DynStorage,
         options: h5::OpenOptions,
+        budget: Arc<DecodeBudget>,
     ) -> Result<Self> {
-        let budget = DecodeBudget::global()?;
         h5::Hdf5File::from_storage_with_options(storage, options).map(|f| Self::wrap(f, budget))
     }
     pub(crate) fn from_vec_with_options(
@@ -177,8 +177,10 @@ impl File {
         self.inner.storage()
     }
     /// A file over a storage backend of the engine's own.
-    pub(crate) fn from_storage(storage: h5::storage::DynStorage) -> Result<Self> {
-        let budget = DecodeBudget::global()?;
+    pub(crate) fn from_storage(
+        storage: h5::storage::DynStorage,
+        budget: Arc<DecodeBudget>,
+    ) -> Result<Self> {
         h5::Hdf5File::from_storage_with_options(storage, h5::OpenOptions::default())
             .map(|f| Self::wrap(f, budget))
     }

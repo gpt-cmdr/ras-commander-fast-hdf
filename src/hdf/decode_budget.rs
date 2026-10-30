@@ -24,7 +24,18 @@
 //! budget unless given their own ([`super::ReadOnlyHdfSession::set_decode_budget`]);
 //! `RAS_FAST_HDF_DECODE_BUDGET_BYTES` and `RAS_FAST_HDF_DECODE_BUDGET_WAIT_MS`
 //! set the process-wide one when it is first used.
+//!
+//! Admission and release are lock-free: a read reserves with one
+//! compare-and-swap on the in-flight count, and a release subtracts and takes
+//! the lock only when a read is waiting. The lock and condition variable are
+//! used only by reads that wait. A waiter registers itself, then re-checks the
+//! budget under the lock before it sleeps; a release subtracts, then checks for
+//! waiters and notifies under the lock. With both sides sequentially
+//! consistent, either the release sees the waiter (and its notify cannot be
+//! lost, because the waiter holds the lock from its re-check until it sleeps)
+//! or the waiter's re-check sees the released bytes.
 use crate::{Error, ErrorKind, Result};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering::SeqCst};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, OnceLock};
 use std::time::{Duration, Instant};
 
@@ -42,16 +53,16 @@ pub const DECODE_BUDGET_WAIT_MS_ENV: &str = "RAS_FAST_HDF_DECODE_BUDGET_WAIT_MS"
 pub struct DecodeBudget {
     max_bytes: u64,
     wait: Duration,
-    state: Mutex<State>,
+    in_flight: AtomicU64,
+    peak: AtomicU64,
+    waits: AtomicU64,
+    refusals: AtomicU64,
+    /// Reads registered to wait; a release notifies only when this is nonzero.
+    waiters: AtomicUsize,
+    /// Held by a waiter from its re-check until it sleeps, and by a release
+    /// before it notifies.
+    lock: Mutex<()>,
     released: Condvar,
-}
-
-#[derive(Debug, Default)]
-struct State {
-    in_flight: u64,
-    peak: u64,
-    waits: u64,
-    refusals: u64,
 }
 
 /// A snapshot of a [`DecodeBudget`].
@@ -84,7 +95,12 @@ impl DecodeBudget {
         Ok(Self {
             max_bytes,
             wait,
-            state: Mutex::default(),
+            in_flight: AtomicU64::new(0),
+            peak: AtomicU64::new(0),
+            waits: AtomicU64::new(0),
+            refusals: AtomicU64::new(0),
+            waiters: AtomicUsize::new(0),
+            lock: Mutex::new(()),
             released: Condvar::new(),
         })
     }
@@ -135,16 +151,43 @@ impl DecodeBudget {
         self.wait
     }
 
+    /// A snapshot of the budget. Each field is read on its own, so under
+    /// concurrent reads the fields may come from slightly different moments.
     pub fn stats(&self) -> DecodeBudgetStats {
-        let state = lock(&self.state);
         DecodeBudgetStats {
             max_bytes: self.max_bytes,
             wait: self.wait,
-            in_flight_bytes: state.in_flight,
-            peak_in_flight_bytes: state.peak,
-            waits: state.waits,
-            refusals: state.refusals,
+            in_flight_bytes: self.in_flight.load(SeqCst),
+            peak_in_flight_bytes: self.peak.load(SeqCst),
+            waits: self.waits.load(SeqCst),
+            refusals: self.refusals.load(SeqCst),
         }
+    }
+
+    /// Add `bytes` to the in-flight count if the budget has room for them.
+    /// The count never exceeds `max_bytes`; without room, the count seen.
+    fn try_add(&self, bytes: u64) -> std::result::Result<(), u64> {
+        let mut current = self.in_flight.load(SeqCst);
+        loop {
+            if self.max_bytes - current < bytes {
+                return Err(current);
+            }
+            match self
+                .in_flight
+                .compare_exchange_weak(current, current + bytes, SeqCst, SeqCst)
+            {
+                Ok(_) => {
+                    self.peak.fetch_max(current + bytes, SeqCst);
+                    return Ok(());
+                }
+                Err(seen) => current = seen,
+            }
+        }
+    }
+
+    fn refuse(&self, message: String) -> std::result::Result<Reservation, String> {
+        self.refusals.fetch_add(1, SeqCst);
+        Err(message)
     }
 
     /// Reserve `bytes` until the returned guard is dropped, waiting for at
@@ -154,54 +197,82 @@ impl DecodeBudget {
         bytes: u64,
         may_wait: bool,
     ) -> std::result::Result<Reservation, String> {
+        let reservation = || Reservation {
+            budget: self.clone(),
+            bytes,
+        };
         if bytes == 0 {
-            return Ok(Reservation {
-                budget: self.clone(),
-                bytes: 0,
-            });
+            return Ok(reservation());
         }
-        let mut state = lock(&self.state);
         if bytes > self.max_bytes {
-            state.refusals += 1;
-            return Err(format!(
+            return self.refuse(format!(
                 "read needs {bytes} bytes of decode memory, more than the {}-byte in-flight decode budget",
                 self.max_bytes
             ));
         }
-        if self.max_bytes - state.in_flight < bytes && !may_wait {
-            state.refusals += 1;
-            return Err(format!(
-                "read needs {bytes} bytes of decode memory; {} of the {}-byte in-flight decode budget is in use, and reads on decode worker threads do not wait",
-                state.in_flight, self.max_bytes
+        let in_flight = match self.try_add(bytes) {
+            Ok(()) => return Ok(reservation()),
+            Err(in_flight) => in_flight,
+        };
+        if !may_wait {
+            return self.refuse(format!(
+                "read needs {bytes} bytes of decode memory; {in_flight} of the {}-byte in-flight decode budget is in use, and reads on decode worker threads do not wait",
+                self.max_bytes
             ));
         }
-        if self.max_bytes - state.in_flight < bytes {
-            state.waits += 1;
-            let deadline = Instant::now() + self.wait;
-            while self.max_bytes - state.in_flight < bytes {
-                let now = Instant::now();
-                if now >= deadline {
-                    state.refusals += 1;
-                    return Err(format!(
-                        "read needs {bytes} bytes of decode memory; {} of the {}-byte in-flight decode budget stayed in use for {} ms",
-                        state.in_flight,
-                        self.max_bytes,
-                        self.wait.as_millis()
-                    ));
-                }
-                state = self
-                    .released
-                    .wait_timeout(state, deadline - now)
-                    .unwrap_or_else(|e| e.into_inner())
-                    .0;
+        self.waits.fetch_add(1, SeqCst);
+        let deadline = Instant::now() + self.wait;
+        let mut guard = lock(&self.lock);
+        // Registered before the re-check below and removed on every exit,
+        // including a panic, so a release never skips a sleeping waiter.
+        let _waiting = Waiting::register(&self.waiters);
+        loop {
+            let in_flight = match self.try_add(bytes) {
+                Ok(()) => return Ok(reservation()),
+                Err(in_flight) => in_flight,
+            };
+            let now = Instant::now();
+            if now >= deadline {
+                drop(guard);
+                return self.refuse(format!(
+                    "read needs {bytes} bytes of decode memory; {in_flight} of the {}-byte in-flight decode budget stayed in use for {} ms",
+                    self.max_bytes,
+                    self.wait.as_millis()
+                ));
             }
+            guard = self
+                .released
+                .wait_timeout(guard, deadline - now)
+                .unwrap_or_else(|e| e.into_inner())
+                .0;
         }
-        state.in_flight += bytes;
-        state.peak = state.peak.max(state.in_flight);
-        Ok(Reservation {
-            budget: self.clone(),
-            bytes,
-        })
+    }
+
+    fn release(&self, bytes: u64) {
+        self.in_flight.fetch_sub(bytes, SeqCst);
+        if self.waiters.load(SeqCst) != 0 {
+            // A waiter that registered before this load holds the lock from
+            // its re-check until it sleeps, so taking the lock here orders the
+            // notify after that sleep; a later waiter's re-check sees the bytes.
+            drop(lock(&self.lock));
+            self.released.notify_all();
+        }
+    }
+}
+
+/// A waiter's registration in [`DecodeBudget::waiters`], removed on drop.
+struct Waiting<'a>(&'a AtomicUsize);
+
+impl<'a> Waiting<'a> {
+    fn register(waiters: &'a AtomicUsize) -> Self {
+        waiters.fetch_add(1, SeqCst);
+        Self(waiters)
+    }
+}
+
+impl Drop for Waiting<'_> {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, SeqCst);
     }
 }
 
@@ -222,8 +293,8 @@ fn global_slot() -> Result<&'static Mutex<Arc<DecodeBudget>>> {
 }
 
 fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
-    // The state is updated in single statements; a panic elsewhere cannot
-    // leave it half-written.
+    // The budget's lock guards no data, and the global slot is replaced in a
+    // single statement; a panic elsewhere cannot leave either half-written.
     mutex.lock().unwrap_or_else(|e| e.into_inner())
 }
 
@@ -236,13 +307,9 @@ pub(crate) struct Reservation {
 
 impl Drop for Reservation {
     fn drop(&mut self) {
-        if self.bytes == 0 {
-            return;
+        if self.bytes != 0 {
+            self.budget.release(self.bytes);
         }
-        let mut state = lock(&self.budget.state);
-        state.in_flight -= self.bytes;
-        drop(state);
-        self.budget.released.notify_all();
     }
 }
 
@@ -403,5 +470,124 @@ mod tests {
         let stats = b.stats();
         assert_eq!((stats.in_flight_bytes, stats.refusals), (0, 0));
         assert!(stats.peak_in_flight_bytes <= 1_000);
+    }
+
+    /// Run `f` on its own thread; fail if it does not finish within `limit`
+    /// (a deadlock or a lost wakeup would otherwise hang the test run).
+    fn within<T: Send + 'static>(limit: Duration, f: impl FnOnce() -> T + Send + 'static) -> T {
+        let (done, finished) = std::sync::mpsc::channel();
+        std::thread::spawn(move || done.send(f()).unwrap());
+        finished
+            .recv_timeout(limit)
+            .expect("did not finish in time: deadlock or lost wakeup")
+    }
+
+    #[test]
+    fn stress_many_threads_over_a_small_budget_never_exceed_it_and_end_at_zero() {
+        // 32 threads asking for up to 400 bytes each (about 6.4 kB combined)
+        // from a 1,000-byte budget, mixing waiting reads and reads that may
+        // not wait. An independent counter checks the cap at every moment.
+        const MAX: u64 = 1_000;
+        let b = budget(MAX, 60_000);
+        let held = Arc::new(AtomicU64::new(0));
+        let refused_no_wait = Arc::new(AtomicU64::new(0));
+        let (b2, held2, refused2) = (b.clone(), held.clone(), refused_no_wait.clone());
+        within(Duration::from_secs(120), move || {
+            let threads = 32;
+            let start = Barrier::new(threads);
+            std::thread::scope(|scope| {
+                for t in 0..threads {
+                    let (b, held, refused, start) = (&b2, &held2, &refused2, &start);
+                    scope.spawn(move || {
+                        start.wait();
+                        for i in 0..2_000u64 {
+                            let bytes = 1 + (t as u64 * 7_919 + i * 104_729) % 400;
+                            let may_wait = !(t + i as usize).is_multiple_of(5);
+                            match b.reserve(bytes, may_wait) {
+                                Ok(reservation) => {
+                                    let now = held.fetch_add(bytes, SeqCst) + bytes;
+                                    assert!(now <= MAX, "{now} bytes held");
+                                    if i % 64 == 0 {
+                                        std::thread::sleep(Duration::from_micros(100));
+                                    } else {
+                                        std::hint::spin_loop();
+                                    }
+                                    held.fetch_sub(bytes, SeqCst);
+                                    drop(reservation);
+                                }
+                                Err(message) => {
+                                    assert!(!may_wait, "a waiting read was refused: {message}");
+                                    refused.fetch_add(1, SeqCst);
+                                }
+                            }
+                        }
+                    });
+                }
+            });
+        });
+        let stats = b.stats();
+        assert_eq!(stats.in_flight_bytes, 0);
+        assert_eq!(b.waiters.load(SeqCst), 0);
+        assert_eq!(held.load(SeqCst), 0);
+        assert!(stats.peak_in_flight_bytes <= MAX);
+        assert_eq!(stats.refusals, refused_no_wait.load(SeqCst));
+        assert!(stats.waits > 0, "the budget was never contended");
+    }
+
+    #[test]
+    fn a_release_always_wakes_the_waiter() {
+        // A one-byte budget passed back and forth between threads that hold
+        // it for a few microseconds, so the others go to sleep and only a
+        // release can wake them. A lost wakeup leaves a thread asleep until its
+        // 60 s wait runs out, past the 30 s limit.
+        let b = budget(1, 60_000);
+        let b2 = b.clone();
+        within(Duration::from_secs(30), move || {
+            std::thread::scope(|scope| {
+                for _ in 0..4 {
+                    let b = &b2;
+                    scope.spawn(move || {
+                        for _ in 0..2_000 {
+                            let reservation = b.reserve(1, true).unwrap();
+                            let held = Instant::now();
+                            while held.elapsed() < Duration::from_micros(5) {
+                                std::hint::spin_loop();
+                            }
+                            drop(reservation);
+                        }
+                    });
+                }
+            });
+        });
+        let stats = b.stats();
+        assert_eq!((stats.in_flight_bytes, stats.refusals), (0, 0));
+        assert_eq!(b.waiters.load(SeqCst), 0);
+        assert!(stats.waits > 0, "no read ever waited");
+    }
+
+    #[test]
+    fn a_panicking_read_returns_its_reservation_and_wakes_waiters() {
+        let b = budget(100, 60_000);
+        let holding = Arc::new(Barrier::new(2));
+        let (b2, holding2) = (b.clone(), holding.clone());
+        let holder = std::thread::spawn(move || {
+            let _reservation = b2.reserve(100, true).unwrap();
+            holding2.wait();
+            // Give the waiter time to go to sleep on the full budget.
+            while b2.waiters.load(SeqCst) == 0 {
+                std::thread::yield_now();
+            }
+            panic!("read failed while holding its reservation");
+        });
+        holding.wait();
+        let b3 = b.clone();
+        within(Duration::from_secs(30), move || {
+            drop(b3.reserve(100, true).unwrap());
+        });
+        assert!(holder.join().is_err(), "the holder panicked");
+        let stats = b.stats();
+        assert_eq!((stats.in_flight_bytes, stats.refusals), (0, 0));
+        assert_eq!(b.waiters.load(SeqCst), 0);
+        assert!(stats.waits >= 1);
     }
 }

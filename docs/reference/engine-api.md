@@ -251,6 +251,9 @@ concurrent calls and sessions (`hdf::DecodeBudget`, `src/hdf/decode_budget.rs`).
 - Defaults: `hdf::DEFAULT_DECODE_BUDGET_BYTES` (4 GiB, twice the per-call default) and
   `hdf::DEFAULT_DECODE_BUDGET_WAIT` (30 s). A read waits only while other reads already hold
   gigabytes, so ordinary reads never wait.
+- Admission and release are lock-free (one compare-and-swap on the in-flight count); only a
+  read that has to wait takes the budget's lock and sleeps on its condition variable, and a
+  release notifies only when a read is waiting.
 - Every session draws on the process-wide budget, `DecodeBudget::global()`, unless given its
   own with `ReadOnlyHdfSession::set_decode_budget(Arc<DecodeBudget>)`. Give several sessions
   the same `Arc` to cap them together. `DecodeBudget::new(max_bytes, wait)` makes one;

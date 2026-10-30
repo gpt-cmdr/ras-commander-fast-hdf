@@ -281,8 +281,12 @@ mod measure {
             bytes: Arc::clone(&bytes),
             reads: Arc::clone(&reads),
         };
-        let file =
-            File::from_storage_with_options(Arc::new(storage), h5::OpenOptions::default()).unwrap();
+        let file = File::from_storage_with_options(
+            Arc::new(storage),
+            h5::OpenOptions::default(),
+            crate::hdf::DecodeBudget::global().unwrap(),
+        )
+        .unwrap();
         let s = ReadOnlyHdfSession {
             file,
             pool: crate::SessionPool::new(1).unwrap(),
