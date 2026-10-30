@@ -74,7 +74,7 @@ the PyPI wheel of the same name (`python/pyproject.toml`, maturin).
   - `cargo clippy --locked --all-features --all-targets --no-deps -- -D warnings`
   - `cargo test --locked --no-default-features --features catalog,hdf,mesh,results`
     (engine, pure Rust) and
-    `cargo test --locked --features python,exports-all,exports-pmtiles`
+    `cargo test --locked --features python,exports-all,exports-pmtiles,test-hooks`
     (engine and bridge; not `--all-features`, because `extension-module`
     cannot link a test binary on Linux)
   - `python scripts/vendor_sources.py --check` when touching `vendor/`

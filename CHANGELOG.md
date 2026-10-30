@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Release wheels no longer contain the panic-injection test hooks
+  (`_panic_for_test` on the module and on `HdfSession`). They are built only
+  with the new `test-hooks` Cargo feature, which CI test builds enable; the CI
+  wheel smoke test checks that release-feature wheels do not have them.
+  ras-commander's panic-containment tests skip when the hooks are absent.
+  `API_VERSION` stays 11: no binding ras-commander uses outside its tests
+  changed.
+- A contained Rust panic no longer prints Rust's default panic message to
+  stderr. The extension installs a quiet panic hook when it is imported; the
+  Python exception (`NativePanicError`, or ras-commander's `FastHdfPanicError`)
+  still carries the message. Set `RUST_BACKTRACE` (not `0`) to get the default
+  message and a backtrace on stderr.
 - 1D summaries whose two axes have the same length (for example `Summary Output/Storage
   Areas/Maximum Water Surface (2, 2)` in a plan with exactly two storage areas) now take
   the element axis from stored `Row N:  name` (or `RowN`) attributes when these label
