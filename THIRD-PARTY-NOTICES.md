@@ -34,7 +34,7 @@ SOFTWARE.
 
 | Component | Version | Licence (SPDX, as declared) | Source | Licence texts |
 |---|---|---|---|---|
-| ras-commander-fast-hdf | 0.2.5 | MIT | https://github.com/gpt-cmdr/ras-commander-fast-hdf (the engine modules of this crate) | [c6f7836d26fe](#licence-c6f7836d26fe) |
+| ras-commander-fast-hdf | 0.3.0 | MIT | https://github.com/gpt-cmdr/ras-commander-fast-hdf (the engine modules of this crate) | [c6f7836d26fe](#licence-c6f7836d26fe) |
 | freestiler-core (embedded source, modified; vendor/freestiler-core/PROVENANCE.md) | 0.1.0 (beb64b0) | MIT AND ISC | https://github.com/walkerke/freestiler | [303ebf345f07](#licence-303ebf345f07), [fd0d2efcf9f0](#licence-fd0d2efcf9f0), [f6ca04af604c](#licence-f6ca04af604c), [ccf343d85399](#licence-ccf343d85399), [ccf343d85399](#licence-ccf343d85399) |
 | adler2 | 2.0.1 | 0BSD OR MIT OR Apache-2.0 | https://github.com/oyvindln/adler2 | [861399f8c21c](#licence-861399f8c21c), [56a24963c525](#licence-56a24963c525), [23f18e03dc49](#licence-23f18e03dc49) |
 | ahash | 0.8.12 | MIT OR Apache-2.0 | https://github.com/tkaitchuck/ahash | [143368af9701](#licence-143368af9701), [0444c6991eea](#licence-0444c6991eea) |
@@ -1996,7 +1996,7 @@ THE SOFTWARE.
 
 ### licence-c6f7836d26fe
 
-File(s): LICENSE. Used by: ras-commander-fast-hdf 0.2.5.
+File(s): LICENSE. Used by: ras-commander-fast-hdf 0.3.0.
 
 ```text
 MIT License
