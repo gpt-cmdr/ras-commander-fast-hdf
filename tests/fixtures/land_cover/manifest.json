@@ -1,0 +1,16 @@
+{
+  "source": "synthetic h5py 3.16.0 (tests/generate_land_cover_fixtures.py)",
+  "files": {
+    "geom.hdf": "3d60369df8ae4ba3cf1c28cee1c8c4ff0f046741acf712fb27d4e28273c8aa60",
+    "geom_multipart.hdf": "27b266e4637c709addaf2b53c7f295459a412e43a7978889d6ead379a4e2efad",
+    "geom_v1.hdf": "9b0fb94790cf874a94caf5208a844ea997a343e09057629cae4a8700da449426",
+    "geom_virtual.hdf": "34736179cc8c2b447fec53fac64ce44546c82eb7ea5fd2da7c25875e3551dd83",
+    "geom_xs.hdf": "2411873c6729620632f35358c9f98446f0ec623b9174af3ec2314736c070c858",
+    "lc.hdf": "d5418672b635fb496057ee5413e4a3171bb988a2fa6a9e6faf547030eba7edb3",
+    "lc_v1.hdf": "d9d9062053d8599050f5f70474f2b195905a05649a4cf2e4d16fe853d1a1ec3d",
+    "lc_virtual.hdf": "fd11a185080727ffccd91bb99f7608299514f7f6c758b8abafae8a64fda6559c",
+    "precip_cumulative.hdf": "a4d762b62b1538ad6e29b22bce251535bfb0a22706e3be24b5fa37729beeaf40",
+    "precip_full.hdf": "d6ed4b441e38d626843822b92b4a7b00938acba22bc9fed0c6980c60eab406f2",
+    "precip_per.hdf": "78203d0caa63a25585e994fe6b66c2d741552087c19e54498f746f8e2b0855aa"
+  }
+}

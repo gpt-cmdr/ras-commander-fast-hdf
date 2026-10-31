@@ -42,6 +42,7 @@
   `is_ghost_cell`; `LayerOptions::summary_time_days` adds the stored Time row
   (`<slug>_time_days`) to timed summary layers; `ArrowLayer::omitted` reports the cells left
   out of `mesh_cells`. Defaults are unchanged.
+- Final n Values raster (`FinalManningsModel`) and gridded precipitation rasters (`PrecipitationSteps`, `precipitation_grid_info`): additive, `API_VERSION` stays 11. Identical to RAS Mapper 7.0.1 and to ras2cng on the models listed in [the reference page](docs/reference/land-cover-precipitation.md).
 
 ## 0.2.5 (2026-10-30)
 
