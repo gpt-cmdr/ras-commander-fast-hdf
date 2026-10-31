@@ -321,3 +321,103 @@ fn summary_geometry_joins_cells_and_faces() {
     assert_eq!(line, vec![[1.0, 0.0], [1.5, -0.25], [2.0, 0.0]]);
     assert!(s.read_layer("mesh_summary", None, &o).is_err());
 }
+
+#[test]
+fn ghost_cell_points_are_kept_and_flagged_on_request() {
+    let o = LayerOptions::default().with_ghost_cells(true);
+    let layer = session().read_layer("mesh_cell_points", None, &o).unwrap();
+    assert_eq!(
+        field_names(&layer),
+        ["mesh_name", "cell_id", "is_ghost_cell", "geometry"]
+    );
+    let b = &layer.batches[0];
+    assert_eq!(b.num_rows(), 3, "the ghost centre is a stored row");
+    let ghost = b.column(2).as_boolean();
+    assert_eq!(
+        (0..3).map(|i| ghost.value(i)).collect::<Vec<_>>(),
+        [false, false, true]
+    );
+    let w = b.column(3).as_binary::<i32>().value(2);
+    assert_eq!(f64::from_le_bytes(w[13..21].try_into().unwrap()), -0.5);
+}
+
+#[test]
+fn stored_time_offsets_on_request() {
+    let o = LayerOptions::default().with_summary_time_days(true);
+    let layer = session()
+        .mesh_summary_layer("Maximum Water Surface", &o)
+        .unwrap();
+    let names = field_names(&layer);
+    assert_eq!(names[4], "maximum_water_surface_time_days");
+    let b = &layer.batches[0];
+    let d = b.column(4).as_primitive::<Float32Type>();
+    assert_eq!(
+        d.values(),
+        &[0.5, 1.25],
+        "the stored days, not the rounded times"
+    );
+    // Untimed summaries are unchanged.
+    let plain = session()
+        .mesh_summary_layer("Maximum Water Surface", &LayerOptions::default())
+        .unwrap();
+    assert!(!field_names(&plain)
+        .iter()
+        .any(|n| n.ends_with("_time_days")));
+}
+
+#[test]
+fn omitted_cells_are_reported() {
+    let layer = session()
+        .mesh_cells_layer(&LayerOptions::default())
+        .unwrap();
+    assert_eq!(layer.omitted.len(), 1, "{:?}", layer.omitted);
+    assert_eq!(layer.omitted[0].1.cell_id, 2);
+}
+
+#[test]
+fn consumer_names_come_from_the_catalog() {
+    use arrow_layers::{apply_naming_rule, consumer_field_name, NamingRule};
+    assert_eq!(
+        apply_naming_rule(NamingRule::SnakeCase, "US SA/2D"),
+        "us_sa_2d"
+    );
+    assert_eq!(apply_naming_rule(NamingRule::SnakeCase, "SA-2D"), "sa_2d");
+    assert_eq!(apply_naming_rule(NamingRule::Canonical, "SA-2D"), "SA-2D");
+    assert_eq!(consumer_field_name("terrio", "bc_lines", "SA-2D"), "sa_2d");
+    assert_eq!(
+        consumer_field_name("terrio", "bc_lines", "source_row"),
+        "source_row"
+    );
+    assert_eq!(
+        consumer_field_name("terrio", "mesh_cell_points", "is_ghost_cell"),
+        "is_ghost"
+    );
+    assert_eq!(
+        consumer_field_name("ras2cng", "bc_lines", "source_row"),
+        "bc_line_id"
+    );
+    assert_eq!(consumer_field_name("ras2cng", "bc_lines", "SA-2D"), "SA-2D");
+
+    let s = features();
+    let layer = s
+        .feature_layer("bc_lines", &LayerOptions::default())
+        .unwrap();
+    let before = layer.batches[0].column(0).clone();
+    let renamed = layer.with_consumer_names("ras2cng", "bc_lines").unwrap();
+    assert_eq!(field_names(&renamed)[0], "bc_line_id");
+    assert_eq!(renamed.identity.0, "bc_line_id");
+    assert!(
+        std::sync::Arc::ptr_eq(&before, renamed.batches[0].column(0)),
+        "zero copy"
+    );
+    let geometry = renamed.schema.field_with_name("geometry").unwrap();
+    assert_eq!(geometry.metadata()["ARROW:extension:name"], "geoarrow.wkb");
+    let terrio = s
+        .feature_layer("bc_lines", &LayerOptions::default())
+        .unwrap()
+        .with_consumer_names("terrio", "bc_lines")
+        .unwrap();
+    assert!(field_names(&terrio).iter().all(|n| n
+        .chars()
+        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')));
+}

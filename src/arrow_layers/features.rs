@@ -419,6 +419,7 @@ impl ReadOnlyHdfSession {
         let mut ids = Vec::new();
         let mut geoms = BinaryBuilder::new();
         let mut wkb = Vec::with_capacity(21);
+        let mut ghost: Vec<Option<bool>> = Vec::new();
         for mesh in self.mesh_area_names(options.metadata_max_bytes)? {
             let path = format!("{}/{mesh}/Cells Center Coordinate", super::GEOMETRY);
             let centres = match self.read_numeric_bounded(&path, None, options.max_bytes) {
@@ -428,8 +429,15 @@ impl ReadOnlyHdfSession {
             };
             let pts = xy("mesh_cell_points", &centres)?;
             let physical = self.physical_cell_count(&mesh, options.metadata_max_bytes)?;
-            let keep = physical.map_or(pts.len(), |c| (c as usize).min(pts.len()));
+            let keep = if options.include_ghost_cells {
+                pts.len()
+            } else {
+                physical.map_or(pts.len(), |c| (c as usize).min(pts.len()))
+            };
             for (i, p) in pts.iter().take(keep).enumerate() {
+                if options.include_ghost_cells {
+                    ghost.push(physical.map(|c| i as u64 >= c));
+                }
                 wkb.clear();
                 wkb.push(1);
                 wkb.extend_from_slice(&1u32.to_le_bytes());
@@ -442,18 +450,22 @@ impl ReadOnlyHdfSession {
                 );
             }
         }
+        let mut fields = vec![
+            Field::new("mesh_name", DataType::Utf8, false),
+            Field::new("cell_id", DataType::Int64, false),
+        ];
+        let mut columns: Vec<ArrayRef> =
+            vec![Arc::new(names.finish()), Arc::new(Int64Array::from(ids))];
+        if options.include_ghost_cells {
+            fields.push(Field::new("is_ghost_cell", DataType::Boolean, true));
+            columns.push(Arc::new(arrow_array::BooleanArray::from(ghost)));
+        }
+        fields.push(geometry_field());
+        columns.push(Arc::new(geoms.finish()));
         ArrowLayer::from_columns(
             "mesh_cell_points",
-            vec![
-                Field::new("mesh_name", DataType::Utf8, false),
-                Field::new("cell_id", DataType::Int64, false),
-                geometry_field(),
-            ],
-            vec![
-                Arc::new(names.finish()),
-                Arc::new(Int64Array::from(ids)),
-                Arc::new(geoms.finish()),
-            ],
+            fields,
+            columns,
             ("mesh_name", Some("cell_id")),
             options.batch_rows,
         )

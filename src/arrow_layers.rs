@@ -207,6 +207,7 @@ pub const FIELD_ALIASES: &[FieldAlias] = &[
     fa("ras2cng", "storage_areas", "Min Elev", "min_elev"),
     fa("ras2cng", "river_reaches", "source_row", "river_id"),
     fa("terrio", "mesh_summary", "is_ghost_cell", "is_ghost"),
+    fa("terrio", "mesh_cell_points", "is_ghost_cell", "is_ghost"),
 ];
 
 /// The aliases `consumer` uses for the fields of its layer `layer`.
@@ -215,6 +216,58 @@ pub fn field_aliases(consumer: &str, layer: &str) -> impl Iterator<Item = &'stat
     FIELD_ALIASES
         .iter()
         .filter(move |a| a.consumer == consumer && a.layer == layer)
+}
+
+/// How a consumer names the canonical fields it has no explicit [`FIELD_ALIASES`] entry for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum NamingRule {
+    /// The canonical (stored) name, unchanged. ras2cng's rule: ras-commander keeps the stored
+    /// `Attributes` column names.
+    Canonical,
+    /// Lower case ASCII letters and digits, every run of other characters one `_`, trimmed
+    /// (`SA-2D` -> `sa_2d`, `US SA/2D` -> `us_sa_2d`). terrio's HECRAS driver rule.
+    SnakeCase,
+}
+
+/// The naming rule of a consumer: `terrio` uses [`NamingRule::SnakeCase`], every other consumer
+/// (`ras2cng`) [`NamingRule::Canonical`].
+pub fn naming_rule(consumer: &str) -> NamingRule {
+    if consumer == "terrio" {
+        NamingRule::SnakeCase
+    } else {
+        NamingRule::Canonical
+    }
+}
+
+/// `name` under `rule`.
+pub fn apply_naming_rule(rule: NamingRule, name: &str) -> String {
+    match rule {
+        NamingRule::Canonical => name.to_owned(),
+        NamingRule::SnakeCase => {
+            let mut out = String::with_capacity(name.len());
+            for c in name.chars() {
+                if c.is_ascii_alphanumeric() {
+                    out.push(c.to_ascii_lowercase());
+                } else if !out.ends_with('_') {
+                    out.push('_');
+                }
+            }
+            out.trim_matches('_').to_owned()
+        }
+    }
+}
+
+/// The name `consumer` gives canonical field `canonical` of its layer `layer`: the explicit
+/// [`FIELD_ALIASES`] entry, otherwise the consumer's [`naming_rule`]. The catalog is the one
+/// source of both.
+pub fn consumer_field_name(consumer: &str, layer: &str, canonical: &str) -> String {
+    field_aliases(consumer, layer)
+        .find(|a| a.canonical == canonical)
+        .map_or_else(
+            || apply_naming_rule(naming_rule(consumer), canonical),
+            |a| a.alias.to_owned(),
+        )
 }
 
 /// Field name of a summary variable: lower case, spaces to underscores (ras-commander's
@@ -243,6 +296,14 @@ pub struct LayerOptions {
     /// Summary layers only: append the element `geometry` (cell polygon or face line, read
     /// from the same file) to every row.
     pub summary_geometry: bool,
+    /// `mesh_cell_points` only: keep the ghost cells (stored rows at or above the area's
+    /// `Cell Count`) and add `is_ghost_cell` (null for a mesh without a recorded `Cell Count`).
+    /// Default off: physical cells only, as ras-commander.
+    pub include_ghost_cells: bool,
+    /// Summary layers with a proven Time row only: add `<slug>_time_days`, the stored offset in
+    /// days from the plan's `Simulation Start Time`, in its stored float type (NaN as null).
+    /// `<slug>_time` is rounded to 100 ms; this column is the stored value.
+    pub summary_time_days: bool,
 }
 impl Default for LayerOptions {
     fn default() -> Self {
@@ -251,6 +312,8 @@ impl Default for LayerOptions {
             max_bytes: DEFAULT_READ_MAX_BYTES,
             metadata_max_bytes: DEFAULT_MAX_BYTES,
             summary_geometry: false,
+            include_ghost_cells: false,
+            summary_time_days: false,
         }
     }
 }
@@ -264,6 +327,17 @@ impl LayerOptions {
     /// Options that append the element geometry to summary layers (see `summary_geometry`).
     pub fn with_summary_geometry(mut self, on: bool) -> Self {
         self.summary_geometry = on;
+        self
+    }
+    /// Options that keep ghost cells in `mesh_cell_points` (see `include_ghost_cells`).
+    pub fn with_ghost_cells(mut self, on: bool) -> Self {
+        self.include_ghost_cells = on;
+        self
+    }
+    /// Options that add the stored time offset to timed summary layers (see
+    /// `summary_time_days`).
+    pub fn with_summary_time_days(mut self, on: bool) -> Self {
+        self.summary_time_days = on;
         self
     }
     /// Options with these byte budgets (per mesh array read, and per metadata object).
@@ -283,6 +357,9 @@ pub struct ArrowLayer {
     pub batches: Vec<RecordBatch>,
     /// Identity fields of every row: namespace and optional local integer.
     pub identity: (String, Option<String>),
+    /// `mesh_cells` only: the cells the engine left out (no or too few faces, ghost cells
+    /// included), by mesh name. Cells with invalid geometry are a refusal, never listed here.
+    pub omitted: Vec<(String, crate::mesh::CellDiagnostic)>,
 }
 impl ArrowLayer {
     pub fn num_rows(&self) -> usize {
@@ -315,6 +392,53 @@ impl ArrowLayer {
             schema,
             batches,
             identity: (identity.0.to_owned(), identity.1.map(str::to_owned)),
+            omitted: Vec::new(),
+        })
+    }
+
+    /// The layer with `consumer`'s field names ([`consumer_field_name`]) for its layer
+    /// `layer` (the consumer's own layer name; `mesh_summary` for summary layers). Values,
+    /// types, nullability and field metadata are unchanged; batches share their arrays. Two
+    /// fields given one name, or an empty name, are refused.
+    pub fn with_consumer_names(self, consumer: &str, layer: &str) -> Result<Self> {
+        let mut seen = HashSet::new();
+        let mut fields = Vec::with_capacity(self.schema.fields().len());
+        for f in self.schema.fields() {
+            let name = consumer_field_name(consumer, layer, f.name());
+            if name.is_empty() || !seen.insert(name.clone()) {
+                return Err(refuse(
+                    UnsupportedCode::Schema,
+                    format!(
+                        "{}: field {:?} gives the {consumer} name {name:?} twice, or an empty one",
+                        self.name,
+                        f.name()
+                    ),
+                ));
+            }
+            fields.push(f.as_ref().clone().with_name(name));
+        }
+        let rename = |n: &String| consumer_field_name(consumer, layer, n);
+        let identity = (
+            rename(&self.identity.0),
+            self.identity.1.as_ref().map(rename),
+        );
+        let schema = Arc::new(Schema::new_with_metadata(
+            fields,
+            self.schema.metadata().clone(),
+        ));
+        let batches = self
+            .batches
+            .iter()
+            .map(|b| {
+                RecordBatch::try_new(schema.clone(), b.columns().to_vec()).map_err(arrow_error)
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Self {
+            name: self.name,
+            schema,
+            batches,
+            identity,
+            omitted: self.omitted,
         })
     }
 }
@@ -473,6 +597,7 @@ impl ReadOnlyHdfSession {
         let mut ids = Vec::new();
         let mut geoms = BinaryBuilder::new();
         let mut wkb = Vec::new();
+        let mut omitted = Vec::new();
         for mesh in self.mesh_area_names(options.metadata_max_bytes)? {
             let present = self.mesh_datasets(&mesh)?;
             let needed = [
@@ -503,6 +628,7 @@ impl ReadOnlyHdfSession {
                     format!("{mesh}: cell {} omitted as invalid geometry ({}); ras-commander's Python polygonizer is not reproduced", d.cell_id, d.reason),
                 ));
             }
+            omitted.extend(packed.diagnostics.iter().map(|d| (mesh.clone(), d.clone())));
             let info = &named.topology.cell_info;
             for (row, &cell) in packed.cell_ids.iter().enumerate() {
                 let c = usize::try_from(cell)
@@ -531,7 +657,7 @@ impl ReadOnlyHdfSession {
                 ids.push(cell);
             }
         }
-        ArrowLayer::from_columns(
+        let mut layer = ArrowLayer::from_columns(
             "mesh_cells",
             vec![
                 Field::new("mesh_name", DataType::Utf8, false),
@@ -545,7 +671,9 @@ impl ReadOnlyHdfSession {
             ],
             ("mesh_name", Some("cell_id")),
             options.batch_rows,
-        )
+        )?;
+        layer.omitted = omitted;
+        Ok(layer)
     }
 
     /// `mesh_faces`: every face as a LineString (`mesh_name`, `face_id`, `geometry`), meshes in
@@ -718,6 +846,7 @@ impl ReadOnlyHdfSession {
         let mut ints: Vec<i128> = Vec::new();
         let mut kind: Option<&'static str> = None;
         let mut times: Vec<Option<i64>> = Vec::new();
+        let mut days_stored: Vec<Option<f64>> = Vec::new();
         let mut has_time: Option<bool> = None;
         let mut micro: Option<bool> = None;
         let mut found = false;
@@ -878,6 +1007,9 @@ impl ReadOnlyHdfSession {
                     let days =
                         flat[n + i].ok_or_else(|| Error::new(ErrorKind::Internal, "time"))?;
                     times.push(timestamp_ns(start.unwrap_or_default(), days)?);
+                    if options.summary_time_days {
+                        days_stored.push((!days.is_nan()).then_some(days));
+                    }
                 }
                 if !face {
                     ghost.push(false);
@@ -942,6 +1074,26 @@ impl ReadOnlyHdfSession {
                 ));
                 columns.push(Arc::new(TimestampNanosecondArray::from(times)));
             }
+            if options.summary_time_days {
+                // The time row shares the value row's stored type (f32 or f64; timed integers
+                // are refused above), so the stored offsets come back exactly.
+                let days: ArrayRef = if kind == Some("f32") {
+                    Arc::new(Float32Array::from(
+                        days_stored
+                            .iter()
+                            .map(|d| d.map(|x| x as f32))
+                            .collect::<Vec<_>>(),
+                    ))
+                } else {
+                    Arc::new(Float64Array::from(days_stored))
+                };
+                fields.push(Field::new(
+                    format!("{slug}_time_days"),
+                    days.data_type().clone(),
+                    true,
+                ));
+                columns.push(days);
+            }
         }
         if !face {
             fields.push(Field::new("is_ghost_cell", DataType::Boolean, true));
@@ -975,6 +1127,8 @@ impl ReadOnlyHdfSession {
         let whole = LayerOptions {
             batch_rows: usize::MAX,
             summary_geometry: false,
+            include_ghost_cells: false,
+            summary_time_days: false,
             ..*options
         };
         let layer = if face {
