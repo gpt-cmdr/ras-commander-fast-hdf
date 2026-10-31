@@ -1,6 +1,6 @@
 # Next HDF release: task list
 
-Targets: **ras-commander-fast-hdf 0.2.5 (or 0.3.0 if semver requires)** and **ras-commander 0.111.0**.
+Targets: **ras-commander-fast-hdf 0.2.5 (or 0.3.0 if semver requires)** and **ras-commander 0.112.0**.
 Written 2026-10-29. Status: `todo` / `in progress` / `done` / `blocked`.
 
 Rules for every task:
