@@ -32,7 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(inputs.include_macos && '["ubuntu-latest", "windows-latest", "macos-15"]' || '["ubuntu-latest", "windows-latest"]') }}
+        os: ${{ fromJSON(inputs.include_macos && '["ubuntu-latest", "windows-latest", "blacksmith-6vcpu-macos-15"]' || '["ubuntu-latest", "windows-latest"]') }}
         include:
           - os: ubuntu-latest
             self_hosted: '["self-hosted", "Linux", "X64", "clb-ci-linux"]'
