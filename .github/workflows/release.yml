@@ -15,12 +15,11 @@ on:
         required: true
         type: string
 
-env:
-  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-
 permissions:
   contents: read
 
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
   WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles,python-arrow
 
 jobs:
