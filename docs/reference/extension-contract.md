@@ -45,14 +45,19 @@ asks Git only when the package directory is itself a Git checkout, and rejects a
 `RAS_ENGINE_COMMIT` that is not a full 40-digit commit. `Cargo.lock` freezes resolution.
 
 `capabilities()` returns the engine commit and feature list, `engine_api_version`,
-`engine_capabilities` (the engine's compiled features and owner/name/feature entry points),
+`engine_capabilities` (the engine's compiled features and owner/name/feature entry points;
+from 0.3.0, release wheels also list `arrow` there, from `python-arrow`, while
+`ENGINE_FEATURES` and `engine_features` keep the four features above),
 `default_max_bytes`, and `bindings`: the sorted set of actually registered functions and
 classes (including the `NativeAnalysis` class, excluding exception classes), so optional
 feature builds report only what was registered. ras-commander's tests check this set
 against an explicit expected list (79 entry points at API 11 from engine 0.2.3, 78
 before; including the `_panic_for_test` hook, which from the next release is present only
 in `test-hooks` builds). 0.2.4 release-feature builds added `export_geoparquet_ipc_files` (80); 0.3.0
-removes it again (the GeoParquet archive profile moved to terrio), back to 79.
+removes it again (the GeoParquet archive profile moved to terrio) and adds, still within
+API 11, `arrow_layer`, `layer_catalog` and the `ArrowLayer` class (feature `python-arrow`,
+in release wheels from 0.3.0) and `FinalManningsModel`, `PrecipitationSteps` and
+`precipitation_grid_info` (feature `python`).
 
 ## Core numeric, mesh and tile functions
 

@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased (0.3.0: breaking)
+## 0.3.0 (2026-10-31)
+
+Breaking for one Python function: `export_geoparquet_ipc_files` is removed (the GeoParquet
+archive profile moved to terrio). Everything else is additive. The extension `API_VERSION`
+stays 11 and the engine API stays 10. ras-commander never called the removed binding, but
+its releases pin `ras-commander-fast-hdf>=0.2.4,<0.3` and so stay on 0.2.x until a release
+widens the pin. Cargo users on `^0.2` are not moved to 0.3.0 automatically.
+
+Release wheels now include the `python-arrow` feature (`arrow_layer`, `layer_catalog`,
+`ArrowLayer`) in addition to the export features, and the land-cover/precipitation bindings
+(`FinalManningsModel`, `PrecipitationSteps`, `precipitation_grid_info`).
 
 - **Removed** the GeoParquet archive profile: the `export_geoparquet_ipc_files` Python
   function and the Rust `exports::geoparquet` module (`export_layers`, `export_ipc`,

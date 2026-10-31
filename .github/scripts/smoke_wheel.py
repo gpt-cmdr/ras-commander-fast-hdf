@@ -13,8 +13,13 @@ assert native.API_VERSION == 11, native.API_VERSION
 assert native.ENGINE_COMMIT == commit, (native.ENGINE_COMMIT, commit)
 assert tuple(native.ENGINE_FEATURES) == ("catalog", "hdf", "mesh", "results"), native.ENGINE_FEATURES
 for name in ("read_numeric", "HdfSession", "assemble_cells", "write_pmtiles",
-             "export_ipc_file", "export_pmtiles_ipc_file"):
+             "export_ipc_file", "export_pmtiles_ipc_file",
+             # python-arrow (release wheels add it) and the land-cover/precipitation bindings.
+             "arrow_layer", "layer_catalog", "ArrowLayer",
+             "FinalManningsModel", "PrecipitationSteps", "precipitation_grid_info"):
     assert hasattr(native, name), name
+# Removed in 0.3.0 (the GeoParquet archive profile moved to terrio).
+assert not hasattr(native, "export_geoparquet_ipc_files"), "export_geoparquet_ipc_files is back"
 # Release wheels are built without the test-hooks feature.
 assert not hasattr(native, "_panic_for_test"), "release wheel exposes _panic_for_test"
 assert not hasattr(native.HdfSession, "_panic_for_test"), "release wheel exposes HdfSession._panic_for_test"
