@@ -26,7 +26,7 @@ THRESHOLD = float(sys.argv[2]) if len(sys.argv) > 2 else 100.0
 OUT = Path(__file__).resolve().parents[1] / "docs" / "images"
 OUT.mkdir(parents=True, exist_ok=True)
 # The release measured in the "new" columns (labels only).
-RELEASE = os.environ.get("PERF_RELEASE_LABEL", "0.111.0")
+RELEASE = os.environ.get("PERF_RELEASE_LABEL", "0.112.0")
 
 THEMES = {
     "light": dict(surface="#fcfcfb", text="#0b0b0b", text2="#52514e", grid="#e4e3df",
