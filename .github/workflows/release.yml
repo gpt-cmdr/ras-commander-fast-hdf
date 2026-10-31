@@ -23,7 +23,7 @@ jobs:
           - os: linux
             runs_on: '["self-hosted", "Linux", "X64", "clb-ci-linux"]'
           - os: macos
-            runs_on: '["macos-14"]'
+            runs_on: '["macos-15"]'
     runs-on: ${{ fromJSON(matrix.runs_on) }}
     timeout-minutes: 120
     steps:
