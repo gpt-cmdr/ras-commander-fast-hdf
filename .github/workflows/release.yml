@@ -34,8 +34,7 @@ jobs:
           - os: linux
             runs_on: '["self-hosted", "Linux", "X64", "clb-ci-linux"]'
           - os: macos
-            # Blacksmith Apple Silicon (macOS 15), like GitHub's arm64 macOS runners.
-            runs_on: '["blacksmith-6vcpu-macos-15"]'
+            runs_on: '["macos-15"]'
     runs-on: ${{ fromJSON(matrix.runs_on) }}
     timeout-minutes: 120
     steps:
