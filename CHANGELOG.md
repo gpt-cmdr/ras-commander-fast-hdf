@@ -1,6 +1,15 @@
 # Changelog
 
-## Unreleased
+## Unreleased (0.3.0: breaking)
+
+- **Removed** the GeoParquet archive profile: the `export_geoparquet_ipc_files` Python
+  function and the Rust `exports::geoparquet` module (`export_layers`, `export_ipc`,
+  `Options`, `hilbert_index`...). terrio owns file formats, and its
+  `terrio::geoparquet::write_arrow_layers` / `terrio.write_geoparquet_layers(...,
+  profile="archive")` is now the one implementation; on ras2cng's Bald Eagle p07 archive
+  it writes the same rows, order, schema, row groups and `geo` metadata. ras2cng (its only
+  consumer) moved to it. The plain `export_ipc_file(..., "parquet")` writer is unchanged.
+  `API_VERSION` stays 11 (ras-commander does not use the removed binding).
 
 - Canonical layer catalog and Arrow layers (features `arrow`, `python-arrow`). The engine
   returns `mesh_cells`, `mesh_faces`, `mesh_perimeters` (alias `mesh_areas`) and each

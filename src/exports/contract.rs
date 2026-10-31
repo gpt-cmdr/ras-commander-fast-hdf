@@ -325,13 +325,6 @@ pub fn validate_wkb(bytes: &[u8], geographic: bool) -> Result<()> {
     validate_wkb_profile(bytes, geographic, false, false).map(|_| ())
 }
 
-/// Validate like [`validate_wkb`] and return the XY bounds
-/// `[xmin, ymin, xmax, ymax]` over every coordinate (holes and parts
-/// included), or `None` for an empty geometry.
-pub fn wkb_bounds(bytes: &[u8]) -> Result<Option<[f64; 4]>> {
-    validate_wkb_profile(bytes, false, false, false)
-}
-
 pub fn validate_geojson_wkb(bytes: &[u8]) -> Result<()> {
     validate_wkb_profile(bytes, true, true, false).map(|_| ())
 }

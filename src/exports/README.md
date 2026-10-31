@@ -69,7 +69,6 @@ native in binary outputs. No unit-based coordinate conversion is guessed.
 | --- | --- | --- |
 | Arrow IPC file | Original WKB, schema and metadata | Every contract type exactly, nulls and full uint64 |
 | GeoParquet | WKB GeoParquet metadata, native PROJJSON, bbox/type finalization | Every contract type exactly, Snappy, 65536-row groups, root group `schema` |
-| GeoParquet archive profile | As GeoParquet, plus optional bbox covering (GeoParquet 1.1 `bbox` struct, or four `bbox_*` columns) and file-level `bbox` | One or more layers unified into one schema with a `layer` column; Snappy, ZSTD (level) or none; row groups end at layer boundaries unless `layer_row_groups` is false; optional Hilbert order within each layer and Hilbert key column; deterministic `geo` metadata, also embedded in the Arrow schema |
 | FlatGeobuf | Official writer, native WKT, spatial index, mixed geometries; empty/null rejects | uint64 converts to checked signed64; larger values reject because GDAL otherwise rounds ULong to float64. Time stored as integer milliseconds, schema metadata carries contract. Null properties omitted in feature storage and reopen as null |
 | GeoPackage | Complete SQLite container, feature table, SRS/WKT2 extension, RTree and contents tables | SQLite signed64 (larger uint64 rejects), bool, real, UTF8, blob, nullable fields; timestamp stored as UTC ISO text with millisecond precision. Field metadata beyond CRS is not archived |
 | GeoJSON / Lines | WGS84 longitude/latitude only, CCW exterior/CW holes; Python transforms and orients | Nullable scalar properties; integers outside ±(2**53-1) become decimal strings. Millisecond timestamps remain JSON integers. Binary attributes reject. No full Arrow schema/field metadata archive. Lines is one feature per newline, with no RFC8142 record separator |
@@ -80,56 +79,14 @@ GeoJSON has no fidelity claim for the original Arrow type schema. Binary source
 exports retain geometry coordinates, without rendering simplification or tiling.
 PMTiles/freestiler remains the separate rendering path and owner.
 
-## GeoParquet archive profile
+## GeoParquet archive profile (moved to terrio)
 
-`exports::geoparquet::export_layers` (Python: `export_geoparquet_ipc_files(inputs,
-output, options)`, `inputs` a list of `(layer_name, ipc_path)`, `options` JSON) writes
-one GeoParquet from several layers, as ras2cng's archive does (`Model.g01.parquet` with a
-`layer` column). Options, all optional and unknown keys refused:
-
-| Option | Default | Meaning |
-| --- | --- | --- |
-| `compression` | `"snappy"` | `"snappy"`, `"zstd"` or `"uncompressed"` |
-| `compression_level` | unset | ZSTD level 1 to 22 (default 1); refused for other codecs |
-| `row_group_rows` | 65536 | Maximum rows per row group |
-| `layer_row_groups` | `true` | A row group also ends at every layer boundary, so a `layer` filter skips whole row groups. `false` fills row groups to `row_group_rows` across layers (pyarrow `write_table(row_group_size=N)` layout) |
-| `bbox_covering` | `"none"` | `"struct"`: a nullable `bbox` struct (`xmin`, `ymin`, `xmax`, `ymax`) with covering paths `["bbox", "xmin"]`, the GeoParquet 1.1 layout. `"columns"`: four float64 columns `bbox_xmin` ... `bbox_ymax`, the layout of ras2cng archives up to 0.12; DuckDB and pyarrow filter on them, but GeoParquet 1.1 validators reject their one-element covering paths |
-| `order` | `"input"` | `"hilbert"`: within each layer, the Hilbert index of each bbox centre over the layer's extent, exactly DuckDB spatial's `ST_Hilbert(x, y, extent)` (16 bits per axis); ties keep input order, null and empty geometries go last |
-| `layer_column` | unset | Name of a nonnullable Utf8 column holding each input's layer name; required with more than one layer, and then every layer needs a unique, nonempty name |
-| `identity` | `{}` | Per layer name, `{"namespace": <Utf8 column>, "local": <Int64 column or null>}`; unlisted layers use `(mesh_name, cell_id)`. Names of layers that are not supplied refuse |
-| `max_batch_rows` | 65536 | As for the other writers |
-| `contract_metadata` | `false` | Keep the input-side `ras:export:v1` key in the output's Arrow schema metadata. By default it is dropped: the `geo` metadata carries the CRS |
-| `dictionary` | `"all"` | Parquet dictionary encoding: `"all"` columns (the writer default), `"utf8"` (top-level Utf8 columns only, the layer column included; what pyarrow writes with `use_dictionary=[<string columns>]`) or `"none"` |
-| `hilbert_column` | unset | With `order = "hilbert"`, also store each row's Hilbert key in a nullable UInt64 column of this name (null for null or empty geometry), after the bbox covering |
-| `statistics` | `"page"` | `"page"`: column-chunk and page statistics with a page index, binary/string bounds truncated to 64 bytes (the Parquet writer default). `"chunk"`: column-chunk statistics only, bounds not truncated, no page index, and none for all-null (`Null`) columns; pyarrow's defaults |
-| `geometry_statistics` | `true` | `false`: no minimum/maximum statistics for the WKB column. Byte-order WKB bounds prune nothing (the bbox covering does), and pyarrow drops them for any value over 4,096 bytes |
-
-The output's `geo` metadata is deterministic: `geometry_types` is sorted by name, as
-GeoPandas writes it, and the same input and options give a byte-identical file. It is
-also stored in the embedded Arrow schema's metadata, as pyarrow writes it, so
-`pyarrow.parquet.read_schema` sees it.
-
-Each layer is validated against contract v1 with its own schema and identity. All layers
-must carry the same `ras:export:v1` CRS evidence and the same geometry field. The output
-schema is the union of the layer fields in first-appearance order, then the layer column,
-then the bbox covering. A field missing from a layer is null for its rows; a field with
-different types in two layers, or one that collides (case-insensitively) with a generated
-column, refuses. Bbox values are the minimum and maximum over every coordinate, holes and
-parts included, and null (not NaN) for null or empty geometry. The file-level `bbox` is
-the extent of the non-empty geometries. Rows, attributes and WKB are otherwise passed
-through unchanged.
-
-With `dictionary = "utf8"`, `statistics = "chunk"` and `geometry_statistics = false`,
-ras2cng's Python writer and this profile write the same file except for the bytes: on
-ras2cng's archives the Arrow table read back (schema with field metadata, values, nulls,
-offsets, row order), the Parquet schema (types, repetition, `LIST` layout), the
-GeoParquet metadata (with `geometry_types` compared as a set), row groups, codecs,
-dictionary-encoded columns, statistics and page-index presence are identical. Bytes
-differ: `created_by`, the file format version (1.0 against pyarrow's 2.6, without effect
-on the stored types), the root group's repetition (unset against `REQUIRED`), and the
-pages themselves (page boundaries and compressed bytes; the native files were 0.5 to 4.6%
-smaller). Unordered export streams one batch at a time;
-`"hilbert"` holds one layer at a time.
+The multi-layer archive profile (`export_geoparquet_ipc_files`: layer column, bbox
+covering, Hilbert order, ZSTD level, Utf8 dictionaries, chunk statistics) was removed in
+0.3.0. terrio owns file formats: use `terrio::geoparquet::write_arrow_layers` (Python
+`terrio.write_geoparquet_layers(..., profile="archive")`), which writes the same rows,
+order, schema, row groups and `geo` metadata. The engine's Arrow output (arrow 59) passes
+to it without conversion.
 
 ## Lifecycle and memory
 

@@ -51,9 +51,8 @@ classes (including the `NativeAnalysis` class, excluding exception classes), so 
 feature builds report only what was registered. ras-commander's tests check this set
 against an explicit expected list (79 entry points at API 11 from engine 0.2.3, 78
 before; including the `_panic_for_test` hook, which from the next release is present only
-in `test-hooks` builds). Unreleased: release-feature builds add
-`export_geoparquet_ipc_files` (80), so that list needs the new name before such a wheel
-is qualified.
+in `test-hooks` builds). 0.2.4 release-feature builds added `export_geoparquet_ipc_files` (80); 0.3.0
+removes it again (the GeoParquet archive profile moved to terrio), back to 79.
 
 ## Core numeric, mesh and tile functions
 
@@ -519,4 +518,4 @@ Tested datasets, measured timings and limitations are in [validation.md](validat
 | 7, 8 | 6 | Sessions (`HdfSession`, NumPy element/index outputs), cache controls (`cache_bytes`, `cache_slots`, `cache_stats()`), `read_mesh_summary_values` and `read_mesh_boundary_batch`; see [sessions.md](sessions.md). |
 | 9 | 7 | 1D bindings (`src/python/one_d.rs`) and the mesh-geometry tables, geometry family capability and boundary links (67 entry points). |
 | 10 | 8 | Read family bindings (`src/python/wave3.rs`) and `stored_family_index` (75 entry points). |
-| 11 | 9, then 10 | `typed_dataset_attributes`, `raw_fixed_strings`, `dataspace` and bitfield attribute types, `domain_rule`; panic containment and `_panic_for_test` (78 entry points). Built against engine API 10: ring-order contract, malformed-input hardening and the 2 GiB default read budget; bindings unchanged. Additive within API 11 (engine 0.2.3): `mesh_corner_elevations` (79 entry points), `SESSION_SOURCES` (sessions as typed-read sources) and `HdfSession.read_mesh_face_lines`. Unreleased, additive: `export_geoparquet_ipc_files` (GeoParquet archive profile, `exports-geoparquet`). |
+| 11 | 9, then 10 | `typed_dataset_attributes`, `raw_fixed_strings`, `dataspace` and bitfield attribute types, `domain_rule`; panic containment and `_panic_for_test` (78 entry points). Built against engine API 10: ring-order contract, malformed-input hardening and the 2 GiB default read budget; bindings unchanged. Additive within API 11 (engine 0.2.3): `mesh_corner_elevations` (79 entry points), `SESSION_SOURCES` (sessions as typed-read sources) and `HdfSession.read_mesh_face_lines`. 0.2.4, additive: `export_geoparquet_ipc_files` (GeoParquet archive profile, `exports-geoparquet`); removed in 0.3.0 (moved to terrio). |

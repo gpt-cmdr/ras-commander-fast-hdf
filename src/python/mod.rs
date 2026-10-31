@@ -88,28 +88,6 @@ fn export_ipc_file(
     })
 }
 
-/// GeoParquet archive profile: one Arrow IPC file per `(layer_name, path)`
-/// input; `options` is the JSON form of `exports::geoparquet::Options`.
-#[cfg(feature = "exports-geoparquet")]
-#[pyfunction]
-#[pyo3(signature = (inputs, output, options="{}"))]
-fn export_geoparquet_ipc_files(
-    py: Python<'_>,
-    inputs: Vec<(Option<String>, std::path::PathBuf)>,
-    output: std::path::PathBuf,
-    options: &str,
-) -> PyResult<String> {
-    crate::python::panic_guard::guard(|| {
-        let options: crate::exports::geoparquet::Options =
-            serde_json::from_str(options).map_err(|e| PyValueError::new_err(e.to_string()))?;
-        py.detach(move || {
-            let metrics = crate::exports::geoparquet::export_ipc(&inputs, &output, &options)
-                .map_err(|e| PyValueError::new_err(e.to_string()))?;
-            serde_json::to_string(&metrics).map_err(|e| PyValueError::new_err(e.to_string()))
-        })
-    })
-}
-
 #[cfg(feature = "exports-pmtiles")]
 #[pyfunction]
 #[pyo3(signature = (input, output, options, threads=None))]
@@ -212,8 +190,6 @@ fn ras_commander_fast_hdf(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.add_function(wrap_pyfunction!(export_ipc_file, m)?)?;
         m.add_function(wrap_pyfunction!(validate_export_wkb, m)?)?;
     }
-    #[cfg(feature = "exports-geoparquet")]
-    m.add_function(wrap_pyfunction!(export_geoparquet_ipc_files, m)?)?;
     #[cfg(feature = "python-arrow")]
     arrow_stream::register(m)?;
     #[cfg(feature = "exports-pmtiles")]
