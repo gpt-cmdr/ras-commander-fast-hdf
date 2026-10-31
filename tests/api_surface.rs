@@ -67,8 +67,17 @@ fn capabilities_follow_compiled_features() {
     for f in ["catalog", "hdf", "mesh", "results"] {
         assert!(c.features.contains(&f), "{f}");
     }
+    let arrow_only = ras_commander_fast_hdf::api::ENTRYPOINTS
+        .iter()
+        .filter(|e| e.feature == "arrow")
+        .count();
     assert_eq!(
         c.entrypoints.len(),
         ras_commander_fast_hdf::api::ENTRYPOINTS.len()
+            - if cfg!(feature = "arrow") {
+                0
+            } else {
+                arrow_only
+            }
     );
 }

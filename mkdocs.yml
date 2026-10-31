@@ -31,6 +31,7 @@ nav:
       - Engine API contract: reference/engine-api.md
       - Read families: reference/read-families.md
       - Mesh results: reference/mesh-results.md
+      - Arrow layers: reference/arrow-layers.md
       - 1D geometry and results: reference/one-d.md
       - Conformance: reference/conformance.md
       - Extension contract: reference/extension-contract.md

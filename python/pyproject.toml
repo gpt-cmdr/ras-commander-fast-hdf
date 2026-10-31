@@ -49,7 +49,7 @@ exports = ["pyarrow>=14", "pyproj>=3.6", "shapely>=2.1"]
 [tool.maturin]
 # The extension is the `python` feature of the ras-commander-fast-hdf crate at the
 # repository root (one crate for the Rust engine and the Python extension).
-# Release wheels add exports-all,exports-pmtiles on the command line.
+# Release wheels add exports-all,exports-pmtiles,python-arrow on the command line.
 manifest-path = "../Cargo.toml"
 module-name = "ras_commander_fast_hdf"
 features = ["python", "extension-module"]

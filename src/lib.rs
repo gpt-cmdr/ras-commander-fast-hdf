@@ -135,6 +135,10 @@ impl From<std::sync::Arc<rayon::ThreadPool>> for SessionPool {
         Self(Some(pool))
     }
 }
+/// HEC-RAS layers as Arrow record batches in the canonical layer schema.
+#[cfg(feature = "arrow")]
+#[forbid(unsafe_code)]
+pub mod arrow_layers;
 #[forbid(unsafe_code)]
 pub mod crs;
 #[cfg(feature = "hdf")]

@@ -633,7 +633,11 @@ impl ReadOnlyHdfSession {
     /// (`HdfMesh._physical_cell_counts`): the `Geometry/2D Flow Areas/Attributes` row whose
     /// exact Name is `area` (last duplicate wins), only when Cell Count is finite and > 0,
     /// truncated like Python `int`. An absent table or Cell Count column records nothing.
-    fn mr_physical_cell_count(&self, area: &str, max_bytes: usize) -> Result<Option<u64>> {
+    pub(crate) fn mr_physical_cell_count(
+        &self,
+        area: &str,
+        max_bytes: usize,
+    ) -> Result<Option<u64>> {
         self.memo(
             format!("mr_physical_cell_count:{:?}", (area, max_bytes)),
             || {
