@@ -59,7 +59,14 @@ alias)`; the values are unchanged.
 | ras2cng | `mannings_n_regions` | `source_row` | `region_id` |
 | ras2cng | `storage_areas` | `Mode`, `Avg Area`, `Min Elev` | `mode`, `avg_area`, `min_elev` |
 | ras2cng | `river_reaches` | `source_row` | `river_id` |
-| terrio | `mesh_summary` | `is_ghost_cell` | `is_ghost` |
+| terrio | `mesh_summary`, `mesh_cell_points` | `is_ghost_cell` | `is_ghost` |
+
+Fields without an entry keep a name given by the consumer's naming rule (`naming_rule`):
+ras2cng keeps the canonical (stored) name, terrio lower-snake-cases it (`SA-2D` becomes
+`sa_2d`, `US SA/2D` becomes `us_sa_2d`). `consumer_field_name(consumer, layer, field)` applies
+the table and then the rule, and `ArrowLayer::with_consumer_names(consumer, layer)` renames a
+whole layer (schema only; the arrays are shared). So the catalog is the one source of both
+consumers' names; neither renames fields itself.
 
 Columns a consumer derives or joins are not aliases and are not in the canonical layer. For
 ras2cng these are: `length` (river lines), `station_elevation`, `mannings_n`, `n_lob`/
@@ -86,6 +93,17 @@ layer or keeps its Python path.
     of days (what pandas 3 infers), Timestamp(ns) otherwise.
   - `is_ghost_cell`: Bool, cell layers only. Ghost cells (index at or above `Cell Count`)
     are left out, so the value is always false.
+  - `<slug>_time_days` (with `LayerOptions::summary_time_days`): the stored Time row, days
+    from the simulation start, in the stored float type (NaN is null). `<slug>_time` is
+    rounded to 100 ms; this column keeps the stored value, for lossless archives.
+
+- `mesh_cell_points` with `LayerOptions::include_ghost_cells`: every stored
+  `Cells Center Coordinate` row, ghost cells included, and `is_ghost_cell` (Bool; null for a
+  mesh without a recorded `Cell Count`). Face cell indexes refer to ghost cells, so a
+  lossless archive keeps them.
+- `mesh_cells`: `ArrowLayer::omitted` lists the cells the engine left out of the polygon
+  layer (`ZeroFaces`, `InsufficientFaces`; ghost cells are among them), by mesh. A cell with
+  invalid geometry is still a refusal of the layer.
 
 - Summary layers with `summary_geometry` (Python `geometry=True`): a last `geometry` field,
   the cell polygon (`mesh_cells`) or face line (`mesh_faces`) read from the same file, null

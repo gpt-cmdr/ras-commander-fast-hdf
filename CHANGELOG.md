@@ -25,6 +25,14 @@
 - `LayerOptions::summary_geometry` (Python `arrow_layer(..., geometry=True)`): summary
   layers carry the cell polygon or face line of each row, read from the same file.
 - `layer_catalog()` returns `{"layers": [...], "field_aliases": [...]}`.
+- Consumer naming rules in the catalog (`NamingRule`, `naming_rule`,
+  `consumer_field_name`, `ArrowLayer::with_consumer_names`): terrio's snake_case field
+  names come from the catalog, as ras2cng's aliases do. terrio aliases `is_ghost_cell` to
+  `is_ghost` on `mesh_cell_points` too.
+- `LayerOptions::include_ghost_cells` keeps ghost cells in `mesh_cell_points` with
+  `is_ghost_cell`; `LayerOptions::summary_time_days` adds the stored Time row
+  (`<slug>_time_days`) to timed summary layers; `ArrowLayer::omitted` reports the cells left
+  out of `mesh_cells`. Defaults are unchanged.
 
 ## 0.2.5 (2026-10-30)
 
