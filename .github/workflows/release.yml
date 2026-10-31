@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 env:
-  WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles
+  WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles,python-arrow
 
 jobs:
   wheels:

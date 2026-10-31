@@ -107,6 +107,19 @@ exports-geoparquet = [
     "dep:arrow-buffer",
 ]
 exports-geopackage = ["exports-arrow", "dep:geopackage"]
+# HEC-RAS layers as Arrow record batches in the canonical layer schema (engine API, no
+# Python). Adds only Arrow's in-memory crates, which the exports-* features already use.
+arrow = [
+    "hdf",
+    "mesh",
+    "results",
+    "dep:arrow-array",
+    "dep:arrow-schema",
+    "dep:arrow-buffer",
+]
+# Python access to the Arrow layers through the Arrow C stream interface (PyCapsule,
+# `__arrow_c_stream__`); no IPC files and no writers. Adds no crates over `arrow`.
+python-arrow = ["python", "arrow", "arrow-array/ffi", "arrow-schema/ffi"]
 exports-all = [
     "exports-geojson",
     "exports-flatgeobuf",

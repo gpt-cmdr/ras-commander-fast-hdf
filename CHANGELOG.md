@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+- Canonical layer catalog and Arrow layers (features `arrow`, `python-arrow`). The engine
+  returns `mesh_cells`, `mesh_faces`, `mesh_perimeters` (alias `mesh_areas`) and each
+  stored 2D summary variable as Arrow record batches with WKB geometry. Python receives
+  them through the Arrow PyCapsule stream interface (`arrow_layer`, `layer_catalog`),
+  with no IPC files. The layers equal ras2cng's Python pipeline on 22 files from four
+  HEC-RAS models: rows, order, types, values and WKB. Layouts ras-commander would read
+  differently are refused. See `docs/reference/arrow-layers.md`. The `exports-*` writers
+  are frozen; terrio will own file formats.
+- Every catalog layer is Arrow now (feature `arrow`): `mesh_cell_points` (physical cell
+  centres) and the stored feature layers `bc_lines`, `breaklines`, `refinement_regions`,
+  `reference_lines`, `reference_points`, `mannings_n_regions`, `cross_sections`,
+  `river_centerlines`, `river_bank_lines`, `river_edge_lines`, `river_flow_paths`,
+  `structures`, `storage_areas`, `river_junctions`, `pump_stations`, `pipe_conduits` and
+  `pipe_nodes`
+  (`ReadOnlyHdfSession::feature_layer`). Each has `source_row`, every stored `Attributes`
+  column under its stored name and `geometry`; multi-part lines are MultiLineStrings,
+  multi-part polygons are refused. `read_layer` reads any layer by canonical name or alias.
+- `FIELD_ALIASES` / `field_aliases()`: per-consumer column names (ras2cng `bc_line_id`,
+  `bl_id`, `region_id`, `river_id`, breakline and storage-area snake_case names; terrio
+  `is_ghost`). ras2cng's `river_reaches` is an alias of `river_centerlines`.
+- `LayerOptions::summary_geometry` (Python `arrow_layer(..., geometry=True)`): summary
+  layers carry the cell polygon or face line of each row, read from the same file.
+- `layer_catalog()` returns `{"layers": [...], "field_aliases": [...]}`.
+
 ## 0.2.5 (2026-10-30)
 
 Robustness and coverage release. The engine API stays 10 (additions only) and the Python

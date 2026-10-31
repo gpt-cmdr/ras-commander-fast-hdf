@@ -20,11 +20,11 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles
+  WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles,python-arrow
   # Everything the wheel compiles except extension-module, which leaves Python
   # symbols for the interpreter to provide and so cannot link a test binary,
   # plus the panic-injection test hooks (test-hooks), which release wheels omit.
-  TEST_FEATURES: python,exports-all,exports-pmtiles,test-hooks
+  TEST_FEATURES: python,exports-all,exports-pmtiles,python-arrow,test-hooks
 
 jobs:
   test:
@@ -91,6 +91,8 @@ jobs:
         run: cargo test --locked --no-default-features --features catalog
       - name: Engine tests (pure Rust)
         run: cargo test --locked --no-default-features --features catalog,hdf,mesh,results
+      - name: Arrow layer tests (pure Rust, no PyO3)
+        run: cargo test --locked --no-default-features --features catalog,arrow
       # Includes the malformed-input regressions, the committed encoding/revision
       # evidence, the engine's reader-policy tests, and the bridge and export tests.
       - name: Tests (all features but extension-module)
@@ -102,6 +104,7 @@ jobs:
           cargo clippy --locked --no-default-features --all-targets --no-deps -- -D warnings
           cargo clippy --locked --no-default-features --features hdf --all-targets --no-deps -- -D warnings
           cargo clippy --locked --no-default-features --features catalog,hdf,mesh,results --all-targets --no-deps -- -D warnings
+          cargo clippy --locked --no-default-features --features arrow --all-targets --no-deps -- -D warnings
           cargo clippy --locked --features python --all-targets --no-deps -- -D warnings
       - name: Embedded third-party source matches vendor/PROVENANCE.json
         shell: bash
