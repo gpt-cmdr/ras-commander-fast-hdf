@@ -1,7 +1,5 @@
 //! Typed, batch-fed source exports. This library never runs HEC-RAS or reprojects.
 pub mod contract;
-#[cfg(feature = "exports-geoparquet")]
-pub mod geoparquet;
 #[cfg(feature = "exports-pmtiles")]
 pub mod pmtiles_bridge;
 mod writers;
