@@ -5,11 +5,22 @@ name: Release
 on:
   push:
     tags: ['v*']
+  # Build and publish an existing tag again with this workflow (e.g. after a
+  # runner outage cancelled the tag's own run). The tag's commit is built;
+  # only the workflow comes from the dispatching branch.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and publish (vX.Y.Z)
+        required: true
+        type: string
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: read
 
-env:
   WHEEL_FEATURES: extension-module,exports-all,exports-pmtiles,python-arrow
 
 jobs:
@@ -23,16 +34,19 @@ jobs:
           - os: linux
             runs_on: '["self-hosted", "Linux", "X64", "clb-ci-linux"]'
           - os: macos
-            runs_on: '["macos-14"]'
+            runs_on: '["macos-15"]'
     runs-on: ${{ fromJSON(matrix.runs_on) }}
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       - name: Tag matches the package version
         shell: bash
         run: |
           version=$(grep -m1 '^version' python/pyproject.toml | cut -d'"' -f2)
-          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          case "$RELEASE_TAG" in v[0-9]*) ;; *) echo "not a release tag: $RELEASE_TAG"; exit 1;; esac
+          test "v$version" = "$RELEASE_TAG" || { echo "tag $RELEASE_TAG != v$version"; exit 1; }
           crate=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
           test "$crate" = "$version" || { echo "Cargo.toml $crate != pyproject.toml $version"; exit 1; }
       - uses: dtolnay/rust-toolchain@stable
@@ -77,6 +91,8 @@ jobs:
     runs-on: ["self-hosted", "Linux", "X64", "clb-ci-linux"]
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE_TAG }}
       # maturin sdist runs cargo metadata; the self-hosted Linux image has no Rust.
       - uses: dtolnay/rust-toolchain@stable
       - name: Cargo on PATH
@@ -114,6 +130,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: dist/*
           body: See [CHANGELOG.md](https://github.com/gpt-cmdr/ras-commander-fast-hdf/blob/main/CHANGELOG.md).
 
