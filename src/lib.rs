@@ -15,6 +15,7 @@
 //! | `hdf` | `hdf`: read-only HDF5 sessions, numeric/compound/string datasets, attributes, identities, units, time. |
 //! | `mesh` | `mesh`: 2D mesh geometry and topology (implies `hdf`). |
 //! | `results` | `results`: 1D/2D results, summaries and time series (implies `hdf`). |
+//! | `hdf` | also [`land_cover`] (RAS Mapper's Final n Values raster rule) and [`precipitation`] (gridded precipitation rasters). |
 //! | `python` | The `ras_commander_fast_hdf` Python extension (PyO3) used by ras-commander. Not needed from Rust. |
 //! | `extension-module`, `exports-*` | Python wheel builds (maturin). |
 //!
@@ -54,9 +55,15 @@ pub mod catalog;
 #[cfg(feature = "hdf")]
 #[forbid(unsafe_code)]
 pub mod hdf;
+#[cfg(feature = "hdf")]
+#[forbid(unsafe_code)]
+pub mod land_cover;
 #[cfg(feature = "mesh")]
 #[forbid(unsafe_code)]
 pub mod mesh;
+#[cfg(feature = "hdf")]
+#[forbid(unsafe_code)]
+pub mod precipitation;
 #[cfg(feature = "mesh")]
 #[forbid(unsafe_code)]
 mod predicates;

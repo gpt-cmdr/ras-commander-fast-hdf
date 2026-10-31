@@ -11,6 +11,7 @@ mod fluvial_bindings;
 pub mod fluvial_geometry;
 #[allow(dead_code)] // pure-Rust kernels; parts are reached only from tests
 pub mod fluvial_topology;
+mod land_cover;
 mod mesh;
 mod one_d;
 mod panic_guard;
@@ -204,6 +205,7 @@ fn ras_commander_fast_hdf(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(analysis::bindings::temporal_reduce, m)?)?;
     m.add_function(wrap_pyfunction!(tiles::write_pmtiles, m)?)?;
     fluvial_bindings::register(m)?;
+    land_cover::register(m)?;
     text_bindings::register(m)?;
     let mut names = Vec::new();
     for (name, value) in m.dict().iter() {

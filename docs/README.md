@@ -35,6 +35,7 @@ They are exact but terse; start with the guides above.
 |---|---|
 | [Engine API contract](reference/engine-api.md) | Every engine surface, its statuses, limits and the history of API generations. |
 | [Read families](reference/read-families.md) | Stored table families (structures, reference lines/points, terrain modifications, land cover, ...) and their qualification. |
+| [Final n Values and precipitation](reference/land-cover-precipitation.md) | The RAS Mapper Final n Values rule and gridded precipitation grids, with their refusals and evidence. |
 | [Mesh results](reference/mesh-results.md) | 2D mesh summary, time-series and boundary-condition reads. |
 | [1D geometry and results](reference/one-d.md) | Cross sections, 1D summary output, 1D structures and pumps. |
 | [Conformance](reference/conformance.md) | How the engine was checked against real HEC-RAS files. |

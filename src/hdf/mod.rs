@@ -9,7 +9,7 @@ use crate::{Error, ErrorKind, Result};
 pub use decode_budget::{
     DecodeBudget, DecodeBudgetStats, DEFAULT_DECODE_BUDGET_BYTES, DEFAULT_DECODE_BUDGET_WAIT,
 };
-use encoding::map_error;
+pub(crate) use encoding::map_error;
 pub use encoding::{EncodingDescriptor, FloatLayout};
 use hdf5_reader::{SliceInfo, SliceInfoElem};
 use reader::File;
