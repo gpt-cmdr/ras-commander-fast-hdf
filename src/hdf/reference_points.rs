@@ -40,7 +40,24 @@ impl ReadOnlyHdfSession {
         &self,
         max_bytes: usize,
     ) -> Result<Reported<ReferencePointGeometry>> {
-        let root = "Geometry/Reference Points";
+        self.named_cell_point_geometry("Geometry/Reference Points", max_bytes)
+    }
+
+    /// Read stored 2D initial-condition points with exact attributes, XY and cell identities.
+    /// No starting water surfaces are inferred. The canonical IC table is independent of
+    /// reference points; missing groups return Unavailable and partial layouts refuse.
+    pub fn initial_condition_point_geometry(
+        &self,
+        max_bytes: usize,
+    ) -> Result<Reported<ReferencePointGeometry>> {
+        self.named_cell_point_geometry("Geometry/IC Points", max_bytes)
+    }
+
+    fn named_cell_point_geometry(
+        &self,
+        root: &str,
+        max_bytes: usize,
+    ) -> Result<Reported<ReferencePointGeometry>> {
         if !self.has_group(root)? {
             return Ok(Reported::unavailable(
                 "canonical reference-point geometry absent",
@@ -133,7 +150,7 @@ impl ReadOnlyHdfSession {
                     "only observed named 2D cell reference points are qualified",
                 ));
             }
-            if !seen.insert((name.clone(), area.clone())) {
+            if root == "Geometry/Reference Points" && !seen.insert((name.clone(), area.clone())) {
                 return Err(identity("ambiguous reference-point Name/area identity"));
             }
             if area.contains(['/', '\\']) {

@@ -34,6 +34,8 @@ pub enum XsGeometryField {
     ManningsN,
     /// `Ineffective Info` / `Ineffective Blocks` (compound rows).
     IneffectiveAreas,
+    /// `Obstruction Info` / `Obstruction Blocks` (stored compound rows).
+    BlockedObstructions,
     /// `Deck High Info` / `Deck High Values` (HEC-RAS 5.x geometry).
     DeckHigh,
     /// `Deck Low Info` / `Deck Low Values` (HEC-RAS 5.x geometry).
@@ -49,6 +51,7 @@ pub const XS_GEOMETRY_FIELDS: &[XsGeometryField] = &[
     XsGeometryField::StationElevation,
     XsGeometryField::ManningsN,
     XsGeometryField::IneffectiveAreas,
+    XsGeometryField::BlockedObstructions,
     XsGeometryField::DeckHigh,
     XsGeometryField::DeckLow,
     XsGeometryField::PropertyTable,
@@ -60,6 +63,7 @@ impl XsGeometryField {
             Self::StationElevation => "station_elevation",
             Self::ManningsN => "mannings_n",
             Self::IneffectiveAreas => "ineffective_areas",
+            Self::BlockedObstructions => "blocked_obstructions",
             Self::DeckHigh => "deck_high",
             Self::DeckLow => "deck_low",
             Self::PropertyTable => "property_table",
@@ -72,6 +76,7 @@ impl XsGeometryField {
             Self::StationElevation => ("Station Elevation Info", "Station Elevation Values"),
             Self::ManningsN => ("Manning's n Info", "Manning's n Values"),
             Self::IneffectiveAreas => ("Ineffective Info", "Ineffective Blocks"),
+            Self::BlockedObstructions => ("Obstruction Info", "Obstruction Blocks"),
             Self::DeckHigh => ("Deck High Info", "Deck High Values"),
             Self::DeckLow => ("Deck Low Info", "Deck Low Values"),
             Self::PropertyTable => ("Property Tables/XSEC Info", "Property Tables/XSEC Value"),
@@ -79,7 +84,7 @@ impl XsGeometryField {
         }
     }
     fn compound(self) -> bool {
-        self == Self::IneffectiveAreas
+        matches!(self, Self::IneffectiveAreas | Self::BlockedObstructions)
     }
     fn per_section(self) -> bool {
         self != Self::PropertyCells

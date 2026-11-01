@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Add exact 2D initial-condition point geometry, source attribute rows and cell
+  assignments through `initial_condition_point_geometry` (Rust and Python).
+- Qualify `Obstruction Info` / `Obstruction Blocks` as the `blocked_obstructions`
+  XS geometry field, including compound bytes, selected record order and budgets.
+- Exercise stored observed-site tables and literal additional steady XS variables
+  using the existing Event Conditions and XS-result readers. Duplicate observation
+  dates, signed zero and NaN payloads remain stored values; no clock is inferred.
+- Keep existing API versions and return shapes. New callers must capability-check
+  the additive IC-point binding; an older wheel can refuse these new typed routes.
+
 ## 0.3.0 (2026-10-31)
 
 Breaking for one Python function: `export_geoparquet_ipc_files` is removed (the GeoParquet

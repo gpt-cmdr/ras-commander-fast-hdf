@@ -524,3 +524,26 @@ Tested datasets, measured timings and limitations are in [validation.md](validat
 | 9 | 7 | 1D bindings (`src/python/one_d.rs`) and the mesh-geometry tables, geometry family capability and boundary links (67 entry points). |
 | 10 | 8 | Read family bindings (`src/python/wave3.rs`) and `stored_family_index` (75 entry points). |
 | 11 | 9, then 10 | `typed_dataset_attributes`, `raw_fixed_strings`, `dataspace` and bitfield attribute types, `domain_rule`; panic containment and `_panic_for_test` (78 entry points). Built against engine API 10: ring-order contract, malformed-input hardening and the 2 GiB default read budget; bindings unchanged. Additive within API 11 (engine 0.2.3): `mesh_corner_elevations` (79 entry points), `SESSION_SOURCES` (sessions as typed-read sources) and `HdfSession.read_mesh_face_lines`. 0.2.4, additive: `export_geoparquet_ipc_files` (GeoParquet archive profile, `exports-geoparquet`); removed in 0.3.0 (moved to terrio). |
+
+
+### Stored initial-condition points and XS obstruction blocks
+
+`initial_condition_point_geometry(path, max_bytes=67108864)` returns the same
+reported Attributes/Points/features shape as `reference_point_geometry`, reading
+only `Geometry/IC Points`. Each identity refers to its original Attributes row.
+The stored signed i32 cell index is checked against the named mesh's stored cell
+geometry. Repeated names retain separate row identities. Coordinates are stored
+XY; no initial water surface or CRS is inferred. An absent group is unavailable;
+a present incomplete group or out-of-range assignment refuses.
+
+`read_xs_geometry(path, "blocked_obstructions", ...)` reads the exact compound
+`Obstruction Blocks` using the existing per-XS `Obstruction Info` range checks.
+Repeated/selected sections retain selection order. Budget and malformed-range
+refusals follow the other ragged XS fields. No permanent flag, XY footprint or
+unit conversion is generated.
+
+Stored observations continue through `read_family_dataset(..., "event_conditions",
+...)`; the Date, Simulation Time and Value compound members retain literal values
+and bytes. Additional steady XS variables continue through `read_xs_result` with
+an exact relative name, such as `Additional Variables/Velocity Total`. The caller
+owns civil-date parsing, DataFrames, unit presentation and optional profile filters.
