@@ -236,6 +236,34 @@ fn reference_point_geometry<'py>(
     })
 }
 #[pyfunction]
+#[pyo3(signature=(path,max_bytes=DEFAULT))]
+fn initial_condition_point_geometry<'py>(
+    py: Python<'py>,
+    path: crate::python::session::Source,
+    max_bytes: usize,
+) -> PyResult<Bound<'py, PyDict>> {
+    crate::python::panic_guard::guard(|| {
+        let r: Reported<ReferencePointGeometry> = path.run(py, |engine_session| {
+            engine_session.initial_condition_point_geometry(max_bytes)
+        })?;
+        reported(py, r, |g| {
+            let features = g
+                .features
+                .iter()
+                .map(|f| {
+                    Ok(
+                        dict!(py,"identity"=>identity(py,&f.id)?,"name"=>&f.name,"area"=>&f.area,
+                    "cell_index"=>f.cell_index,"point_row"=>f.point_row),
+                    )
+                })
+                .collect::<PyResult<Vec<_>>>()?;
+            Ok(dict!(py,"attributes"=>compound(py,&g.attributes)?,
+            "points"=>crate::python::reader::array(py,g.points)?,"features"=>features)
+            .into_any())
+        })
+    })
+}
+#[pyfunction]
 #[pyo3(signature=(path,family,max_bytes=DEFAULT))]
 fn classification_catalogue<'py>(
     py: Python<'py>,
@@ -417,6 +445,7 @@ pub(crate) fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(output_block_inventory, m)?)?;
     m.add_function(wrap_pyfunction!(read_output_block, m)?)?;
     m.add_function(wrap_pyfunction!(reference_point_geometry, m)?)?;
+    m.add_function(wrap_pyfunction!(initial_condition_point_geometry, m)?)?;
     m.add_function(wrap_pyfunction!(classification_catalogue, m)?)?;
     m.add_function(wrap_pyfunction!(stored_family_index, m)?)?;
     m.add_function(wrap_pyfunction!(mesh_corner_elevations, m)?)?;

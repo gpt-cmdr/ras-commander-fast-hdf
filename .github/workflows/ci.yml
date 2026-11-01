@@ -199,3 +199,29 @@ jobs:
         run: |
           docker run --rm -v "$PWD":/w -w /w ${{ matrix.image }} sh -c \
             '${{ matrix.python }} -m pip install dist/*.whl && ${{ matrix.python }} -I .github/scripts/smoke_wheel.py dist ${{ github.sha }}'
+
+  stored-data-corpus:
+    name: Stored data golden corpus
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel-Linux
+          path: dist
+      - name: Install this PR's wheel and reference reader
+        run: python -m pip install dist/*.whl h5py
+      - name: Acquire pinned public HDF corpus
+        run: |
+          mkdir -p working/corpus
+          curl --fail --location https://raw.githubusercontent.com/gpt-cmdr/ras-hdf-test-corpus/6be647713da1abc9af72a56fc42c630a6a54f1e2/scripts/fetch_corpus.py --output working/corpus/fetch.py
+          echo '2ffd5f820e10631d95af39e6bfc8f6f56ed72d3c9214bc44d8e1d29310d7d197  working/corpus/fetch.py' | sha256sum --check
+          python working/corpus/fetch.py --tag v1.0.1 --profile core --dest working/corpus
+          python working/corpus/fetch.py --tag v1.0.1 --profile legacy --dest working/corpus
+      - name: Require stored values and identities from the built wheel
+        run: python -I tests/check_data_readers.py --corpus working/corpus
