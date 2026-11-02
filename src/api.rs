@@ -62,6 +62,8 @@ pub const ENTRYPOINTS: &[Entrypoint] = &[
     e("ReadOnlyHdfSession", "read_strings", "hdf"),
     e("ReadOnlyHdfSession", "numeric_capability", "hdf"),
     e("ReadOnlyHdfSession", "read_numeric", "hdf"),
+    e("ReadOnlyHdfSession", "read_numeric_into", "hdf"),
+    e("ReadOnlyHdfSession", "read_numeric_into_bounded", "hdf"),
     e("ReadOnlyHdfSession", "read_numeric_batch", "hdf"),
     e("ReadOnlyHdfSession", "read_numeric_bounded", "hdf"),
     e("ReadOnlyHdfSession", "read_numeric_batch_bounded", "hdf"),

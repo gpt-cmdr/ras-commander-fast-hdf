@@ -524,3 +524,15 @@ Tested datasets, measured timings and limitations are in [validation.md](validat
 | 9 | 7 | 1D bindings (`src/python/one_d.rs`) and the mesh-geometry tables, geometry family capability and boundary links (67 entry points). |
 | 10 | 8 | Read family bindings (`src/python/wave3.rs`) and `stored_family_index` (75 entry points). |
 | 11 | 9, then 10 | `typed_dataset_attributes`, `raw_fixed_strings`, `dataspace` and bitfield attribute types, `domain_rule`; panic containment and `_panic_for_test` (78 entry points). Built against engine API 10: ring-order contract, malformed-input hardening and the 2 GiB default read budget; bindings unchanged. Additive within API 11 (engine 0.2.3): `mesh_corner_elevations` (79 entry points), `SESSION_SOURCES` (sessions as typed-read sources) and `HdfSession.read_mesh_face_lines`. 0.2.4, additive: `export_geoparquet_ipc_files` (GeoParquet archive profile, `exports-geoparquet`); removed in 0.3.0 (moved to terrio). |
+
+## Caller-owned numeric output (additive within API 11)
+
+`HdfSession.read_numeric_into(dataset_path, out, *, max_bytes=2147483648)` fills
+an exact-shape, exact-native-dtype, aligned, writable C-contiguous NumPy array
+without replacing it and returns `None`. It reads the full dataset only. It uses
+a fallible mutable borrow and retains the GIL while writing; the caller must
+exclude concurrent access through every alias, including already-running native
+code. Preflight refusal preserves the buffer; decoding/I/O failure invalidates
+its entire contents because writes may be partial. Output-byte and process decode
+budgets remain active. The current buffer path decodes serially; existing owned
+reads are unchanged. See [sessions.md](sessions.md#reusing-a-numeric-output-buffer).

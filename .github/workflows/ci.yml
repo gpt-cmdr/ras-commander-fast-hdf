@@ -157,6 +157,12 @@ jobs:
             # -I keeps the checkout off sys.path so the installed wheel is imported.
             "$py" -I .github/scripts/smoke_wheel.py dist "$(git rev-parse HEAD)"
           done
+      - name: Caller-owned numeric buffer contract
+        shell: bash
+        run: |
+          py="${{ steps.py313.outputs.python-path }}"
+          "$py" -m pip install h5py
+          "$py" -I tests/check_numeric_into.py
       - uses: actions/upload-artifact@v4
         with:
           name: wheel-${{ runner.os }}

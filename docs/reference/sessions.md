@@ -147,3 +147,43 @@ mode stays strict, and host I/O, closed-session and internal failures are never 
 Requested-only boundary reads and named subsets ignore corrupt unrequested siblings;
 inventories and all-lines batches report them. Non-inline extensible-array indexes are
 refused explicitly instead of silently returning zeros.
+
+## Reusing a numeric output buffer
+
+`HdfSession.read_numeric_into(dataset_path, out, *, max_bytes=2147483648)` fills
+an existing NumPy array with one full numeric dataset and returns `None`. It
+retains the output allocation and shape. It does not accept selections or cast
+dtypes. `out` must have the exact native numeric dtype and dataset shape and be
+aligned, writable and C-contiguous. NULL dataspaces are refused; scalar and
+zero-length simple arrays retain their distinct shapes.
+
+```python
+import numpy as np
+import ras_commander_fast_hdf as native
+
+with native.HdfSession(path) as session:
+    out = np.empty((time_count, cell_count), dtype=np.float32)
+    session.read_numeric_into(dataset_path, out, max_bytes=out.nbytes)
+    # Consume out before the next fill replaces its contents.
+    session.read_numeric_into(dataset_path, out, max_bytes=out.nbytes)
+```
+
+Use the stored dataset's proven shape and dtype for `time_count`, `cell_count`
+and the allocation. Preflight schema, dtype, shape, policy and budget rejections
+leave `out` untouched. A decoding or I/O error can leave partial writes; treat the
+entire buffer as invalid after such an error.
+
+The caller must prevent concurrent access to `out` and every alias, including
+NumPy/native work already running with the GIL released. A fallible mutable borrow
+is checked and the GIL stays held during this method; those checks do not prevent
+arbitrary external native code from accessing an alias.
+
+`max_bytes` limits the decoded output size, even when the output was allocated
+earlier. The session's in-flight decode budget also applies. Chunk decoding and
+cache storage can still allocate. This method currently uses serial decoding;
+ordinary owned reads retain their existing parallel path and independent writable
+outputs. Reusing output storage can stabilize allocation costs in repeated
+processing, but it does not establish a general speedup over owned cached reads.
+
+The method is additive within binding API 11. Check
+`hasattr(session, "read_numeric_into")` before using it with an older wheel.
