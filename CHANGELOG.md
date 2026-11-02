@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add full numeric reads into caller-owned buffers: Rust `read_numeric_into` and
+  `read_numeric_into_bounded`, and Python `HdfSession.read_numeric_into`. Exact
+  dtype/shape checks and read/decode budgets precede writes. Ordinary reads keep
+  their independently owned outputs. The new buffer path currently decodes serially.
+- Add Rust and installed-wheel regressions for buffer identity, exact value bits,
+  scalar/empty/NULL layouts, dtype/shape/alignment/writability errors and budgets.
+
+
 ## 0.3.0 (2026-10-31)
 
 Breaking for one Python function: `export_geoparquet_ipc_files` is removed (the GeoParquet

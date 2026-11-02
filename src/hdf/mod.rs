@@ -723,6 +723,7 @@ pub mod catalogue_results;
 pub mod corner_elevations;
 
 mod memo;
+mod numeric_into;
 mod sniff;
 
 #[cfg(test)]

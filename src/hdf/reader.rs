@@ -437,6 +437,19 @@ impl Dataset {
         }
     }
 
+    pub(crate) fn read_into<T: h5::H5Type>(&self, destination: &mut [T]) -> Result<()> {
+        self.admit_all(true)?;
+        let elements = self.inner.num_elements()?;
+        // The dependency may allocate a typed temporary for non-native endian
+        // conversion. Reserve it in addition to the caller-owned output.
+        let multiplier = if T::native_copy_compatible(self.inner.dtype()) {
+            1
+        } else {
+            2
+        };
+        let _budget = self.reserve::<T>(elements.checked_mul(multiplier), 1)?;
+        self.inner.read_into(destination)
+    }
     pub(crate) fn read_array<T: h5::H5Type>(&self) -> Result<ndarray::ArrayD<T>> {
         self.admit_all(true)?;
         let _budget = self.reserve_all::<T>(1, true)?;

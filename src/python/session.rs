@@ -219,6 +219,73 @@ impl HdfSession {
             crate::python::reader::array(py, a)
         })
     }
+    /// Fill `out` with one full numeric dataset without replacing its allocation.
+    /// `out` must have the exact native dtype and shape, be aligned, C-contiguous
+    /// and writable. The caller must prevent concurrent access to `out` or its
+    /// aliases, including NumPy/native operations that already released the GIL.
+    /// Preflight rejection leaves `out` untouched; a decode/I/O failure may leave
+    /// partial writes, so treat the whole buffer as invalid after such an error.
+    #[pyo3(signature=(dataset_path,out,*,max_bytes=crate::hdf::DEFAULT_READ_MAX_BYTES))]
+    fn read_numeric_into(
+        &self,
+        dataset_path: &str,
+        out: &Bound<'_, PyAny>,
+        max_bytes: usize,
+    ) -> PyResult<()> {
+        use numpy::{PyArrayMethods, PyUntypedArrayMethods};
+        crate::python::panic_guard::guard(|| {
+            macro_rules! fill {
+                ($ty:ty,$kind:ident) => {
+                    if let Ok(array) = out.cast::<numpy::PyArrayDyn<$ty>>() {
+                        if !array.is_c_contiguous() || !array.is_aligned() {
+                            return Err(PyValueError::new_err(
+                                "out must be aligned and C-contiguous",
+                            ));
+                        }
+                        let shape = array.shape().iter().map(|&n| n as u64).collect::<Vec<_>>();
+                        let mut borrowed = array
+                            .try_readwrite()
+                            .map_err(|e| PyValueError::new_err(e.to_string()))?;
+                        let destination = borrowed.as_slice_mut()?;
+                        // Unlike with(), keep the GIL while writing borrowed NumPy
+                        // memory. The caller's exclusive-access contract is still required.
+                        let guard = self.slot();
+                        let session = guard
+                            .as_ref()
+                            .ok_or_else(|| PyValueError::new_err("HDF session is closed"))?;
+                        let result = crate::python::panic_guard::contain(|| {
+                            session.read_numeric_into_slice(
+                                dataset_path,
+                                &shape,
+                                crate::hdf::NumericKind::$kind,
+                                destination,
+                                max_bytes,
+                            )
+                        });
+                        return match result {
+                            Ok(result) => result.map_err(crate::python::reader::err),
+                            Err(message) => {
+                                Err(crate::python::panic_guard::panic_error_from(message))
+                            }
+                        };
+                    }
+                };
+            }
+            fill!(i8, I8);
+            fill!(i16, I16);
+            fill!(i32, I32);
+            fill!(i64, I64);
+            fill!(u8, U8);
+            fill!(u16, U16);
+            fill!(u32, U32);
+            fill!(u64, U64);
+            fill!(f32, F32);
+            fill!(f64, F64);
+            Err(pyo3::exceptions::PyTypeError::new_err(
+                "out must be a NumPy array with an exact native numeric dtype",
+            ))
+        })
+    }
     fn read_numeric_batch<'py>(
         &self,
         py: Python<'py>,
