@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-11-05)
 
 The HDF5 reader is now `hdf5-reader`/`hdf5-core` 0.12.1 (from 0.10.1), so a build with
-`netcdf-reader` 0.12 compiles one HDF5 reader. What this changes for callers:
+`netcdf-reader` 0.12 compiles one HDF5 reader. No reader type is in the public API, but error kinds
+and the timing of some refusals change. The extension `API_VERSION` stays 11 and the engine API
+stays 10. ras-commander's releases pin `ras-commander-fast-hdf>=0.3.0,<0.4` and so stay on 0.3.x
+until a release widens the pin. What this changes for callers:
 
 - **Files with a user block are refused at open** (`Unsupported`, code `encoding`). The reader can
   now read past the block, but no read has been compared with h5py. Before, such a file opened and
