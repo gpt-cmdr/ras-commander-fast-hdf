@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+The HDF5 reader is now `hdf5-reader`/`hdf5-core` 0.12.1 (from 0.10.1), so a build with
+`netcdf-reader` 0.12 compiles one HDF5 reader. What this changes for callers:
+
+- **Files with a user block stay refused, now at open.** The reader can read past the block, but
+  no read has been compared with h5py, so the session refuses them with the same `Unsupported`
+  kind and `encoding` code. The message now names the non-zero superblock base address.
+- **A zero-width datatype now fails the object's attributes as a whole** (`Corrupt`). The reader
+  refuses it while parsing the object header, so other attributes on that object are no longer
+  returned next to it. Other corrupt attributes are still reported one at a time.
+- **SZIP stays refused.** The reader now decodes it, but no read has been compared with h5py, so
+  the engine refuses it (`Unsupported`, code `encoding`) in any filter position.
+- The reader raises errors for missing variable-length heap objects instead of returning empty
+  strings, and picks up its other 0.11 and 0.12 fixes.
+
 ## 0.3.0 (2026-10-31)
 
 Breaking for one Python function: `export_geoparquet_ipc_files` is removed (the GeoParquet

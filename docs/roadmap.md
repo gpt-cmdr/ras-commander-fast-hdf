@@ -262,7 +262,7 @@ avoids it by refusing such indexes, which also refuses valid files. Upstream
 
 ### Depend on hdf5-reader from crates.io
 
-**Status:** done; the engine depends on `hdf5-reader` 0.10.1 from crates.io.
+**Status:** done; the engine depends on `hdf5-reader` 0.12.1 from crates.io.
 
 The internal copy of the reader is gone. Its unbounded-filter policy is
 applied by the engine (`src/hdf/reader.rs`) with the same refusals.

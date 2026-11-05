@@ -11,7 +11,7 @@
 //!   intermediate stage is bounded by the encoded-size bound of the filters
 //!   applied before it when writing. DEFLATE, shuffle, Fletcher-32, N-Bit and
 //!   scale-offset have such a bound; LZ4 (32004), SZIP and unknown filters do
-//!   not. hdf5-reader 0.10 then decodes the stages that come before such a
+//!   not. hdf5-reader then decodes the stages that come before such a
 //!   filter in decoding order with only its 4 GiB per-filter ceiling; the
 //!   engine refuses the read instead (`UnsupportedFilter`, so `Unsupported`
 //!   with code `encoding`). The last filter of a pipeline is the first to be
@@ -81,6 +81,9 @@ fn bounded_filter(id: u16) -> bool {
 enum Refusal {
     /// A filter without encoded-size bound is an intermediate stage.
     UnboundedFilter(u16),
+    /// SZIP in any position: hdf5-reader 0.12 decodes it, but no read of it has
+    /// been compared with h5py, so it stays refused as it was before 0.12.
+    UnqualifiedSzip,
 }
 
 impl Refusal {
@@ -89,6 +92,10 @@ impl Refusal {
         match self {
             Self::UnboundedFilter(id) => Error::UnsupportedFilter(format!(
                 "filter {id} has no qualified encoded-size bound in a bounded pipeline"
+            )),
+            Self::UnqualifiedSzip => Error::UnsupportedFilter(format!(
+                "filter {} (SZIP) is not qualified",
+                h5::filters::FILTER_SZIP
             )),
         }
     }
@@ -110,22 +117,29 @@ pub(crate) struct File {
 }
 
 impl File {
-    fn wrap(inner: h5::Hdf5File, budget: Arc<DecodeBudget>) -> Self {
-        Self {
+    fn wrap(inner: h5::Hdf5File, budget: Arc<DecodeBudget>) -> Result<Self> {
+        // hdf5-reader 0.12 reads past a user block, but no read of such a file has been
+        // compared with h5py and the datatype decoder assumes a zero base. Refuse it whole.
+        if inner.superblock().base_address != 0 {
+            return Err(Error::UnsupportedEncoding(
+                "non-zero superblock base address".into(),
+            ));
+        }
+        Ok(Self {
             inner,
             shared: Arc::new(Shared {
                 verdicts: Mutex::default(),
                 raw_attributes: Mutex::default(),
                 budget: Mutex::new(budget),
             }),
-        }
+        })
     }
     pub(crate) fn open_with_options(
         path: impl AsRef<std::path::Path>,
         options: h5::OpenOptions,
         budget: Arc<DecodeBudget>,
     ) -> Result<Self> {
-        h5::Hdf5File::open_with_options(path, options).map(|f| Self::wrap(f, budget))
+        Self::wrap(h5::Hdf5File::open_with_options(path, options)?, budget)
     }
     /// A file over any storage backend (the presence measurement counts the bytes it reads).
     #[cfg(all(test, feature = "mesh"))]
@@ -134,14 +148,17 @@ impl File {
         options: h5::OpenOptions,
         budget: Arc<DecodeBudget>,
     ) -> Result<Self> {
-        h5::Hdf5File::from_storage_with_options(storage, options).map(|f| Self::wrap(f, budget))
+        Self::wrap(
+            h5::Hdf5File::from_storage_with_options(storage, options)?,
+            budget,
+        )
     }
     pub(crate) fn from_vec_with_options(
         data: Vec<u8>,
         options: h5::OpenOptions,
         budget: Arc<DecodeBudget>,
     ) -> Result<Self> {
-        h5::Hdf5File::from_vec_with_options(data, options).map(|f| Self::wrap(f, budget))
+        Self::wrap(h5::Hdf5File::from_vec_with_options(data, options)?, budget)
     }
     /// The decode budget this file's reads draw on.
     pub(crate) fn decode_budget(&self) -> Arc<DecodeBudget> {
@@ -181,8 +198,10 @@ impl File {
         storage: h5::storage::DynStorage,
         budget: Arc<DecodeBudget>,
     ) -> Result<Self> {
-        h5::Hdf5File::from_storage_with_options(storage, h5::OpenOptions::default())
-            .map(|f| Self::wrap(f, budget))
+        Self::wrap(
+            h5::Hdf5File::from_storage_with_options(storage, h5::OpenOptions::default())?,
+            budget,
+        )
     }
 
     /// The raw attributes of the object at `address`, parsed once per file
@@ -245,6 +264,13 @@ impl File {
         // Decoding runs from the last filter to the first; every filter but
         // the last is an intermediate stage.
         if let Some(pipeline) = pipeline {
+            if pipeline
+                .filters
+                .iter()
+                .any(|f| f.id == h5::filters::FILTER_SZIP)
+            {
+                return Ok(Some(Refusal::UnqualifiedSzip));
+            }
             if let Some((_, earlier)) = pipeline.filters.split_last() {
                 if let Some(f) = earlier.iter().find(|f| !bounded_filter(f.id)) {
                     return Ok(Some(Refusal::UnboundedFilter(f.id)));

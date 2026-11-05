@@ -25,10 +25,10 @@ now the `python` feature of the same crate; `python/` holds only the Python pack
 
 ## HDF5 reader
 
-HDF5 decoding uses the `hdf5-reader` and `hdf5-core` crates 0.10.1 from
+HDF5 decoding uses the `hdf5-reader` and `hdf5-core` crates 0.12.1 from
 [roteiro-gis/netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (`MIT OR
-Apache-2.0`, copyright Ian Norden; tag `v0.10.1`, commit
-`957b10000b1bb52654a51881b3fb868a32f26b7e`), as ordinary crates.io dependencies with the
+Apache-2.0`, copyright Ian Norden; tag `v0.12.1`, commit
+`2807c87c1cc3f8f8aeccb83e5e4dfd3a1608a9f0`), as ordinary crates.io dependencies with the
 reader's `rayon` and `lz4` features. Up to 0.2.3 the engine compiled a copy of the 0.9.3
 reader with 14 local patches into the crate. Twelve of them are upstream in 0.10.0 and
 0.10.1:
@@ -47,6 +47,9 @@ reader with 14 local patches into the crate. Twelve of them are upstream in 0.10
 | 0011 old-style group name cache, `Group::member_names` | #107 (`5242e51`) |
 | 0012 soft links in old-style groups | #103 (`8c1c6d8`) |
 | 0013 row/column gathers, uncached reads, cache defaults | #106 (`1be2681`); selected-chunk index lookups for gathers: #111 (`269fcae`, 0.10.1) |
+
+The engine moved from 0.10.1 to 0.12.1 without local patches. Two things 0.12 can read stay refused
+by the engine until their values are compared with h5py: SZIP data, and files with a user block.
 
 The other two were CLB qualification policies, not fixes:
 

@@ -86,6 +86,25 @@ fn assert_refused(name: &str, kind: NumericKind, gathers: &[(Slice, &[u64])], me
 }
 
 #[test]
+fn user_block_is_refused_whole() {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/file_type/userblock.h5");
+    let e = ReadOnlyHdfSession::open(&path).err().unwrap();
+    assert_eq!(e.kind, ErrorKind::Unsupported, "{e:?}");
+    assert_eq!(e.code, Some(UnsupportedCode::Encoding), "{e:?}");
+}
+
+#[test]
+fn szip_is_refused_in_any_position() {
+    // The last filter is decoded first, so the unbounded-filter policy allows it.
+    assert_refused(
+        "filter_deflate_then_szip.h5",
+        NumericKind::F64,
+        &[],
+        "unsupported filter: filter 4 (SZIP) is not qualified",
+    );
+}
+
+#[test]
 fn unbounded_intermediate_filters_are_refused() {
     let gathers: &[(Slice, &[u64])] = &[
         (Slice::new(1, 5, 2), &[0, 7, 3]),
