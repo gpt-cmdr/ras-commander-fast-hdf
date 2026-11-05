@@ -25,10 +25,10 @@ first, then the ras-commander version that requires it. A release that keeps
    ([Testing](testing.md#qualifying-a-wheel-with-ras-commander)).
 5. Tag the qualified commit `vX.Y.Z` and push the tag. The release workflow
    builds the wheels and source distribution from the tag, attaches them to a
-   GitHub Release with SHA-256 checksums, and publishes them to PyPI.
+   GitHub Release with SHA-256 checksums, and publishes them to PyPI and the crate
+   to crates.io (below).
 6. Check that `pip install ras-commander-fast-hdf==X.Y.Z` works in a clean
    environment, and that `ENGINE_COMMIT` equals the tagged commit.
-7. Publish the crate to crates.io (below).
 
 Never publish a wheel built from a dirty tree; its `ENGINE_COMMIT` would not
 identify the source.
@@ -46,8 +46,10 @@ python -m twine upload dist/*
 
 ## crates.io
 
-Publishing the crate is a maintainer step; no workflow does it. From a clean
-checkout of the release tag:
+The release workflow's `crates` job publishes the crate after the GitHub Release. It runs only when
+the repository variable `PUBLISH_CRATES` is `true`, using the `CARGO_REGISTRY_TOKEN` secret of the
+`crates-io` environment. To publish a tag's crate alone, for example after that job failed, dispatch
+the workflow with the tag and `crates_only` set. By hand, from a clean checkout of the release tag:
 
 ```bash
 cargo publish --locked --dry-run
@@ -58,7 +60,7 @@ CI runs the same dry run on every push. The package holds only what is needed
 to build, plus `LICENSE`, `README.md`, `CHANGELOG.md`, `THIRD-PARTY-NOTICES.md`
 and the licence and provenance files from `vendor/` (the `include` list
 in `Cargo.toml`). Tests, fixtures and Python packaging are not shipped.
-crates.io versions cannot be replaced, only yanked, so publish only a tag whose
-wheels have been qualified. `ras-commander-fast-hdf` is the only crate this
+crates.io versions cannot be replaced, only yanked, so tag only a commit
+whose wheels have been qualified. `ras-commander-fast-hdf` is the only crate this
 repository publishes; the former engine crate name `ras-commander-rust` is
 retired.
