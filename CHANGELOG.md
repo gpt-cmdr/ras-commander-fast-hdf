@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+The HDF5 reader is now `hdf5-reader`/`hdf5-core` 0.12.1 (from 0.10.1), so a build with
+`netcdf-reader` 0.12 compiles one HDF5 reader. What this changes for callers:
+
+- **Files with a user block are refused at open** (`Unsupported`, code `encoding`). The reader can
+  now read past the block, but no read has been compared with h5py. Before, such a file opened and
+  its reads failed with the same kind and code. The bytes after a user block behave as before: the
+  file type reads and numeric data is refused, because the engine reads the recorded base itself.
+- **A zero-width datatype now fails with `Corrupt` when the reader parses it.** On an attribute,
+  that fails the object's attributes as a whole, so other attributes on that object are no longer
+  returned next to it. On a dataset, it fails at open. Other corrupt attributes are still reported
+  one at a time. Zero-size time, opaque, compound and reference types and zero array dimensions
+  are refused the same way, and datatype sizes over 255 bytes are no longer truncated.
+- **SZIP datasets stay refused** (`Unsupported`, code `encoding`) in any filter position. The reader
+  now decodes SZIP, but no read has been compared with h5py. SZIP in a filtered fractal heap (dense
+  attribute or link storage) is not covered; HEC-RAS does not write such heaps.
+- **Object headers over 64 MiB are refused** (`Unsupported`, code `resource_limit`), a new default
+  limit in the reader that the engine does not change.
+- **Missing variable-length heap objects fail dataset string reads** instead of returning empty
+  strings. Attribute reads still report no value for them.
+- **Deep dense groups and old enums read differently.** The reader now parses v2 B-trees with nested
+  internal nodes, so dense links or attributes it could misparse enumerate differently, and it reads
+  enum member names in datatype message versions 1 and 2 correctly (truncated padding is `Corrupt`).
+- **Memory and speed.** The reader caches global heap collections (up to about 64 MiB more per open
+  session) and shares dataset metadata between hard-link aliases, so repeated reads are faster.
+
 ## 0.3.0 (2026-10-31)
 
 Breaking for one Python function: `export_geoparquet_ipc_files` is removed (the GeoParquet

@@ -24,7 +24,7 @@ chunk copies into preallocated buffers).
 | Feature | Adds | Dependencies |
 |---|---|---|
 | `catalog` (default) | Project (`.prj`) and plan (`.p##`) records, linked geometry/flow files, declared simulation windows | Standard library only |
-| `hdf` | Read-only HDF sessions; numeric, compound, string and attribute reads; capabilities; 1D geometry and results; structures; read families; time and units; CRS evidence | `hdf5-reader` 0.10.0 (with its `rayon` and `lz4` features) and its pure-Rust dependencies, `ndarray`, `rayon`, `flate2` (zlib-rs backend) |
+| `hdf` | Read-only HDF sessions; numeric, compound, string and attribute reads; capabilities; 1D geometry and results; structures; read families; time and units; CRS evidence | `hdf5-reader` 0.12.1 (with its `rayon` and `lz4` features) and its pure-Rust dependencies, `ndarray`, `rayon`, `flate2` (zlib-rs backend) |
 | `mesh` | 2D mesh topology and cell polygon assembly (implies `hdf`) | `robust` |
 | `results` | Bounded temporal reduction of result arrays (implies `hdf`) | none extra |
 
@@ -106,7 +106,7 @@ HEC-RAS 5.0.7), so ras-commander reads them with h5py.
 
 ## Licenses
 
-MIT. The HDF5 reader is the crates.io `hdf5-reader` and `hdf5-core` 0.10.1
+MIT. The HDF5 reader is the crates.io `hdf5-reader` and `hdf5-core` 0.12.1
 from [netcdf-rust](https://github.com/roteiro-gis/netcdf-rust) (MIT OR
 Apache-2.0), an ordinary dependency; the engine's two read policies on top of
 it are in `src/hdf/reader.rs` (see [Provenance](reference/provenance.md#hdf5-reader)).

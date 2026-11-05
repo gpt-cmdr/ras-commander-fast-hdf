@@ -262,20 +262,18 @@ avoids it by refusing such indexes, which also refuses valid files. Upstream
 
 ### Depend on hdf5-reader from crates.io
 
-**Status:** done; the engine depends on `hdf5-reader` 0.10.1 from crates.io.
+**Status:** done; the engine depends on `hdf5-reader` 0.12.1 from crates.io.
 
 The internal copy of the reader is gone. Its unbounded-filter policy is
 applied by the engine (`src/hdf/reader.rs`) with the same refusals.
 
 ### Reader-level limits for direct reader users
 
-**Status:** planned.
+**Status:** done upstream in `hdf5-reader` 0.11 (netcdf-rust#113).
 
 The engine checks sizes before calling the reader, but other users of the
-reader do not get those checks. A zero-width float dataset still
-makes the reader request terabytes for a one-element read, and the reader has
-no overall read budget. A zero-width datatype refusal and a reader
-`max_read_bytes` would protect them; both fit the hardening patches above.
+reader did not get those checks. The reader now refuses zero-width datatypes and
+has a `max_read_bytes` budget and an object-header limit (64 MiB by default).
 
 ### Drop the geo dependency
 

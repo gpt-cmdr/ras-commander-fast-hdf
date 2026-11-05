@@ -1,0 +1,7 @@
+The published hdf5-reader 0.12.1 crate package ships no licence file.
+These texts are copied unmodified from https://github.com/roteiro-gis/netcdf-rust at tag v0.12.1
+(commit 2807c87c1cc3f8f8aeccb83e5e4dfd3a1608a9f0, the commit recorded in the package's
+.cargo_vcs_info.json):
+  https://raw.githubusercontent.com/roteiro-gis/netcdf-rust/v0.12.1/LICENSE-MIT
+  https://raw.githubusercontent.com/roteiro-gis/netcdf-rust/v0.12.1/LICENSE-APACHE
+Retrieved 2026-11-05.

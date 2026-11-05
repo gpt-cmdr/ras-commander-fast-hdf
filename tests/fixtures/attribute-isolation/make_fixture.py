@@ -16,9 +16,9 @@ with h5py.File(p, 'w', libver='earliest') as f:
     f.attrs.create('Units System', np.int32(1))
 b = bytearray(p.read_bytes())
 at = b.index(envelope)
-if projection:
-    b[at+16:at+20] = (99).to_bytes(4, 'little')
-else:
-    b[at+4:at+8] = bytes(4)
+# A compound member offset past the record. The reader parses this and the engine
+# reports it per attribute. A zero datatype size is not used: hdf5-reader 0.11 and later
+# refuse it while parsing the header, so it fails the whole object's attributes.
+b[at+16:at+20] = (99).to_bytes(4, 'little')
 p.write_bytes(b)
 print(hashlib.sha256(b).hexdigest())

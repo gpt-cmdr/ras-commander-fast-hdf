@@ -32,7 +32,7 @@ f=attr_file('float32',np.array([0.1,-2.5],dtype='>f4'));manifest.append(dict(nam
 s=attr_file('fixed',np.bytes_('hello'))
 manifest.append(dict(name=s.name,expected='text',sha256=hashlib.sha256(s.read_bytes()).hexdigest()))
 mutate('integer_width3',u,lambda b,d,v:struct.pack_into('<I',b,d+4,3),'unsupported')
-mutate('integer_zero_width',u,lambda b,d,v:struct.pack_into('<I',b,d+4,0),'unsupported')
+mutate('integer_zero_width',u,lambda b,d,v:struct.pack_into('<I',b,d+4,0),'corrupt')
 mutate('datatype_truncated_envelope',u,lambda b,d,v:struct.pack_into('<H',b,d-12,8),'corrupt')
 f64=attr_file('float64',np.array([0.1,-2.5],dtype='<f8'));manifest.append(dict(name=f64.name,expected='float64',sha256=hashlib.sha256(f64.read_bytes()).hexdigest()))
 mutate('float_offset',f64,lambda b,d,v:struct.pack_into('<H',b,d+8,1),'unsupported')

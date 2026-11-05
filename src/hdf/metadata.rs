@@ -484,8 +484,8 @@ mod sniff_tests {
         let (r, copied) = ReadOnlyHdfSession::sniff_file_type(&small, "pipes.h5".into());
         assert!(r.unwrap().is_hec_ras());
         assert_eq!(copied, (small.len() as u64).min(FIRST_BYTES));
-        // A user block: the superblock is found past the first copy, and the reader then
-        // refuses the file (it does not apply a base address), exactly as it does whole.
+        // A user block: the superblock is found past the first copy, and the engine then
+        // refuses the file, exactly as it does whole.
         let data = fixture("file_type/userblock.h5");
         let (r, copied) = ReadOnlyHdfSession::sniff_file_type(&data, "userblock.h5".into());
         assert!(copied > FIRST_BYTES, "{copied}");

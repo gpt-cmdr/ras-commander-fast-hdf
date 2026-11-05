@@ -26,7 +26,7 @@
   },
   {
     "name": "integer_zero_width.h5",
-    "expected": "unsupported",
+    "expected": "corrupt",
     "sha256": "92965dea572e01743c5cad6a10ccfb90745a486a64364cde07f22d0a0140c0b8"
   },
   {

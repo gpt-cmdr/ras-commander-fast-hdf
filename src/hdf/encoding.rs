@@ -260,7 +260,7 @@ fn v2_messages(chunk: &[u8], creation_order: bool, out: &mut Vec<Message>) -> cr
 
 fn datatype_payload(file: &File, address: u64, depth: u8) -> crate::Result<Vec<u8>> {
     let sb = file.superblock();
-    if sb.base_address != 0 {
+    if file.recorded_base_address() != 0 {
         return Err(unsupported("non-zero superblock base address"));
     }
     let (offset_size, length_size) = (sb.offset_size as usize, sb.length_size as usize);
