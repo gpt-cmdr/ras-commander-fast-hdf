@@ -96,7 +96,7 @@ fn user_block_is_refused_whole() {
 #[test]
 fn recorded_base_address_is_refused_by_the_datatype_decoder() {
     // The bytes after a user block: the superblock is at offset 0 and records a non-zero
-    // base. The reader reports the location (0) as the base; h5py refuses this file. The
+    // base. The reader reports the location (0) as the base. The
     // file type still reads (`hec_ras_file_type_of_bytes` documents this), numeric data
     // does not, as before hdf5-reader 0.12.
     let source =

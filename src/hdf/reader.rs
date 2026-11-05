@@ -55,8 +55,8 @@
 //! Two things hdf5-reader 0.12 can read stay refused until their values are
 //! compared with h5py: SZIP datasets, and files whose superblock is not at the
 //! start of the file (a user block). The bytes after a user block record a base
-//! that does not match where their superblock is: h5py refuses them, and the
-//! datatype decoder refuses them as it did before 0.12 (`encoding.rs`).
+//! that does not match where their superblock is. libhdf5 versions differ on such
+//! a file, and the datatype decoder refuses it as it did before 0.12 (`encoding.rs`).
 //!
 //! Every read also reserves its estimated memory from the file's in-flight
 //! decode budget ([`super::decode_budget`]) after the policy admits it and
