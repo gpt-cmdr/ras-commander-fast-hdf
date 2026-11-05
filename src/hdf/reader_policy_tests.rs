@@ -94,14 +94,41 @@ fn user_block_is_refused_whole() {
 }
 
 #[test]
+fn recorded_base_address_is_refused_by_the_datatype_decoder() {
+    // The bytes after a user block: the superblock is at offset 0 and records a non-zero
+    // base. The reader reports the location (0) as the base; h5py refuses this file. The
+    // file type still reads (`hec_ras_file_type_of_bytes` documents this), numeric data
+    // does not, as before hdf5-reader 0.12.
+    let source =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/file_type/userblock.h5");
+    let bytes = std::fs::read(source).unwrap();
+    let path = std::env::temp_dir().join(format!("recorded_base_{}.h5", std::process::id()));
+    std::fs::write(&path, &bytes[128 * 1024..]).unwrap();
+    let s = ReadOnlyHdfSession::open(&path).unwrap();
+    assert!(s.hec_ras_file_type().unwrap().is_hec_ras());
+    let e = s.read_numeric("Geometry/x", None).unwrap_err();
+    drop(s);
+    std::fs::remove_file(&path).unwrap();
+    assert_eq!(e.kind, ErrorKind::Unsupported, "{e:?}");
+    assert_eq!(e.code, Some(UnsupportedCode::Encoding), "{e:?}");
+}
+
+#[test]
 fn szip_is_refused_in_any_position() {
-    // The last filter is decoded first, so the unbounded-filter policy allows it.
-    assert_refused(
-        "filter_deflate_then_szip.h5",
-        NumericKind::F64,
-        &[],
-        "unsupported filter: filter 4 (SZIP) is not qualified",
-    );
+    let gathers: &[(Slice, &[u64])] = &[
+        (Slice::new(1, 5, 2), &[0, 7, 3]),
+        (Slice::new(0, 6, 1), &[7]),
+    ];
+    // Last: decoded first, so the unbounded-filter policy allows it. Not last: the SZIP
+    // refusal comes before the unbounded-filter one.
+    for name in ["filter_deflate_then_szip.h5", "filter_szip_then_deflate.h5"] {
+        assert_refused(
+            name,
+            NumericKind::F64,
+            gathers,
+            "unsupported filter: filter 4 (SZIP) is not qualified",
+        );
+    }
 }
 
 #[test]

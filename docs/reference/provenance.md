@@ -49,7 +49,9 @@ reader with 14 local patches into the crate. Twelve of them are upstream in 0.10
 | 0013 row/column gathers, uncached reads, cache defaults | #106 (`1be2681`); selected-chunk index lookups for gathers: #111 (`269fcae`, 0.10.1) |
 
 The engine moved from 0.10.1 to 0.12.1 without local patches. Two things 0.12 can read stay refused
-by the engine until their values are compared with h5py: SZIP data, and files with a user block.
+by the engine until their values are compared with h5py: SZIP datasets, and files whose superblock
+is not at the start of the file (a user block). SZIP in a filtered fractal heap is not covered, like
+the unbounded-filter policy; HEC-RAS does not write such heaps.
 
 The other two were CLB qualification policies, not fixes:
 

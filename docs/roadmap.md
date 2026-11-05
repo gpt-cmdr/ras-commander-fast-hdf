@@ -269,13 +269,11 @@ applied by the engine (`src/hdf/reader.rs`) with the same refusals.
 
 ### Reader-level limits for direct reader users
 
-**Status:** planned.
+**Status:** done upstream in `hdf5-reader` 0.11 (netcdf-rust#113).
 
 The engine checks sizes before calling the reader, but other users of the
-reader do not get those checks. A zero-width float dataset still
-makes the reader request terabytes for a one-element read, and the reader has
-no overall read budget. A zero-width datatype refusal and a reader
-`max_read_bytes` would protect them; both fit the hardening patches above.
+reader did not get those checks. The reader now refuses zero-width datatypes and
+has a `max_read_bytes` budget and an object-header limit (64 MiB by default).
 
 ### Drop the geo dependency
 

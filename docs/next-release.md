@@ -16,7 +16,7 @@ Rules for every task:
 | A1 | Require `ras-commander-fast-hdf>=0.2.4` (it carries the `get_ref_lines_timeseries` / `get_xsec_timeseries` regression fixes) | ras-commander | robustness agent | todo |
 | A2 | Invalid-cell policy for `map_horizontal_profiles`, `map_whole_simulation`, `compare_with_rasmapper`; native `generate_fluvial_pluvial_polygons` on meshes with invalid cells (identical to the reference or narrowly refused) | ras-commander | robustness agent | todo |
 | A3 | Terrain-CRS override for `map_sloping_profiles` (parity with the horizontal path) | ras-commander | robustness agent | todo |
-| A4 | Bound root object-header parsing and add a reader read budget (`max_read_bytes`, zero-width datatype refusal) in upstream `hdf5-reader`: prepare the PR; open it only with the user's approval | netcdf-rust (upstream) | engine agent | todo |
+| A4 | Bound root object-header parsing and add a reader read budget (`max_read_bytes`, zero-width datatype refusal) in upstream `hdf5-reader`: prepare the PR; open it only with the user's approval | netcdf-rust (upstream) | engine agent | done (netcdf-rust#113, in 0.11) |
 | A5 | Global in-flight chunk-decode budget across workers and concurrent calls | fast-hdf | engine agent | todo |
 | A6 | Release wheels: panic-injection hooks behind a `test-hooks` Cargo feature (off in release); quiet panic hook in the extension | fast-hdf | engine agent | todo |
 | A7 | Fix `test_fluvial_min_area_native_parity` under pandas 3.1 (strict column-type comparison) | ras-commander | robustness agent | todo |

@@ -49,7 +49,14 @@
 //!
 //! Filtered fractal heaps (dense link or attribute storage written with an
 //! I/O filter pipeline) were also decoded with the old patch 0008 in force;
-//! they are not covered here. HEC-RAS does not write them.
+//! they are not covered here, and neither is SZIP in such a heap. HEC-RAS does
+//! not write them.
+//!
+//! Two things hdf5-reader 0.12 can read stay refused until their values are
+//! compared with h5py: SZIP datasets, and files whose superblock is not at the
+//! start of the file (a user block). The bytes after a user block record a base
+//! that does not match where their superblock is: h5py refuses them, and the
+//! datatype decoder refuses them as it did before 0.12 (`encoding.rs`).
 //!
 //! Every read also reserves its estimated memory from the file's in-flight
 //! decode budget ([`super::decode_budget`]) after the policy admits it and
@@ -109,10 +116,30 @@ struct Shared {
     budget: Mutex<Arc<DecodeBudget>>,
 }
 
+/// The base address a superblock at the start of the file records. Its offset in the
+/// superblock depends on the superblock version.
+fn recorded_base_address(file: &h5::Hdf5File) -> Result<u64> {
+    let superblock = file.superblock();
+    let at = match superblock.version {
+        0 => 24,
+        1 => 28,
+        _ => 12,
+    };
+    let bytes = file
+        .storage()
+        .read_range(at, usize::from(superblock.offset_size))?;
+    Ok(bytes
+        .iter()
+        .take(8)
+        .rev()
+        .fold(0, |value, byte| (value << 8) | u64::from(*byte)))
+}
+
 /// An open HDF5 file.
 #[derive(Clone)]
 pub(crate) struct File {
     inner: h5::Hdf5File,
+    recorded_base: u64,
     shared: Arc<Shared>,
 }
 
@@ -125,8 +152,10 @@ impl File {
                 "non-zero superblock base address".into(),
             ));
         }
+        let recorded_base = recorded_base_address(&inner)?;
         Ok(Self {
             inner,
+            recorded_base,
             shared: Arc::new(Shared {
                 verdicts: Mutex::default(),
                 raw_attributes: Mutex::default(),
@@ -186,6 +215,11 @@ impl File {
     }
     pub(crate) fn chunk_cache_stats(&self) -> h5::ChunkCacheStats {
         self.inner.chunk_cache_stats()
+    }
+    /// The base address the superblock records. The reader's `Superblock` reports where it
+    /// found the superblock instead, which `wrap` has checked is zero.
+    pub(crate) fn recorded_base_address(&self) -> u64 {
+        self.recorded_base
     }
     pub(crate) fn superblock(&self) -> &h5::superblock::Superblock {
         self.inner.superblock()

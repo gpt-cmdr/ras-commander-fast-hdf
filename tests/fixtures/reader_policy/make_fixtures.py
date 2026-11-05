@@ -14,6 +14,8 @@ message stays well formed. The chunk bytes are not changed.
   it (the chunk is not LZ4 data, so the read fails as corrupt).
 - filter_deflate_then_szip.h5: pipeline [DEFLATE, SZIP]. SZIP is the first
   decoding stage, so only the engine's SZIP refusal stops the read.
+- filter_szip_then_deflate.h5: pipeline [SZIP, DEFLATE]. SZIP is an
+  intermediate stage; the SZIP refusal comes first.
 
 ea_inline.h5: h5py libver="latest", "data" f64 shape (3, 5), maxshape
 (None, 5), chunks (1, 5), values row * 5 + col: an extensible-array chunk
@@ -90,6 +92,7 @@ def main() -> None:
         "filter_unknown_then_deflate.h5": (SHUFFLE, DEFLATE, UNKNOWN),
         "filter_deflate_then_lz4.h5": (DEFLATE, SHUFFLE, LZ4),
         "filter_deflate_then_szip.h5": (DEFLATE, SHUFFLE, SZIP),
+        "filter_szip_then_deflate.h5": (SHUFFLE, DEFLATE, SZIP),
     }
     for name, (first, second, new_id) in cases.items():
         write(OUT / name, first, second)
