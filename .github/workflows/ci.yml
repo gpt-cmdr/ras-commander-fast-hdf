@@ -54,10 +54,10 @@ jobs:
         run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
       - name: Cargo on Windows PATH
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: cmd
         run: |
-          $cargoRoot = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $env:USERPROFILE '.cargo' }
-          Join-Path $cargoRoot 'bin' | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
+          "%CARGO_HOME%\bin\cargo.exe" --version
       - uses: Swatinem/rust-cache@v2
         with:
           # Never restore Cargo's bin folder: the self-hosted Windows image keeps
