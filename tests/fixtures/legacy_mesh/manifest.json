@@ -1,0 +1,45 @@
+{
+  "generator": "generate.py",
+  "files": [
+    {
+      "file": "valid.h5",
+      "sha256": "84bce8e9861f1d5db05b214db1b5672f0443f7a4eb5f6e819cd994c7800ab477"
+    },
+    {
+      "file": "no_ghosts.h5",
+      "sha256": "7f5fb1b73d6ede967b7db075c297bc4750264f9863a3b0ccb20d556f6242155b"
+    },
+    {
+      "file": "two_faces.h5",
+      "sha256": "662b53576f15672eeb2bc3001448537b2f7212afad387aeffd78ae3277294dec"
+    },
+    {
+      "file": "interleaved.h5",
+      "sha256": "47e3663874b15a1b920ddee6ab3d553cd57dc873206429b2315417f884873366"
+    },
+    {
+      "file": "gap.h5",
+      "sha256": "13396209ffb2e1f2c2486e6e4bd746d3c39ba6578a478173a4657c2d35ee4869"
+    },
+    {
+      "file": "duplicates.h5",
+      "sha256": "9c42cfa12c8fb389945f0abdd5e08000e59004b0411bfd3182bd02a3ced01bf1"
+    },
+    {
+      "file": "missing_group.h5",
+      "sha256": "b4119259b0a407dd614e78ba687e8147f6865a4b5e563ec4ecc9370478b4a320"
+    },
+    {
+      "file": "invalid_name.h5",
+      "sha256": "92e850303bc1aada6b09a7945e7dd0c6b8068dad6bb920e9ff5b10582057cdd1"
+    },
+    {
+      "file": "rank_two.h5",
+      "sha256": "72433a498602bb5d60d645b0899360c62c3fa477d3b969165e9d5f16fdf4c489"
+    },
+    {
+      "file": "modern.h5",
+      "sha256": "e592a536d881821e935824047b6ad390323de1bc4d9c5009bb2ecaaa78871e34"
+    }
+  ]
+}

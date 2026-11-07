@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Read HEC-RAS 5.0.x mesh inventories from the legacy `Names` dataset when
+  `Attributes` is absent. Preserve stored row order and inventory provenance;
+  remove the legacy name field's trailing blank padding.
+- Qualify physical cells from contiguous cell-face ranges containing polygon
+  cells followed by one-face boundary ghosts. Ambiguous boundaries and damaged
+  ranges refuse the read. `Cell Maximum Index` and result widths are not used.
+  Modern `Attributes` metadata continues to take precedence.
+- Python extension `API_VERSION` is 12. Pair this build with the matching
+  ras-commander adapter for legacy ghost filtering; older adapters fall back
+  to h5py in automatic mode.
+
 ## 0.4.0 (2026-11-05)
 
 The HDF5 reader is now `hdf5-reader`/`hdf5-core` 0.12.1 (from 0.10.1), so a build with

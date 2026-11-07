@@ -45,7 +45,7 @@ pub struct MeshNameDiagnostic {
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct MeshDescriptor {
-    /// Source file, `Geometry/2D Flow Areas/Attributes` and this mesh's attribute row.
+    /// Source file, inventory dataset (`Attributes` or legacy `Names`) and stored row.
     pub id: crate::hdf::Identity,
     pub mesh_name: String,
     pub physical_cells: u64,
@@ -103,13 +103,140 @@ fn diagnostics(names: &[String], groups: &[String]) -> Vec<MeshNameDiagnostic> {
     out
 }
 impl ReadOnlyHdfSession {
-    /// Group discovery is available with hdf alone. Names-only layouts remain unsupported.
+    fn mesh_has_attributes(&self) -> Result<bool> {
+        let members = self.group_members(GEOMETRY)?;
+        if members.groups.iter().any(|name| name == "Attributes") {
+            return Err(Error::new(ErrorKind::Corrupt, "mesh Attributes is a group"));
+        }
+        Ok(members.datasets.iter().any(|name| name == "Attributes"))
+    }
+    /// The legacy inventory is a stored rank-one fixed-string dataset, in row order.
+    pub(crate) fn legacy_mesh_names(&self, max_bytes: usize) -> Result<Vec<String>> {
+        let path = format!("{GEOMETRY}/Names");
+        let raw = self.raw_fixed_strings(&path, max_bytes)?;
+        let Some(value) = raw.value() else {
+            return Err(match raw.capability() {
+                Capability::Unavailable { reason } => Error::new(ErrorKind::NotFound, reason),
+                Capability::Corrupt { reason } => Error::new(ErrorKind::Corrupt, reason),
+                c => Error::unsupported(
+                    c.code().unwrap_or(UnsupportedCode::Encoding),
+                    c.reason().unwrap_or("unproven Names dataset"),
+                ),
+            });
+        };
+        if value.shape.len() != 1 {
+            return Err(Error::new(
+                ErrorKind::Corrupt,
+                "mesh Names must be rank one",
+            ));
+        }
+        // RAS 5.0.x stores blank-padded names even with a NULLPAD datatype.
+        let names = self
+            .read_strings(&path)?
+            .into_iter()
+            .map(|name| name.trim_end_matches(' ').to_owned())
+            .collect::<Vec<_>>();
+        if names
+            .iter()
+            .any(|name| name.is_empty() || name.contains(['/', '\\']))
+        {
+            return Err(Error::new(ErrorKind::Corrupt, "invalid legacy mesh name"));
+        }
+        Ok(names)
+    }
+
+    /// Qualify the legacy physical prefix from stored cell-face ranges. A polygon cell
+    /// has at least three faces; one-face boundary ghosts must form a trailing suffix.
+    /// Neither result width nor the stale `Cell Maximum Index` attribute is evidence.
+    pub(crate) fn legacy_mesh_physical_count(&self, area: &str, max_bytes: usize) -> Result<u64> {
+        let root = format!("{GEOMETRY}/{area}");
+        let centers = self.numeric_capability(&format!("{root}/Cells Center Coordinate"))?;
+        let faces =
+            self.numeric_capability(&format!("{root}/Cells Face and Orientation Values"))?;
+        let info = self.read_numeric_bounded(
+            &format!("{root}/Cells Face and Orientation Info"),
+            None,
+            max_bytes,
+        )?;
+        if centers.shape.len() != 2
+            || centers.shape[1] != 2
+            || info.shape != centers.shape
+            || faces.shape.len() != 2
+            || faces.shape[1] != 2
+        {
+            return Err(Error::new(
+                ErrorKind::Corrupt,
+                "legacy cell-face tables must align with N by 2 centers",
+            ));
+        }
+        if !centers.capability.is_supported() || !faces.capability.is_supported() {
+            return Err(Error::unsupported(
+                UnsupportedCode::Encoding,
+                "legacy centers or cell-face values use an unsupported numeric encoding",
+            ));
+        }
+        fn count(mut values: impl Iterator<Item = i128>, face_rows: u64) -> Result<u64> {
+            let mut end = 0i128;
+            let mut physical = 0u64;
+            let mut ghosts = false;
+            while let Some(start) = values.next() {
+                let n = values
+                    .next()
+                    .ok_or_else(|| Error::new(ErrorKind::Corrupt, "incomplete cell-face row"))?;
+                if start != end || n < 1 || start + n > i128::from(face_rows) {
+                    return Err(Error::new(
+                        ErrorKind::Corrupt,
+                        "invalid legacy cell-face range",
+                    ));
+                }
+                if n == 1 {
+                    ghosts = true;
+                } else if n < 3 || ghosts {
+                    return Err(Error::unsupported(
+                        UnsupportedCode::IdentityLayout,
+                        "legacy physical/ghost cell boundary is unqualified",
+                    ));
+                } else {
+                    physical += 1;
+                }
+                end = start + n;
+            }
+            if end != i128::from(face_rows) || physical == 0 {
+                return Err(Error::new(
+                    ErrorKind::Corrupt,
+                    "legacy cell-face ranges do not cover stored values",
+                ));
+            }
+            Ok(physical)
+        }
+        use crate::hdf::NumericValues as V;
+        macro_rules! count {
+            ($v:expr) => {
+                count($v.into_iter().map(i128::from), faces.shape[0])
+            };
+        }
+        match info.values {
+            V::I8(v) => count!(v),
+            V::I16(v) => count!(v),
+            V::I32(v) => count!(v),
+            V::I64(v) => count!(v),
+            V::U8(v) => count!(v),
+            V::U16(v) => count!(v),
+            V::U32(v) => count!(v),
+            V::U64(v) => count!(v),
+            _ => Err(Error::unsupported(
+                UnsupportedCode::Encoding,
+                "legacy cell-face Info requires integers",
+            )),
+        }
+    }
+    /// Group discovery is available with hdf alone, independently of inventory metadata.
     pub fn mesh_names(&self) -> Result<Vec<String>> {
         let groups = self.group_members(GEOMETRY)?.groups;
         if groups.is_empty() {
             return Err(Error::unsupported(
                 UnsupportedCode::NotImplemented,
-                "no mesh groups; legacy Names-only inventory not yet implemented",
+                "no mesh groups; group discovery is unavailable",
             ));
         }
         Ok(groups
@@ -118,6 +245,17 @@ impl ReadOnlyHdfSession {
             .collect())
     }
     fn mesh_attributes(&self, max_bytes: usize) -> Result<(Vec<String>, Vec<i64>)> {
+        if !self.mesh_has_attributes()? {
+            let names = self.legacy_mesh_names(max_bytes)?;
+            let counts = names
+                .iter()
+                .map(|name| {
+                    i64::try_from(self.legacy_mesh_physical_count(name, max_bytes)?)
+                        .map_err(|_| Error::new(ErrorKind::Corrupt, "physical count exceeds i64"))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            return Ok((names, counts));
+        }
         let table = self.simple_compound(&format!("{GEOMETRY}/Attributes"), max_bytes)?;
         let names = table
             .columns
@@ -164,7 +302,11 @@ impl ReadOnlyHdfSession {
     /// Inspect all missing/extra/duplicate/invalid names without reading center arrays.
     pub fn mesh_name_diagnostics(&self, max_bytes: usize) -> Result<Vec<MeshNameDiagnostic>> {
         self.memo(format!("mesh_name_diagnostics:{:?}", (max_bytes,)), || {
-            let (names, _) = self.mesh_attributes(max_bytes)?;
+            let names = if self.mesh_has_attributes()? {
+                self.mesh_attributes(max_bytes)?.0
+            } else {
+                self.legacy_mesh_names(max_bytes)?
+            };
             let groups = self.group_members(GEOMETRY)?.groups;
             Ok(diagnostics(&names, &groups))
         })
@@ -313,10 +455,16 @@ impl ReadOnlyHdfSession {
         }
         Ok(out)
     }
-    /// Source-exact counts require Attributes/group agreement. Name mismatches fail
+    /// Counts require inventory/group agreement and a qualified physical-cell count.
+    /// Names mismatches fail
     /// with all structured diagnostics in mesh_name_diagnostics(), never an empty pass.
     pub fn mesh_inventory(&self, max_bytes: usize) -> Result<Vec<MeshDescriptor>> {
         self.memo(format!("mesh_inventory:{:?}", (max_bytes,)), || {
+            let inventory = if self.mesh_has_attributes()? {
+                "Attributes"
+            } else {
+                "Names"
+            };
             let (names, counts) = self.mesh_attributes(max_bytes)?;
             let groups = self.group_members(GEOMETRY)?.groups;
             let issues = diagnostics(&names, &groups);
@@ -363,7 +511,7 @@ impl ReadOnlyHdfSession {
                 out.push(MeshDescriptor {
                     id: crate::hdf::Identity::new(
                         self.path(),
-                        format!("{GEOMETRY}/Attributes"),
+                        format!("{GEOMETRY}/{inventory}"),
                         row as u64,
                     ),
                     mesh_name: name,
