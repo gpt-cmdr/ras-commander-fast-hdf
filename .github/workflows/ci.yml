@@ -1,8 +1,9 @@
 name: CI
 
-# Pushes and pull requests run on CLB's self-hosted Slurm runners (clb-ci-linux,
-# clb-ci-windows). Pull requests from forks never reach a self-hosted runner: they
-# fall back to the GitHub-hosted runner named by matrix.os. macOS is GitHub-hosted
+# Linux pushes and pull requests run on CLB's self-hosted Slurm runners.
+# Windows uses GitHub-hosted runners: the CLB Windows image currently loses Rust
+# proxies during toolchain setup. Pull requests from forks also use GitHub-hosted
+# runners. macOS is GitHub-hosted
 # and runs only on release tags or when requested with include_macos.
 on:
   push:
@@ -36,8 +37,6 @@ jobs:
         include:
           - os: ubuntu-latest
             self_hosted: '["self-hosted", "Linux", "X64", "clb-ci-linux"]'
-          - os: windows-latest
-            self_hosted: '["self-hosted", "Windows", "X64", "clb-ci-windows"]'
     # Fork pull requests -> GitHub-hosted matrix.os; otherwise the self-hosted labels.
     runs-on: ${{ fromJSON(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository && format('["{0}"]', matrix.os) || matrix.self_hosted || format('["{0}"]', matrix.os)) }}
     timeout-minutes: 120
@@ -49,8 +48,15 @@ jobs:
       # Self-hosted Windows images can preset CARGO_HOME with rustup already
       # installed; the toolchain action then skips adding Cargo's bin to PATH.
       - name: Cargo on PATH
+        if: runner.os != 'Windows'
         shell: bash
         run: echo "${CARGO_HOME:-$HOME/.cargo}/bin" >> "$GITHUB_PATH"
+      - name: Cargo on Windows PATH
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          echo %CARGO_HOME%\bin>>"%GITHUB_PATH%"
+          "%CARGO_HOME%\bin\cargo.exe" --version
       - uses: Swatinem/rust-cache@v2
         with:
           # Never restore Cargo's bin folder: the self-hosted Windows image keeps
@@ -58,6 +64,9 @@ jobs:
           cache-bin: "false"
           workspaces: |
             . -> target
+      - name: Verify Cargo is available
+        shell: bash
+        run: cargo --version
       - uses: actions/setup-python@v6
         id: py310
         with:

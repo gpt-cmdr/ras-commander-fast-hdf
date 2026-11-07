@@ -5,7 +5,7 @@ This page is the detailed contract of the compiled Python module `ras_commander_
 bindings and the shape of what they return, how errors and panics reach Python, and which
 licences the wheel ships. The module is an internal building block: applications normally
 use ras-commander's `Hdf*` classes and its `fast_hdf` adapter, which decide between this
-module and h5py. The current binding contract is `API_VERSION` 11, built against engine API
+module and h5py. The current binding contract is `API_VERSION` 12, built against engine API
 10 from this repository. An overview is in [../python-extension.md](../python-extension.md);
 the [API version history](#api-version-history) at the end lists what each version added.
 
@@ -35,7 +35,7 @@ minimum supported Rust version is 1.88.
 
 | Name | Meaning |
 |---|---|
-| `API_VERSION` | Binding contract version (11). One Rust constant; ras-commander requires an exact match. |
+| `API_VERSION` | Binding contract version (12). One Rust constant; ras-commander requires an exact match. |
 | `TEXT_API_VERSION` | Version of the RAS text-file bindings (1). |
 | `ENGINE_COMMIT` | Commit of this checkout the wheel was built from (`git rev-parse HEAD`), or the 40-digit value of `RAS_ENGINE_COMMIT` when set (for builds from a source archive), else `"unknown"`. |
 | `ENGINE_FEATURES` | Engine Cargo features enabled in the build, in a fixed order: `("catalog", "hdf", "mesh", "results")` (the `python` feature enables all four). |
@@ -518,6 +518,7 @@ Tested datasets, measured timings and limitations are in [validation.md](validat
 
 | API | Engine API | Added or changed |
 |---|---|---|
+| 12 | 10 | Legacy `Names` mesh inventory and topology-qualified physical-cell counts when `Attributes` is absent. Pair with the matching ras-commander adapter for ghost filtering. Signatures and return shapes are unchanged. |
 | 5 | 5 | Hardened bindings: `numeric_capability`, `temporal_reduce`, `raw_crs_evidence`, `typed_group_attributes`, `mesh_inventory`, `cross_sections`, `plan_result_mode`, `steady_profile_names`, `read_cross_section_result`, `plan_capabilities`; central typed exception mapping; time/unit bindings and `mesh_name_diagnostics`; structure bindings; unified wire shapes (capability `{status, code, reason}`, `Reported<T>` evidence, `{source, table, row}` identities, snake_case enum strings, optional `max_bytes` defaults, dictionary diagnostics). |
 | 6 | 5 | Mesh result and geometry bindings in `src/python/fim.rs` (45 entry points). |
 | 7, 8 | 6 | Sessions (`HdfSession`, NumPy element/index outputs), cache controls (`cache_bytes`, `cache_slots`, `cache_stats()`), `read_mesh_summary_values` and `read_mesh_boundary_batch`; see [sessions.md](sessions.md). |

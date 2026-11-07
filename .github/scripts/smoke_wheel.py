@@ -9,7 +9,7 @@ import zipfile
 import ras_commander_fast_hdf as native
 
 dist, commit = sys.argv[1], sys.argv[2]
-assert native.API_VERSION == 11, native.API_VERSION
+assert native.API_VERSION == 12, native.API_VERSION
 assert native.ENGINE_COMMIT == commit, (native.ENGINE_COMMIT, commit)
 assert tuple(native.ENGINE_FEATURES) == ("catalog", "hdf", "mesh", "results"), native.ENGINE_FEATURES
 for name in ("read_numeric", "HdfSession", "assemble_cells", "write_pmtiles",

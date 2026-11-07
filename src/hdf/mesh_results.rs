@@ -632,7 +632,9 @@ impl ReadOnlyHdfSession {
     /// Physical (non-ghost) cell count exactly as ras-commander PR #565 reads it
     /// (`HdfMesh._physical_cell_counts`): the `Geometry/2D Flow Areas/Attributes` row whose
     /// exact Name is `area` (last duplicate wins), only when Cell Count is finite and > 0,
-    /// truncated like Python `int`. An absent table or Cell Count column records nothing.
+    /// truncated like Python `int`. When Attributes is absent, a legacy Names
+    /// inventory uses the validated cell-face prefix; without either table no count
+    /// is recorded. A present Attributes table without Cell Count stays unqualified.
     pub(crate) fn mr_physical_cell_count(
         &self,
         area: &str,
@@ -644,6 +646,12 @@ impl ReadOnlyHdfSession {
                 let Some(table) =
                     absent_ok(self.simple_compound(&format!("{GEOM}/Attributes"), max_bytes))?
                 else {
+                    if self.has_dataset(&format!("{GEOM}/Names"))? {
+                        let names = self.legacy_mesh_names(max_bytes)?;
+                        if names.iter().any(|name| name == area) {
+                            return self.legacy_mesh_physical_count(area, max_bytes).map(Some);
+                        }
+                    }
                     return Ok(None);
                 };
                 let Some(counts) = table.columns.iter().find(|c| c.name == "Cell Count") else {

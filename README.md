@@ -1,5 +1,9 @@
 # ras-commander-fast-hdf
 
+The unreleased legacy mesh metadata compatibility change uses Python extension
+`API_VERSION` 12 and requires the matching ras-commander adapter. Published
+0.3.0 and 0.4.0 wheels use API 11.
+
 <p align="center"><img src="docs/images/logo/ras-commander-fast-hdf_logo.svg" alt="RAS Commander Fast-HDF: Native Rust HDF Engine" width="450"></p>
 
 ras-commander's default HDF engine: a native (Rust) HEC-RAS HDF reader and its Python extension for [ras-commander](https://github.com/gpt-cmdr/ras-commander).

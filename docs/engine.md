@@ -1,5 +1,15 @@
 # Rust engine: `ras-commander-fast-hdf`
 
+Legacy HEC-RAS 5.0.x files can store the 2D area inventory in
+`Geometry/2D Flow Areas/Names` instead of `Attributes`. `mesh_inventory`
+preserves that dataset's order and identifies each mesh by its `Names` row.
+The physical-cell count comes from validated contiguous cell-face ranges:
+polygon cells (at least three faces) must precede all one-face boundary ghosts,
+and the ranges must cover the stored face/orientation values exactly and align
+with the cell centers. Other layouts refuse the read. The engine does not use
+`Cell Maximum Index`, which can be stale, or result widths to infer that count.
+When `Attributes` is present, it remains the inventory and count authority.
+
 The crate `ras-commander-fast-hdf` (Rust import `ras_commander_fast_hdf`) is a
 read-only Rust library for HEC-RAS projects and the HDF5 files HEC-RAS writes.
 Its source is in `src/`. Without the `python` feature it has no Python
