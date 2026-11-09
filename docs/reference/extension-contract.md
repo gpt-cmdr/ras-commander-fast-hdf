@@ -377,7 +377,8 @@ plus `mesh_geometry` (field descriptors), `mesh_geometry_tables` (exact Attribut
 and Cell Info), `geometry_family_capability` and `mesh_boundary_links`. Semantics are the
 engine's ([mesh-results.md](mesh-results.md), [engine-api.md](engine-api.md)). Mesh series
 descriptors and catalogue mesh-result layers carry `domain_rule` (`stored_location`,
-`legacy_exact_name`, `labelled_summary`, `boundary_columns`, `unqualified`).
+`legacy_exact_name`, `labelled_summary`, `legacy_row_labels`, `summary_shape_and_name`,
+`boundary_columns`, `unqualified`).
 
 ## 1D bindings
 

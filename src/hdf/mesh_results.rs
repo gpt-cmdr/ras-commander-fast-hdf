@@ -40,6 +40,11 @@ pub enum DomainRule {
     /// Location absent; HEC-RAS 5.0 two-row summary whose only attributes are the per-row
     /// labels `Row 0:  WSEL` = `Feet` and `Row 1:  Time` = `Days`.
     LegacyRowLabels,
+    /// Location absent on any other summary: domain from ras-commander's name rule (`Face` in
+    /// the name selects faces, otherwise cells), proven by a width equal to that domain's
+    /// stored count and different from the other domain's, on a value array `[n]` or a
+    /// value/time pair `[2, n]` whose row 1 is labelled `Time` in days.
+    SummaryShapeAndName,
     /// Boundary-condition columns are their own stored axis, not mesh elements.
     BoundaryColumns,
     /// No rule qualified a domain (the capability says why).
@@ -52,6 +57,7 @@ impl DomainRule {
             Self::LegacyExactName => "legacy_exact_name",
             Self::LabelledSummary => "labelled_summary",
             Self::LegacyRowLabels => "legacy_row_labels",
+            Self::SummaryShapeAndName => "summary_shape_and_name",
             Self::BoundaryColumns => "boundary_columns",
             Self::Unqualified => "unqualified",
         }
@@ -400,12 +406,43 @@ impl ReadOnlyHdfSession {
             && cap.capability.is_supported()
             && cap.shape.len() == 2
             && series_area.is_some();
+        // Location absent on any other summary: ras-commander's h5py reader takes the domain
+        // from the name alone (`"Face" in var`). The engine uses that name rule only for a
+        // value array (`[n]`) or a value/time pair (`[2, n]`) whose row 1 is labelled `Time`
+        // in days, and only when the width equals the named domain's stored count and differs
+        // from the other domain's (`location::summary_shape_and_name`).
+        let has_location = attributes.iter().any(|a| a.name == "Location");
+        let list_time_row = attributes.iter().any(|a| {
+            matches!(a.name.as_str(), "Rows" | "Rows Variables" | "Row Variables")
+                && matches!(&a.value, MetadataValue::Strings(v) if v.len() == 2 && v[1] == "Time")
+        }) && matches!(row_units.map(|a| &a.value), Some(MetadataValue::Strings(v)) if v.len() == 2 && v[1] == "days");
+        // HEC-RAS 5.0.x: exactly `Row 0:  <quantity>` (one text value) and `Row 1:  Time` = `Days`.
+        let row_label_time_row = attributes.len() == 2
+            && one_text("Row 1:  Time", "Days")
+            && attributes.iter().any(|a| {
+                a.name
+                    .strip_prefix("Row 0:  ")
+                    .is_some_and(|q| !q.is_empty())
+                    && matches!(&a.value, MetadataValue::Strings(v) if v.len() == 1)
+            });
+        let shape_and_name_eligible = summary
+            && !bc
+            && !has_location
+            && cap.capability.is_supported()
+            && path.starts_with(&format!("{BASE}/Summary Output/2D Flow Areas/"))
+            && match cap.shape.as_slice() {
+                [_] => true,
+                [2, _] => list_time_row || row_label_time_row,
+                _ => false,
+            };
         let location = if bc {
             Ok((ElementDomain::Other, DomainRule::BoundaryColumns))
-        } else if labelled_cell_summary && !attributes.iter().any(|a| a.name == "Location") {
+        } else if labelled_cell_summary && !has_location {
             Ok((ElementDomain::Cell, DomainRule::LabelledSummary))
         } else if legacy_row_label_summary {
             Ok((ElementDomain::Cell, DomainRule::LegacyRowLabels))
+        } else if shape_and_name_eligible {
+            super::location::summary_shape_and_name(&name, columns.unwrap_or_default(), counts)
         } else {
             super::location::mesh_series(&attributes, &name, legacy_eligible)
         };
@@ -471,7 +508,10 @@ impl ReadOnlyHdfSession {
         let time_of_extreme_row = if summary
             && cap.shape.first() == Some(&2)
             && cap.shape.len() == 2
-            && (legacy_row_label_summary || attributes.iter().any(|a| {
+            && (legacy_row_label_summary
+                || (domain_rule == DomainRule::SummaryShapeAndName
+                    && (list_time_row || row_label_time_row))
+                || attributes.iter().any(|a| {
                 matches!(a.name.as_str(), "Rows Variables" | "Row Variables")
                     && matches!(&a.value,MetadataValue::Strings(v) if v.len()==2 && v[1]=="Time")
             })) {

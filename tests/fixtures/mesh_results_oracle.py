@@ -33,6 +33,17 @@ for r in probe:
       if labels==['WSEL','Time'] and len(units)==2 and units[0] in ['ft','m'] and units[1]=='days':domain,rule='cell','labelled_summary'
       # HEC-RAS 5.0: only the two per-row label attributes, with the observed US Customary units.
       elif sorted(d.attrs.keys())==['Row 0:  WSEL','Row 1:  Time'] and [bytes(d.attrs[k]).decode().rstrip(' '+chr(0)) for k in ['Row 0:  WSEL','Row 1:  Time']]==['Feet','Days']:domain,rule='cell','legacy_row_labels'
+     # Absent Location, no labelled rule: ras-commander's name rule (`"Face" in var`), proven by
+     # a width equal to that domain's count and unequal to the other's, on [n] or a [2, n] whose
+     # row 1 is labelled Time in days (6.x `Rows`/`Rows Variables`/`Row Variables` + `Units`, or
+     # exactly the two 5.0 `Row 0:  <q>` / `Row 1:  Time` = `Days` attributes).
+     if family=='Summary Output' and location is None and 'Location' not in d.attrs and rule=='unqualified' and d.dtype.kind in 'iuf' and d.name=='/'+root+'/'+name:
+      txt=lambda v:[bytes(x).decode().rstrip(' '+chr(0)) for x in np.atleast_1d(v)]
+      listed=any(k in d.attrs and len(txt(d.attrs[k]))==2 and txt(d.attrs[k])[1]=='Time' for k in ['Rows','Rows Variables','Row Variables']) and 'Units' in d.attrs and len(txt(d.attrs['Units']))==2 and txt(d.attrs['Units'])[1]=='days'
+      keys=sorted(d.attrs.keys())
+      rowlab=len(keys)==2 and 'Row 1:  Time' in keys and txt(d.attrs['Row 1:  Time'])==['Days'] and any(k.startswith('Row 0:  ') and len(k)>8 and len(txt(d.attrs[k]))==1 for k in keys)
+      named='face' if 'Face' in name else 'cell'
+      if (d.ndim==1 or (d.ndim==2 and d.shape[0]==2 and (listed or rowlab))) and 'cell' in counts and 'face' in counts and counts['cell']!=counts['face'] and cols==counts[named]:domain,rule=named,'summary_shape_and_name'
      assert domain=='other' or (domain in counts and counts[domain]==cols),(d.name,location,d.shape,counts)
      ids=sorted(set(np.linspace(0,max(cols-1,0),min(64,cols),dtype=int).tolist()))
      if len(ids)>1:ids=ids[::-1]+ids[:1] # unsorted and duplicate selection
@@ -41,7 +52,7 @@ for r in probe:
      refusal = 'schema' if family!='Summary Output' and d.ndim!=2 else ('identity_layout' if family!='Boundary Conditions' and domain=='other' else None)
      v['expected_code']=refusal
      v['chunks']=d.chunks
-     v['time_row']=1 if family=='Summary Output' and d.ndim==2 and d.shape[0]==2 and (rule=='legacy_row_labels' or any(k in d.attrs and list(d.attrs[k])[-1]==b'Time' for k in ['Rows Variables','Row Variables'])) else None
+     v['time_row']=1 if family=='Summary Output' and d.ndim==2 and d.shape[0]==2 and (rule in ('legacy_row_labels','summary_shape_and_name') or any(k in d.attrs and list(d.attrs[k])[-1]==b'Time' for k in ['Rows Variables','Row Variables'])) else None
      if family!='Summary Output' and d.ndim==2:
       v['slab_end']=min(7,d.shape[0]);v['slab']=np.asarray(d[:v['slab_end']:2,:][:,ids],dtype=d.dtype.newbyteorder('<')).tobytes().hex()
      for row in rows:

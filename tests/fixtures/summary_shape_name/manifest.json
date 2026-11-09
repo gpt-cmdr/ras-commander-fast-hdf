@@ -1,0 +1,13 @@
+{
+  "generator": "generate.py",
+  "files": [
+    {
+      "file": "valid.h5",
+      "sha256": "0260d625d40615c7dd6e59c95f058a8aeb98223da2bfd53053699328cd2642c9"
+    },
+    {
+      "file": "equal_counts.h5",
+      "sha256": "4a3cc3f9dcbf3312e1356ee2b691676d576b8949f2b11e630482abb4e53cc31c"
+    }
+  ]
+}

@@ -161,8 +161,8 @@ check against the block Time as for every series (mismatch Corrupt). Unknown nam
 rank-one time-only series and every Summary Output array are unchanged.
 
 `MeshResultVariable.domain_rule` (`DomainRule`, `as_str()`) records which rule produced
-`domain`: `stored_location`, `legacy_exact_name`, `labelled_summary`, `boundary_columns`
-or `unqualified`. It is kept when the capability later refuses the domain (for example a
+`domain`: `stored_location`, `legacy_exact_name`, `labelled_summary`, `legacy_row_labels`,
+`summary_shape_and_name`, `boundary_columns` or `unqualified`. It is kept when the capability later refuses the domain (for example a
 legacy count mismatch). The values are the literal stored values; the rule never
 transforms them. Real excerpts and mutations (unknown names, wrong counts, rows mismatch,
 present-but-invalid Location) are in `tests/fixtures/legacy_location`
@@ -245,3 +245,46 @@ Committed excerpts and mutations are in `tests/fixtures/legacy_row_labels`
 generator applies the same rule independently; on eight public plan HDFs (BaldEagleDamBrk
 p07/p08/p19, Chippewa_2D p02, DavisStormSystem p02, Muncie p02/p04/p05) it gives 92 qualified
 variables and 42 refusals, the six BaldEagle water-surface summaries being the only change.
+
+## Summaries without Location, by name and width (`summary_shape_and_name`)
+
+HEC-RAS 5.0.x writes face summaries (`Maximum Face Velocity`, `Minimum Face Velocity`, `Maximum
+Face Shear Stress`) with only per-row label attributes, HEC-RAS 6.1 writes every summary with
+`Rows` and `Units` but no `Location`, and every version writes `Cell Last Iteration` (6.1 also
+`Cell Maximum Iteration`) as a rank-one array with one text attribute `Cell`. ras-commander's
+h5py reader (`HdfResultsMesh.get_mesh_summary_output`) takes the domain of any summary from the
+name alone: faces when the name contains `Face` (exact case), cells otherwise. With Location
+absent and neither labelled water-surface rule above applying, the engine uses that name rule
+(`DomainRule::SummaryShapeAndName`) only when the stored layout proves it:
+
+- the array is a proven numeric value array `[n]`, or a value/time pair `[2, n]` whose row 1 is
+  labelled `Time` in days: a two-entry `Rows`, `Rows Variables` or `Row Variables` list ending in
+  `Time` with a two-entry `Units` list ending in `days`, or exactly the two 5.0 attributes
+  `Row 0:  <quantity>` (one text value) and `Row 1:  Time` = `Days`;
+- the width equals the stored count of the named domain (`Cells Center Coordinate` rows for
+  cells, ghosts included; `Faces FacePoint Indexes` rows for faces), and differs from the other
+  domain's count.
+
+Everything else stays refused (Unsupported(identity_layout)) with the reason in the capability:
+
+| Layout | Reason |
+|---|---|
+| equal cell and face counts | `cell and face counts are equal (n), so the width cannot confirm the domain the name implies` |
+| width of the other domain, or of neither | `width w differs from the <domain> count n the name implies` |
+| `[2, n]` whose row 1 is not labelled `Time` in days, three-row arrays (`Starting Differences ...`), iteration lookups (`(k, 2)`) | `stored Location attribute absent` |
+
+Row 1 of a qualified pair is `time_of_extreme_row`. Values are the literal stored values; the
+rule only names the domain. A present `Location` is still authoritative, and the two labelled
+water-surface rules above take precedence. ras-commander needs no change: it reads these arrays
+through `read_mesh_summary_values`, which now returns the literal dataset instead of a refusal
+that sent it to h5py.
+
+Qualification: the Arrow summary layer (`mesh_summary`) equals ras-commander 0.115.0's
+`get_mesh_summary_output(..., include_geometry=False)` in h5py mode, row for row and column for
+column (values bit for bit, time as nanoseconds, ghost cells left out), on every qualified
+variable of the corpus plans that store summaries without Location: Spring p01 (HEC-RAS 5.0.7),
+Spring_BLE p02 (6.1.0), BaldEagleDamBrk p18 and Muncie p03 (5.0.7), and the `Cell Last
+Iteration` arrays of BaldEagleDamBrk p05/p07/p15/p19, DavisStormSystem p02, AustinOyster p01,
+Chippewa_2D p02, Weise p01 and Muncie p03/p04 (6.6 to 7.0.1). Synthetic layouts and every
+refusal are in `tests/fixtures/summary_shape_name` (`generate.py`, `tests/summary_shape_name.rs`);
+the mesh-results oracle generator applies the same rule independently.
