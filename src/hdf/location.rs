@@ -86,7 +86,7 @@ pub(super) fn summary_shape_and_name(
     };
     if cells == faces {
         return Err(missing(format!(
-            "Location absent: cell and face counts are equal ({cells}), so the width cannot              confirm the domain the name implies"
+            "Location absent: cell and face counts are equal ({cells}), so the width cannot confirm the domain the name implies"
         )));
     }
     let (domain, want) = if name.contains("Face") {

@@ -96,7 +96,9 @@ fn equal_cell_and_face_counts_are_ambiguous_and_refused() {
         };
         assert_eq!(*code, UnsupportedCode::IdentityLayout);
         assert!(
-            reason.contains("cell and face counts are equal (4)"),
+            reason.ends_with(
+                "cell and face counts are equal (4), so the width cannot confirm the domain the name implies"
+            ),
             "{reason}"
         );
         let e = s
