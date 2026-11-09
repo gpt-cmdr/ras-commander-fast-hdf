@@ -79,7 +79,10 @@ fn unproven_layouts_stay_refused() {
     else {
         panic!()
     };
-    assert!(reason.contains("width 4 differs from the face count 6"), "{reason}");
+    assert!(
+        reason.contains("width 4 differs from the face count 6"),
+        "{reason}"
+    );
 }
 
 #[test]
@@ -92,7 +95,10 @@ fn equal_cell_and_face_counts_are_ambiguous_and_refused() {
             panic!("{name}: {:?}", v.capability)
         };
         assert_eq!(*code, UnsupportedCode::IdentityLayout);
-        assert!(reason.contains("cell and face counts are equal (4)"), "{reason}");
+        assert!(
+            reason.contains("cell and face counts are equal (4)"),
+            "{reason}"
+        );
         let e = s
             .mesh_summary_layer(name, &LayerOptions::default())
             .unwrap_err();
@@ -121,7 +127,10 @@ fn arrow_layers_read_the_qualified_summaries() {
     else {
         panic!()
     };
-    assert_eq!(b.column(2).as_primitive::<Float32Type>().values(), &stored[..6]);
+    assert_eq!(
+        b.column(2).as_primitive::<Float32Type>().values(),
+        &stored[..6]
+    );
     assert_eq!(b.schema().field(3).name(), "maximum_face_velocity_time");
 
     let cells = s

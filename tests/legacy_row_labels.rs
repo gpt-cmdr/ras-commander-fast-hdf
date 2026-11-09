@@ -65,13 +65,25 @@ fn any_other_layout_stays_refused() {
     // SI labels and face summaries are not this rule's: the absent-Location summary rule
     // qualifies them by name and width (`tests/summary_shape_name.rs`).
     for (file, name, domain) in [
-        ("units_meters.h5", "Maximum Water Surface", ElementDomain::Cell),
-        ("face_velocity.h5", "Maximum Face Velocity", ElementDomain::Face),
+        (
+            "units_meters.h5",
+            "Maximum Water Surface",
+            ElementDomain::Cell,
+        ),
+        (
+            "face_velocity.h5",
+            "Maximum Face Velocity",
+            ElementDomain::Face,
+        ),
     ] {
         let v = variable(&session(file), name);
         assert_eq!(
             (v.capability, v.domain, v.domain_rule),
-            (Capability::Supported, domain, DomainRule::SummaryShapeAndName),
+            (
+                Capability::Supported,
+                domain,
+                DomainRule::SummaryShapeAndName
+            ),
             "{file}"
         );
         assert_eq!(v.time_of_extreme_row, Some(1), "{file}");
