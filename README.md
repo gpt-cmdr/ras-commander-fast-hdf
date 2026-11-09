@@ -1,9 +1,5 @@
 # ras-commander-fast-hdf
 
-The unreleased legacy mesh metadata compatibility change uses Python extension
-`API_VERSION` 12 and requires the matching ras-commander adapter. Published
-0.3.0 and 0.4.0 wheels use API 11.
-
 <p align="center"><img src="docs/images/logo/ras-commander-fast-hdf_logo.svg" alt="RAS Commander Fast-HDF: Native Rust HDF Engine" width="450"></p>
 
 ras-commander's default HDF engine: a native (Rust) HEC-RAS HDF reader and its Python extension for [ras-commander](https://github.com/gpt-cmdr/ras-commander).
@@ -69,7 +65,7 @@ No code changes are needed. To choose the engine, set
 
 | Item | Status |
 |---|---|
-| Version | **0.4.0** (on PyPI and crates.io), Python extension `API_VERSION` 11. 0.4.0 moves to `hdf5-reader` 0.12.1, which changes some error kinds and refusal timing (see the changelog); ras-commander releases up to 0.113 pin `<0.4` and keep using 0.3.x. ras-commander accepts only the exact `API_VERSION` it was built against; ras-commander 0.107.0 and later use 11. |
+| Version | **0.5.0** (on PyPI and crates.io), Python extension `API_VERSION` 12 (0.3.0 and 0.4.0 use 11). 0.5.0 reads HEC-RAS 5.0.x mesh inventories and 2D summaries that store no `Location` (see the changelog). ras-commander accepts only the `API_VERSION` values it was built against: 0.114.0 and later accept 11 and 12, and releases up to 0.116 pin `<0.4`, so they stay on 0.3.x until a release widens the pin. |
 | Platforms | CPython 3.10 or later (stable ABI). Windows x64 and Linux x64 are qualified; Linux wheels cover glibc 2.17 or later (`manylinux2014`) and musl (`musllinux_1_2`, Alpine). macOS arm64 builds in CI but has not been qualified against the HEC-RAS corpus. ras-commander 0.107.1 and later install the engine on these three platforms; elsewhere they use h5py. |
 | Equivalence with h5py | Identical results to h5py on 201 public ras-commander method cases across 137 HEC-RAS 5.x–7.x result and geometry files: 3,800 method × file pairs in three modes, plus 1,428 calls replayed from the example notebooks. Methods the corpus has not exercised natively stay on h5py in `auto` mode. |
 | Speed | On the largest test models, against the last release before the engine (ras-commander 0.106.1): cell polygons 46× faster, mesh time series 7–8×, per-cell and per-face summaries 10–16×, fluvial-pluvial boundary over 700× on an 18,066-cell mesh (ras-commander 0.110.1 with engine 0.2.3). Small calls stay within a few milliseconds. See [Performance](#performance). |

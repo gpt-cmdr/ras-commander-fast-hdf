@@ -15,7 +15,7 @@ The complete, generation-by-generation contract is in
 | Name | Meaning |
 |---|---|
 | `__version__` | Package version, e.g. `"0.2.0"`. |
-| `API_VERSION` | Binding contract version (11). ras-commander requires an exact match. |
+| `API_VERSION` | Binding contract version (12; 11 up to 0.4.0). ras-commander requires a version it was built against. |
 | `TEXT_API_VERSION` | Separate version of the RAS text-file bindings (1). |
 | `ENGINE_COMMIT` | Commit of this repository the wheel was built from, or `"unknown"` for builds without Git metadata. |
 | `ENGINE_FEATURES` | Engine Cargo features compiled in: `("catalog", "hdf", "mesh", "results")`. |

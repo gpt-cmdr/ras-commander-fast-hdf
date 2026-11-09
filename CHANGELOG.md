@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.5.0 (2026-11-09)
+
+HEC-RAS 5.0.x and 6.1 plan files read natively in more places: 2D summaries that store no
+`Location`, and mesh inventories from the legacy `Names` dataset. The extension `API_VERSION` is
+12 (0.4.0: 11); the engine API stays 10. No function, signature or Cargo feature is removed or
+renamed. ras-commander 0.114.0 and later accept `API_VERSION` 11 and 12; releases up to 0.116 pin
+`ras-commander-fast-hdf<0.4` and stay on 0.3.x until a release widens the pin.
+
 - Qualify 2D summary arrays that store no `Location` (HEC-RAS 5.0.x face summaries, every
   HEC-RAS 6.1 summary, `Cell Last Iteration`/`Cell Maximum Iteration`) by ras-commander's name
   rule, proven by their width: `Face` in the name selects faces, otherwise cells, and the width
