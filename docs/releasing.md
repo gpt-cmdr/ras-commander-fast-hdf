@@ -5,7 +5,7 @@
 | Version | Where | Changes when |
 |---|---|---|
 | Package version (`0.2.0`) | `Cargo.toml` and `python/pyproject.toml` (must match; the release workflow checks) | Every release (semantic versioning; 0.x while the contract settles). The crate and the wheel share it. |
-| Extension `API_VERSION` (11) | `src/python/mod.rs` | A change ras-commander must know about: a signature, return shape, error class or behavior it relies on. |
+| Extension `API_VERSION` (12) | `src/python/mod.rs` | A change ras-commander must know about: a signature, return shape, error class or behavior it relies on. |
 | Engine `API_VERSION` (10) | `src/api.rs` | A change to the Rust engine's public surface. |
 | `TEXT_API_VERSION` (1) | `src/python/text_bindings.rs` | A change to the RAS text bindings. |
 
