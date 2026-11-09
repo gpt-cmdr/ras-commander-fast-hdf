@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- Qualify 2D summary arrays that store no `Location` (HEC-RAS 5.0.x face summaries, every
+  HEC-RAS 6.1 summary, `Cell Last Iteration`/`Cell Maximum Iteration`) by ras-commander's name
+  rule, proven by their width: `Face` in the name selects faces, otherwise cells, and the width
+  must equal that domain's stored count and differ from the other domain's
+  (`DomainRule::SummaryShapeAndName`, `summary_shape_and_name`). Only a value array `[n]` or a
+  value/time pair `[2, n]` whose row 1 is labelled `Time` in days (`Rows`/`Rows Variables`/`Row
+  Variables` with `Units`, or the 5.0 `Row 0:  <quantity>` / `Row 1:  Time` = `Days` pair)
+  qualifies. Equal cell and face counts, a width the name contradicts, an unlabelled row 1 and
+  other shapes (iteration lookups, starting differences) stay refused, with the reason. Values
+  stay literal; the Arrow summary layers equal ras-commander's h5py
+  `get_mesh_summary_output(include_geometry=False)` on every qualified variable of the corpus
+  (see [mesh-results.md](docs/reference/mesh-results.md)). A summary with a stored `Location`,
+  and the labelled water-surface rules, are unchanged. Additive within the extension API.
 - Read HEC-RAS 5.0.x mesh inventories from the legacy `Names` dataset when
   `Attributes` is absent. Preserve stored row order and inventory provenance;
   remove the legacy name field's trailing blank padding.
