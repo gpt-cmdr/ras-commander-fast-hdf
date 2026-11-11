@@ -74,7 +74,7 @@ pandas==2.3.2
 pandocfilters==1.5.1
 parso==0.8.7
 pathlib==1.0.1
-pillow==12.2.0
+pillow==13.0.0
 platformdirs==4.11.12
 playwright==1.63.0
 pluggy==1.7.0
