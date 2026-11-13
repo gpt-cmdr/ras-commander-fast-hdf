@@ -114,7 +114,7 @@ setuptools==84.2.1
 shapely==2.1.2
 simplejson==4.1.1
 six==1.17.0
-soupsieve==2.10
+soupsieve==4.0
 stack-data==0.6.3
 tinycss2==1.5.1
 tornado==6.5.10
