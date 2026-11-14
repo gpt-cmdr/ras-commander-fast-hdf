@@ -117,7 +117,7 @@ six==1.17.0
 soupsieve==2.10
 stack-data==0.6.3
 tinycss2==1.5.1
-tornado==6.5.10
+tornado==6.6.1
 tqdm==4.67.3
 traitlets==5.16.1
 typing_extensions==4.16.0
