@@ -117,6 +117,22 @@ jobs:
             cargo tree --no-default-features --features catalog,arrow -e normal -i "arrow-array@$major" > /dev/null
             cp "$RUNNER_TEMP/Cargo.toml" Cargo.toml; cp "$RUNNER_TEMP/Cargo.lock" Cargo.lock
           done
+      # Without Cargo.lock, Cargo resolves the range to its highest major beside the writers'
+      # Arrow 59. The alignment documented in Cargo.toml (update the other major's in-memory
+      # crates once) must leave one Arrow major for the wheel's features.
+      - name: Fresh resolution aligns on one Arrow major
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cp Cargo.lock "$RUNNER_TEMP/Cargo.lock"; rm Cargo.lock
+          features="python,exports-all,exports-pmtiles,python-arrow"
+          arrow() { cargo tree --features "$features" -e normal --prefix none | grep -E '^(arrow-[a-z]+|parquet) v' | sed 's/ (\*)//' | sort -u; }
+          writers=$(arrow | sed -nE 's/^arrow-ipc v([0-9]+)\..*/\1/p')
+          stray=$(arrow | grep -E '^arrow-(array|schema|buffer|data) v' | grep -vE " v$writers\." | sed -E 's/^([a-z-]+) v([0-9.]+).*/-p \1@\2/')
+          test -n "$stray"  # the fresh resolution does split, or this step tests nothing
+          cargo update $stray
+          if arrow | grep -vE " v$writers\."; then echo "more than one Arrow major after alignment"; exit 1; fi
+          cp "$RUNNER_TEMP/Cargo.lock" Cargo.lock
       # Includes the malformed-input regressions, the committed encoding/revision
       # evidence, the engine's reader-policy tests, and the bridge and export tests.
       - name: Tests (all features but extension-module)
