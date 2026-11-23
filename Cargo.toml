@@ -154,12 +154,20 @@ geo-types = { version = "0.7", optional = true }
 pmtiles2 = { version = "=0.3.1", optional = true }
 integer-encoding = { version = "=4.0.2", optional = true }
 
-# Export writers (features "exports-*").
-arrow-array = { version = "=59.0.0", optional = true }
-arrow-schema = { version = "=59.0.0", optional = true }
+# Arrow's in-memory crates, used by the `arrow` engine feature and the export writers.
+# A range of majors, not one: the record batches of the Arrow layer API are the consumer's
+# own Arrow types, so the consumer's Arrow major decides which one Cargo resolves (terrio
+# upstream is on 58). The code compiles and its tests pass on every major in the range; CI
+# tests the `arrow` feature at both ends. Widen the upper bound only after that check passes
+# on the new major.
+arrow-array = { version = ">=58, <61", optional = true }
+arrow-schema = { version = ">=58, <61", optional = true }
+arrow-buffer = { version = ">=58, <61", optional = true }
+# Export writers (features "exports-*", Python wheels only). geoparquet 0.9 and geopackage
+# 0.10 are built on Arrow 59, so the writers stay on exactly 59; Cargo.lock keeps the
+# in-memory crates above on 59 too, and wheels build with `--locked`.
 arrow-ipc = { version = "=59.0.0", optional = true }
 arrow-select = { version = "=59.0.0", optional = true }
-arrow-buffer = { version = "59.0.0", optional = true }
 tempfile = { version = "3", optional = true }
 geozero = { version = "=0.15.1", optional = true, default-features = false, features = ["with-wkb", "with-geojson"] }
 flatgeobuf = { version = "=6.0.1", optional = true, default-features = false }

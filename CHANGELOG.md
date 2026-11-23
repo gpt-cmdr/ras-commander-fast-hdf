@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The `arrow` feature accepts Arrow 58, 59 and 60 (`arrow-array`, `arrow-schema` and
+  `arrow-buffer` `>=58, <61`; 0.5.0 required exactly `=59.0.0`). Its record batches are the
+  consumer's own Arrow types, so a consumer on Arrow 58 (terrio upstream) or 60 links the engine
+  without a second Arrow major in its tree. The code is unchanged; its tests pass on every major in
+  the range, and CI tests the `arrow` feature at both ends. The `exports-*` writers stay on exactly
+  Arrow 59, the major geoparquet 0.9 and geopackage 0.10 are built on; `Cargo.lock` and the wheels
+  are unchanged.
+
 ## 0.5.0 (2026-11-09)
 
 HEC-RAS 5.0.x and 6.1 plan files read natively in more places: 2D summaries that store no

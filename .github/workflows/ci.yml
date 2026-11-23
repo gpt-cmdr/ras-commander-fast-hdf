@@ -102,6 +102,21 @@ jobs:
         run: cargo test --locked --no-default-features --features catalog,hdf,mesh,results
       - name: Arrow layer tests (pure Rust, no PyO3)
         run: cargo test --locked --no-default-features --features catalog,arrow
+      # The `arrow` feature takes a range of Arrow majors (Cargo.toml) so that consumers on
+      # either end link the engine with one Arrow; the locked run above is the middle (59).
+      # Each pass narrows the range to one major in the manifest, then restores it and the lockfile.
+      - name: Arrow layer tests on the range ends (Arrow 58 and 60)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cp Cargo.toml "$RUNNER_TEMP/Cargo.toml"; cp Cargo.lock "$RUNNER_TEMP/Cargo.lock"
+          for major in 58 60; do
+            sed -i -E "s/^(arrow-(array|schema|buffer) = \{ version = )\">=58, <61\"/\1\"$major\"/" Cargo.toml
+            test "$(grep -c "^arrow-\(array\|schema\|buffer\) = { version = \"$major\"" Cargo.toml)" = 3
+            cargo test --no-default-features --features catalog,arrow
+            cargo tree --no-default-features --features catalog,arrow -e normal -i "arrow-array@$major" > /dev/null
+            cp "$RUNNER_TEMP/Cargo.toml" Cargo.toml; cp "$RUNNER_TEMP/Cargo.lock" Cargo.lock
+          done
       # Includes the malformed-input regressions, the committed encoding/revision
       # evidence, the engine's reader-policy tests, and the bridge and export tests.
       - name: Tests (all features but extension-module)

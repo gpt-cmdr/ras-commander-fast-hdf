@@ -85,8 +85,8 @@ The multi-layer archive profile (`export_geoparquet_ipc_files`: layer column, bb
 covering, Hilbert order, ZSTD level, Utf8 dictionaries, chunk statistics) was removed in
 0.3.0. terrio owns file formats: use `terrio::geoparquet::write_arrow_layers` (Python
 `terrio.write_geoparquet_layers(..., profile="archive")`), which writes the same rows,
-order, schema, row groups and `geo` metadata. The engine's Arrow output (arrow 59) passes
-to it without conversion.
+order, schema, row groups and `geo` metadata. The engine's Arrow output (Arrow 58, 59 or 60,
+whichever major the consumer's dependency tree resolves) passes to it without conversion.
 
 ## Lifecycle and memory
 
