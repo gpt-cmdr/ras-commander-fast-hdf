@@ -30,7 +30,7 @@ fastjsonschema==2.22.2
 findlibs==0.1.2
 fiona==1.10.1
 fonttools==4.63.0
-fsspec==2026.4.0
+fsspec==2026.6.0
 geographiclib==2.1
 geopandas==1.1.1
 geopy==2.5.0
