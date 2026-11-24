@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.5.1 (2026-11-24)
+
+A build-only release for Rust consumers of the `arrow` feature. The code is unchanged: the
+extension `API_VERSION` stays 12 and the engine API stays 10, so ras-commander versions that
+accept 0.5.0 accept 0.5.1.
 
 - The `arrow` feature accepts Arrow 58, 59 and 60 (`arrow-array`, `arrow-schema` and
   `arrow-buffer` `>=58, <61`; 0.5.0 required exactly `=59.0.0`). Its record batches are the
