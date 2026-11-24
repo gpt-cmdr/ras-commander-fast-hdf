@@ -4,7 +4,7 @@ asttokens==3.0.2
 attrs==25.3.0
 beautifulsoup4==4.15.0
 bleach==6.4.0
-certifi==2025.8.3
+certifi==2026.10.18
 cffi==2.0.0
 cfgrib==0.9.15.1
 cftime==1.6.6.1
