@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- The `arrow` feature accepts Arrow 58, 59 and 60 (`arrow-array`, `arrow-schema` and
+  `arrow-buffer` `>=58, <61`; 0.5.0 required exactly `=59.0.0`). Its record batches are the
+  consumer's own Arrow types, so a consumer on Arrow 58 (terrio upstream) or 60 can link the engine
+  with one Arrow major in its tree. Cargo does not unify majors by itself: a fresh resolution adds
+  Arrow 60 beside the consumer's 58, so the consumer aligns its lockfile once with
+  `cargo update -p arrow-array@60.2.0 -p arrow-schema@60.2.0 -p arrow-buffer@60.2.0 -p arrow-data@60.2.0`
+  (the second major's versions from `cargo tree -d`), and `cargo tree -d` then shows one
+  `arrow-array`. The code is unchanged; its tests pass on every major in the range, and CI tests the
+  `arrow` feature at both ends. The `exports-*` writers stay on exactly Arrow 59, the major
+  geoparquet 0.9 and geopackage 0.10 are built on, and need the in-memory crates on 59 too. The
+  committed `Cargo.lock` holds them there, and the wheels and the sdist build from it. `Cargo.lock`
+  and the wheels are unchanged.
+
 ## 0.5.0 (2026-11-09)
 
 HEC-RAS 5.0.x and 6.1 plan files read natively in more places: 2D summaries that store no
