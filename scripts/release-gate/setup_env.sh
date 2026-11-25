@@ -13,7 +13,9 @@ uv pip install --python $PY --no-deps -e "$CLONE"
 # RasMapperLib needs a GDAL junction beside python.exe. The library creates it on first
 # load with a 15 s PowerShell call, which timed out under gate load and failed every
 # RasMapperLib test in that worker; create it once here instead (Windows with HEC-RAS only).
-if [ "${GATE_WINDOWS:-1}" != 1 ]; then
+# GATE_WINDOWS comes from env.sh; a GATE_ENV file without it falls back to uname -s.
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) WIN=1 ;; *) WIN=0 ;; esac
+if [ "${GATE_WINDOWS:-$WIN}" != 1 ]; then
   echo "HEC-RAS GDAL bridge skipped: RasMapperLib needs a Windows HEC-RAS install"
 else
 $PY - <<'EOF' || echo "HEC-RAS GDAL bridge not prepared (no HEC-RAS install?); RasMapperLib tests will skip or fail"

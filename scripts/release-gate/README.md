@@ -11,8 +11,11 @@ which from `uname -s` and sets the venv's Python (`Scripts/python.exe` or
 `requirements-release.txt` installs `pywin32` only on Windows. Only Windows
 prepares the HEC-RAS GDAL bridge and removes conda from `PATH`. The `D:/`
 defaults in `env.sh` are the Windows gate machine's; on Linux set `W`, `FX`
-and the other paths. `with_gate_queue.sh` keeps its lock in `/tmp/ras-perf`
-on Linux unless `GATE_LOCK_DIR` is set.
+and the other paths. On Linux, `with_gate_queue.sh` keeps its lock in a
+private folder, `/tmp/ras-perf-<uid>`, and refuses to use that folder if
+another account owns it. To make several accounts queue together, set
+`GATE_LOCK_DIR` to a folder they can all write, and set it for any older lock
+helper as well.
 
 Linux was qualified for 0.5.1 this way on CLB's Slurm cluster. One job ran
 `setup_env.sh` with the released manylinux wheel, then
