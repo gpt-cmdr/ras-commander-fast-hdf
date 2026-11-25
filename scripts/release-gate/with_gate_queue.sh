@@ -9,7 +9,10 @@
 # $POLL s, faster than their 60 s, to make that rare.)
 # Tickets whose waiter PID has died are removed. A GATE_RUNNING whose holder looks dead is
 # only reported, never removed: other tools write that file too.
-D=${GATE_LOCK_DIR:-D:/CLB-Dev/ras-perf}
+# Default lock folder: the Windows gate machine's, or a machine-wide one on Linux/macOS
+# (where D:/... would be a relative folder named "D:").
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) D_DEFAULT=D:/CLB-Dev/ras-perf ;; *) D_DEFAULT=/tmp/ras-perf ;; esac
+D=${GATE_LOCK_DIR:-$D_DEFAULT}
 LOCK=$D/GATE_RUNNING; BENCH=$D/BENCH_RUNNING; QDIR=$D/GATE_QUEUE
 POLL=${GATE_QUEUE_POLL:-5}; REPORT=${GATE_QUEUE_REPORT:-60}
 mkdir -p "$QDIR"
