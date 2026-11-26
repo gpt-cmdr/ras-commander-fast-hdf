@@ -9,15 +9,29 @@
 # $POLL s, faster than their 60 s, to make that rare.)
 # Tickets whose waiter PID has died are removed. A GATE_RUNNING whose holder looks dead is
 # only reported, never removed: other tools write that file too.
-D=${GATE_LOCK_DIR:-D:/CLB-Dev/ras-perf}
+# Default lock folder: the Windows gate machine's, or on Linux/macOS (where D:/... would be
+# a relative folder named "D:") a private per-account folder in /tmp, refused unless this
+# account owns it. To queue several accounts together, set GATE_LOCK_DIR to a folder they
+# can all write (and in every older lock helper too).
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) WIN=1; D_DEFAULT=D:/CLB-Dev/ras-perf ;;
+  *) WIN=0; D_DEFAULT=/tmp/ras-perf-$(id -u) ;;
+esac
+D=${GATE_LOCK_DIR:-$D_DEFAULT}
 LOCK=$D/GATE_RUNNING; BENCH=$D/BENCH_RUNNING; QDIR=$D/GATE_QUEUE
 POLL=${GATE_QUEUE_POLL:-5}; REPORT=${GATE_QUEUE_REPORT:-60}
+if [ $WIN = 0 ] && [ -z "$GATE_LOCK_DIR" ]; then
+  mkdir -p -m 700 "$D" && [ ! -L "$D" ] && [ -O "$D" ] || {
+    echo "lock folder $D is not a folder owned by $(id -un); set GATE_LOCK_DIR" >&2; exit 2; }
+fi
 mkdir -p "$QDIR"
 
 winpid() { cat /proc/$1/winpid 2>/dev/null; }
 # Alive if the MSYS pid answers, or (waiter from another MSYS runtime) its Windows pid exists.
 alive() {  # alive <msys-pid> <win-pid>
   kill -0 "$1" 2>/dev/null && return 0
+  # Linux/macOS ticket (no Windows pid): kill -0 fails on another account's live process.
+  [ -z "$2" ] && [ $WIN = 0 ] && { ps -p "$1" > /dev/null 2>&1; return; }
   [ -n "$2" ] && tasklist //FI "PID eq $2" //NH 2>/dev/null | grep -qw "$2"
 }
 # Print the oldest live ticket path; delete stale ones on the way.
@@ -41,7 +55,9 @@ fi
 DESC=$1; shift
 [ $# -gt 0 ] || { echo "usage: $0 \"<description>\" <command...>" >&2; exit 2; }
 # Name sorts by arrival: zero-padded epoch nanoseconds, then pid as a tie-break.
-TICKET=$QDIR/$(printf '%020d' "$(date +%s%N)")-$$.ticket
+# BSD/macOS date has no %N: fall back to whole seconds (pid then breaks a same-second tie).
+NS=$(date +%s%N); case $NS in *[!0-9]*) NS=$(date +%s)000000000 ;; esac
+TICKET=$QDIR/$(printf '%020d' "$NS")-$$.ticket
 OWN="$DESC (pid $$, started $(date '+%F %T'))"
 printf '%s %s\n%s\n' "$$" "$(winpid $$)" "$OWN" > "$TICKET.tmp" && mv "$TICKET.tmp" "$TICKET" || exit 1
 HAVE=0

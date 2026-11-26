@@ -100,8 +100,11 @@ Each suite also writes a JSON-lines record per case (`RAS_ROUTE1_RESULTS`,
 `RAS_ROUTE2_RESULTS`, ...), from which ras-commander's documentation table of
 qualified methods is generated.
 
-`scripts/release-gate/` holds the Windows release-gate scripts that run all of
-these, plus the ordinary suite in each mode, from a pinned environment.
+`scripts/release-gate/` holds the release-gate scripts that run all of
+these, plus the ordinary suite in each mode, from a pinned environment. They
+run in Git Bash on Windows and in bash on Linux. The 0.5.1 Linux
+qualification ran them on CLB's Slurm cluster, inside the CI runner's
+Apptainer container, for the route2, route3, nonhdf and fluvial stages.
 
 ### What a release must show
 

@@ -7,7 +7,10 @@ T=${1:-run}; shift; STAGES=${*:-existing quarantine route1 route2 route3 extents
 L=$RUN/logs/$T; mkdir -p $L $W/cwd; cd $W/cwd || exit 1
 M=$RUN/manifests
 export RAS_ROUTE1_FIXTURES=$M/fixtures-route1.json
-export PYTHONPATH="$CLONE;$CLONE/tests;$CLONE/tests/rust_engine_bridge;$RUN/scripts" CRASHLOG_DIR=$L/fault
+# Path lists use Python's os.pathsep: ';' on Windows, ':' on Linux/macOS (set by env.sh;
+# detected here too, for a copy of env.sh older than that setting).
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) S=';' ;; *) S=':' ;; esac; S=${GATE_PATHSEP:-$S}
+export PYTHONPATH="$CLONE$S$CLONE/tests$S$CLONE/tests/rust_engine_bridge$S$RUN/scripts" CRASHLOG_DIR=$L/fault
 unset RAS_COMMANDER_FAST_HDF
 P="$PY -m pytest --import-mode=importlib -q -p no:cacheprovider -p no:faulthandler -p crashlog -rs"
 # The routed-equivalence folders (tests/rust_*) run in their own stages above, so the
@@ -30,7 +33,7 @@ for st in $STAGES; do
   route3) RAS_ROUTE2_FIXTURES=${ROUTE2_MANIFEST:-$M/fixtures-route2.json} RAS_ROUTE3_LEGACY_EXCERPTS=$ENG/tests/fixtures/legacy_location RAS_ROUTE3_RESULTS=$L/route3.jsonl $P "$CLONE/tests/rust_route_3" --basetemp=$W/tmp-$T-d --junitxml=$L/route3.xml > $L/route3.log 2>&1 ;;
   extents) RAS_ROUTE_EXTENTS_RESULTS=$L/extents.jsonl RAS_ROUTE_EXTENTS_FIXTURES=$RAS_ROUTE1_FIXTURES $P -n 6 "$CLONE/tests/rust_route_extents" --basetemp=$W/tmp-$T-e --junitxml=$L/extents.xml > $L/extents.log 2>&1; rc=$?; merge $L/extents.jsonl; (exit $rc) ;;
   nonhdf) RAS_ROUTE2_FIXTURES=${ROUTE2_MANIFEST:-$M/fixtures-route2.json} RAS_ROUTE_NONHDF_RESULTS=$L/nonhdf.jsonl $P -n 6 "$CLONE/tests/rust_route_nonhdf" --basetemp=$W/tmp-$T-f --junitxml=$L/nonhdf.xml > $L/nonhdf.log 2>&1; rc=$?; merge $L/nonhdf.jsonl; (exit $rc) ;;
-  fluvial) RAS_FLUVIAL_PUBLIC_FIXTURES=$FX/structures-fixtures RAS_MESH_DIAGNOSTIC_FIXTURES=$FX/structures-fixtures RAS_FLUVIAL_FIXTURE_DIRS="$FX/structures-fixtures;$FX/wave2-fixtures;$FX/wave3-fixtures;$FX/golden" $P -n 4 "$CLONE/tests/rust_fluvial_public" "$CLONE/tests/test_rust_fluvial_contract.py" "$CLONE/tests/test_mesh_polygon_diagnostics_parity.py" "$CLONE/tests/test_mesh_polygon_ring_contract.py" --basetemp=$W/tmp-$T-g --junitxml=$L/fluvial.xml > $L/fluvial.log 2>&1 ;;
+  fluvial) RAS_FLUVIAL_PUBLIC_FIXTURES=$FX/structures-fixtures RAS_MESH_DIAGNOSTIC_FIXTURES=$FX/structures-fixtures RAS_FLUVIAL_FIXTURE_DIRS="$FX/structures-fixtures$S$FX/wave2-fixtures$S$FX/wave3-fixtures$S$FX/golden" $P -n 4 "$CLONE/tests/rust_fluvial_public" "$CLONE/tests/test_rust_fluvial_contract.py" "$CLONE/tests/test_mesh_polygon_diagnostics_parity.py" "$CLONE/tests/test_mesh_polygon_ring_contract.py" --basetemp=$W/tmp-$T-g --junitxml=$L/fluvial.xml > $L/fluvial.log 2>&1 ;;
   main-python) RAS_COMMANDER_FAST_HDF=0 $P -n 8 "$CLONE/tests" $RUST_IGNORES --timeout=900 --basetemp=$W/tmp-$T-h --junitxml=$L/main-python.xml > $L/main-python.log 2>&1 ;;
   main-auto) RAS_COMMANDER_FAST_HDF=auto $P -n 8 "$CLONE/tests" $RUST_IGNORES --timeout=900 --basetemp=$W/tmp-$T-i --junitxml=$L/main-auto.xml > $L/main-auto.log 2>&1 ;;
   main-required) RAS_COMMANDER_FAST_HDF=required $P -n 8 "$CLONE/tests" $RUST_IGNORES --timeout=900 --basetemp=$W/tmp-$T-j --junitxml=$L/main-required.xml > $L/main-required.log 2>&1 ;;

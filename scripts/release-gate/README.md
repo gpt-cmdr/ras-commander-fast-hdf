@@ -1,8 +1,27 @@
 # Release gate scripts
 
-The Windows release gate: the ras-commander equivalence suites and the full
+The release gate: the ras-commander equivalence suites and the full
 ras-commander suite in h5py, auto and required mode, run against one engine
 wheel. Compare two runs case by case (junit XML in `$RUN/logs/<tag>/`).
+
+The scripts run in Git Bash on Windows and in bash on Linux. `env.sh` detects
+which from `uname -s` and sets the venv's Python (`Scripts/python.exe` or
+`bin/python`) and the separator of the path lists `PYTHONPATH` and
+`RAS_FLUVIAL_FIXTURE_DIRS` (`;` on Windows, `:` elsewhere).
+`requirements-release.txt` installs `pywin32` only on Windows. Only Windows
+prepares the HEC-RAS GDAL bridge and removes conda from `PATH`. The `D:/`
+defaults in `env.sh` are the Windows gate machine's; on Linux set `W`, `FX`
+and the other paths. On Linux, `with_gate_queue.sh` keeps its lock in a
+private folder, `/tmp/ras-perf-<uid>`, and refuses to use that folder if
+another account owns it. To make several accounts queue together, set
+`GATE_LOCK_DIR` to a folder they can all write, and set it for any older lock
+helper as well.
+
+Linux was qualified for 0.5.1 this way on CLB's Slurm cluster. One job ran
+`setup_env.sh` with the released manylinux wheel, then
+`full_run.sh <tag> route2 route3 nonhdf fluvial` with
+`ROUTE2_MANIFEST` pointing at the full route-2 manifest. It ran inside the CI
+runner's Apptainer image, with all state in the job's `/scratch/<jobid>`.
 
 | File | Purpose |
 |---|---|
@@ -19,6 +38,7 @@ the `tests/rust_*` folders (those are the earlier stages).
 
 ```bash
 export W=D:/CLB-Dev/my-gate CLONE=D:/CLB-Dev/my-gate/ras-commander RUN=D:/CLB-Dev/my-gate/run
+# Linux: export W=/data/my-gate CLONE=/data/my-gate/ras-commander RUN=/data/my-gate/run FX=/data/fixtures
 mkdir -p $RUN/scripts && cp crashlog.py $RUN/scripts/
 bash setup_env.sh                       # or: bash setup_env.sh path/to/wheel.whl
 bash with_gate_queue.sh "my gate" bash full_run.sh mytag main-python main-auto main-required
