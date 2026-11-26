@@ -127,7 +127,7 @@ traitlets==5.16.1
 typing_extensions==4.16.0
 tzdata==2025.2
 urllib3==2.7.0
-uv==0.11.23
+uv==0.13.4
 wcwidth==0.9.1
 webencodings==0.6.1
 whitebox==2.3.6
